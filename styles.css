@@ -1161,7 +1161,7 @@ body, html {
   padding: 8px;
   margin-bottom: 8px;
   background: linear-gradient(145deg, #e0e0e0, #ffffff);
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff;
+  box-shadow: 1px 1px 1px #d1d1d1, -1px -1px 1px #ffffff;
   border-radius: 8px;
 }
 
@@ -1229,20 +1229,22 @@ body, html {
 }
 /* Base styling for the favorites modal */
 #favorite-modal {
-  display: block;
+   display: block;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: #fff;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff);
+  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff;
   padding: 24px;
   border-radius: 12px;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 1006; /* Matches #cities-modal and #favorite-modal */
   max-width: 500px;
   width: 90%;
   min-height: 300px; /* Matches other banners */
-  font-family: Arial, sans-serif;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #333;
+  
 }
 
 /* Close button styling (consistent with other banners) */
@@ -1283,6 +1285,7 @@ body, html {
   margin: 0;
   max-height: 400px; /* Limit height to prevent overflow */
   overflow-y: auto;
+  
 }
 
 /* List item styling */
@@ -1290,8 +1293,12 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb; /* Gray-200 */
+  padding: 12px 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff);
+  box-shadow: 5px 1px 6px #d1d1d1, -2px -2px 8px #ffffff, inset 3px 3px 6px #d1d1d1, inset 3px 3px 6px #ffffff;;
+  border: 1px solid #d1d5db; /* Gray-300 */
+  border-radius: 8px;
 }
 
 /* Shop name container */
@@ -1327,7 +1334,7 @@ body, html {
 
 /* Remove button (trash icon) specific styling */
 .favorite-modal-button.remove svg {
-  stroke: #ef4444; /* Red-500 */
+  stroke: #000000; /* Red-500 */
 }
 
 /* Ensure hidden class overrides other styles */
@@ -1373,25 +1380,6 @@ body, html {
 
 .city-button:hover {
   background-color: #e5e7eb;
-}
-
-
-/* Base styling for all modals and banners (existing rules) */
-#favorite-modal {
-  display: block;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #fff;
-  padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1005;
-  max-width: 500px;
-  width: 85%;
-  min-height: 300px;
-  font-family: Arial, sans-serif;
 }
 
 /* Mobile-specific adjustments (max-width: 480px) */
