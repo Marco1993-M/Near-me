@@ -986,7 +986,7 @@ async function fetchCities() {
 
   async function calculateAverageRating(shopName) {
   try {
-    // Step 1: Get shop_id from shops table
+    // Get shop_id from shops table
     const { data: shop, error: shopError } = await client
       .from('shops')
       .select('id')
@@ -994,16 +994,12 @@ async function fetchCities() {
       .limit(1)
       .single();
 
-    if (shopError) {
-      console.error('Error fetching shop ID:', shopError);
-      return 0;
-    }
-    if (!shop) {
-      console.warn(`No shop found with name: ${shopName}`);
+    if (shopError || !shop) {
+      console.log(`No shop found with name: ${shopName}`);
       return 0;
     }
 
-    // Step 2: Get ratings from reviews table
+    // Get ratings from reviews table
     const { data: reviews, error: reviewError } = await client
       .from('reviews')
       .select('rating')
@@ -1018,7 +1014,6 @@ async function fetchCities() {
       return 0;
     }
 
-    // Calculate average rating
     const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
     return (total / reviews.length).toFixed(1);
   } catch (error) {
@@ -1029,7 +1024,7 @@ async function fetchCities() {
 
     function showFloatingCard(shop) {
   if (!shop || !shop.name) {
-    console.warn('Attempted to show floating card with invalid shop data:', shop);
+    console.warn('Invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
     return;
   }
@@ -1046,16 +1041,8 @@ async function fetchCities() {
   const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
   const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
 
-  const coffeeIcon = `
-    <svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-    </svg>
-  `;
-  const starIcon = `
-    <svg class="text-yellow-500" fill="black" viewBox="0 0 24 24" width="16" height="16">
-      <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
-    </svg>
-  `;
+  const coffeeIcon = `<svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>`;
+  const starIcon = `<svg class="text-yellow-500" fill="black" viewBox="0 0 24 24" width="16" height="16"><path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/></svg>`;
 
   const floatingCard = document.getElementById('floating-card');
   if (!floatingCard) {
@@ -1093,19 +1080,19 @@ async function fetchCities() {
       ` : ''}
       <button id="share-button" class="floating-card-action-button" aria-label="Share ${shop.name}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.441-6l6.632-3.316m0 0a3 3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
         <span>Share</span>
       </button>
       <button id="favorite-button" class="floating-card-action-button" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.318-1.318a4.5 0 00-6.364 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
         <span>Favorite</span>
       </button>
     </div>
   `;
-  // Ensure visibility
+
   floatingCard.style.display = 'block';
   floatingCard.style.visibility = 'visible';
   floatingCard.style.opacity = '1';
@@ -1114,94 +1101,64 @@ async function fetchCities() {
   console.log('Floating card HTML:', floatingCard.outerHTML);
   console.log('Floating card position:', floatingCard.getBoundingClientRect());
 
-  // Add close button listener
+  // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
   if (closeButton) {
     closeButton.addEventListener('click', function(e) {
       e.stopPropagation();
       floatingCard.classList.add('hidden');
-      console.log('Floating card closed via close button');
+      console.log('Floating card closed');
     });
-  } {
-    console.error('Close button not found in floating card');
   }
 
-  // Add call button listener
+  // Button listeners
   document.getElementById('call-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    if (shop && shop.phone) {
-      console.log('Initiating call for:', shop.name);
-      window.location.href = `tel:${shop.phone};`;
-    }
+    if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-  // Add directions button listener
   document.getElementById('directions-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    if (shop && shop.address) {
-      console.log('Getting directions for:', shop.name);
-      const encodedAddress = encodeURIComponent(shop.address);
-      const mapsUrl = `geo:0,0?q=${encodedAddress};`;
-      window.location.href = mapsUrl;
-    }
+    if (shop.address) window.location.href = `geo:0,0?q=${encodeURIComponent(shop.address)}`;
   });
 
-  // Add share button listener
   document.getElementById('share-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    if (currentShop) {
-      console.log('Sharing shop:', currentShop.name);
-      shareShop(currentShop);
-    }
+    if (currentShop) shareShop(currentShop);
   });
 
-  // Add favorite button listener
- document.getElementById('favorite-button')?.addEventListener('click', function(e) {
-   e.stopPropagation();
+  document.getElementById('favorite-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
     if (currentShop) {
-      const shopKey = `${currentShop.name}-${currentShop.lat}-${shop.lng}`;
-      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fave.address === currentShop.address);
+      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
       if (isCurrentlyFavorited) {
-        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fave.address === currentShop.address));
+        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
         this.querySelector('svg').setAttribute('fill', 'none');
         this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
         console.log('Removed from favorites:', currentShop.name);
       } else {
-        addToFavorites(currentShop);
+        favorites.push({ name: currentShop.name, address: currentShop.address });
         this.querySelector('svg').setAttribute('fill', 'currentColor');
         this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
         console.log('Added to favorites:', currentShop.name);
       }
-      if (typeof updateFavoritesModal === 'function') {
-        updateFavoritesModal();
-      } else {
-        console.error('updateFavoritesModal is not defined');
-      }
+      if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
     }
   });
 
-  // Add click handler for card to show details, but don't hide immediately
+  // Card click to show details
   floatingCard.addEventListener('click', function(e) {
-    e.stopPropagation();
     if (
       e.target.closest('.floating-card-close-button') ||
       e.target.closest('#call-button') ||
       e.target.closest('#directions-button') ||
       e.target.closest('#share-button') ||
       e.target.closest('#favorite-button')
-    ) {
-      return;
-    }
-
+    ) return;
     if (shop) {
-      console.log('Floating card clicked, showing shop details for:', shop.name);
       currentShop = shop;
       showShopDetails(shop);
-      // Don't hide card immediately
-      // floatingCard.classList.add('hidden');
       console.log('Shop details requested, card remains visible');
-    } else {
-      console.error('No shop data available for shop details. Current shop:', currentShop);
     }
   });
 }
