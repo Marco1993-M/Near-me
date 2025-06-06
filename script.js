@@ -414,7 +414,7 @@ window.initGoogleMaps = function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: { country: 'us' }, // Adjust country as needed
+            componentRestrictions: { }, // Adjust country as needed
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
