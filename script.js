@@ -398,43 +398,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('AutocompleteService initialized');
         console.log('PlacesService initialized');
         console.log('Geocoder initialized');
-        searchInput.addEventListener('input', debounce(function() {
-  const query = searchInput.value.trim();
-  if (!query || !autocompleteService) {
-    console.log('No query or AutocompleteService not initialized');
-    searchDropdown.innerHTML = '';
-    return;
-  }
-
-  console.log('Search query entered:', query); // Debug log
-  autocompleteService.getPlacePredictions({
-    input: query,
-    types: ['establishment'],
-    componentRestrictions: { country: 'za' } // Adjust country code as needed
-  }, (predictions, status) => {
-    console.log('Autocomplete status:', status); // Debug log
-    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-      searchDropdown.innerHTML = predictions.map(prediction => `
-        <div class="search-dropdown-item p-2 hover:bg-gray-100 cursor-pointer" data-place-id="${prediction.place_id}">
-          ${prediction.description}
-        </div>
-      `).join('');
-      console.log('Autocomplete predictions:', predictions); // Debug log
-
-      // Add click handlers for dropdown items
-      searchDropdown.querySelectorAll('.search-dropdown-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const placeId = item.getAttribute('data-place-id');
-          fetchPlaceDetails(placeId);
-          searchDropdown.innerHTML = ''; // Clear dropdown after selection
-        });
-      });
-    } else {
-      console.error('Autocomplete failed:', status);
-      searchDropdown.innerHTML = '<p class="p-2">No results found.</p>';
-    }
-  });
-}, 300));
         searchInput.disabled = false;
         searchInput.placeholder = 'Search for coffee shops...';
         console.log('Search bar enabled');
@@ -611,48 +574,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 
-function fetchPlaceDetails(placeId) {
-  if (!placesService) {
-    console.error('PlacesService not initialized');
-    return;
-  }
-
-  placesService.getDetails({ placeId }, (place, status) => {
-    console.log('Place details status:', status); // Debug log
-    if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-      const shop = {
-        placeId: place.place_id,
-        name: place.name || 'Unknown Shop',
-        address: place.formatted_address || 'No address available',
-        rating: place.rating ? `${place.rating} / 5` : 'N/A',
-        phone: place.formatted_phone_number || 'No phone number available',
-        website: place.website || 'No website available',
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-        city: extractCityFromAddressComponents(place.address_components)
-      };
-      console.log('Fetched place details:', shop); // Debug log
-
-      // Clear existing markers
-      currentMarkers.forEach(marker => map.removeLayer(marker));
-      currentMarkers = [];
-
-      // Center map on the shop
-      map.setView([shop.lat, shop.lng], 15);
-      const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
-        .addTo(map)
-        .bindPopup(shop.name)
-        .openPopup();
-      currentMarkers.push(marker);
-
-      // Show floating card
-      currentShop = shop;
-      showFloatingCard(shop);
-    } else {
-      console.error('Failed to fetch place details:', status);
-    }
-  });
-}
 
     // Renamed to avoid naming conflict
 async function fetchCities() {
@@ -972,7 +893,7 @@ async function fetchCities() {
   return (total / reviews.length).toFixed(1);
 }
 
-    async function showFloatingCard(shop) {
+    function showFloatingCard(shop) {
   if (!shop || !shop.name) {
     console.warn('Attempted to show floating card with invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
@@ -980,19 +901,16 @@ async function fetchCities() {
   }
   console.log('Showing floating card for:', shop.name);
 
-  let averageRating = await calculateAverageRating(shop.name);
+  let averageRating = 0;
+  try {
+    averageRating = calculateAverageRating(shop.name);
+  } catch (error) {
+    console.error('Error calculating average rating:', error);
+  }
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : 'No ratings yet';
 
-  const { data: authData } = await client.auth.getUser();
-  const userId = authData?.user?.id;
-  const { data: favoriteData, error: favoriteError } = await client
-    .from('favorites')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('shop_name', shop.name)
-    .eq('shop_address', shop.address);
-  if (favoriteError) console.error('Error checking favorite status:', favoriteError);
-  const isFavorited = favoriteData && favoriteData.length > 0;
+  const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
+  const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
 
   const coffeeIcon = `
     <svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24">
@@ -1011,8 +929,10 @@ async function fetchCities() {
     return;
   }
 
+  // Extract the first line of the address
   const addressFirstLine = shop.address ? shop.address.split('\n')[0].trim().split(',')[0].trim() : 'Unknown Location';
 
+  // Update dynamic content, replacing Website with Directions
   floatingCard.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1077,48 +997,31 @@ async function fetchCities() {
     }
   });
 
-  document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
+  document.getElementById('favorite-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (currentShop) {
-      const { data: authData } = await client.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) {
-        console.error('No user authenticated');
-        return;
-      }
-      const { data: favoriteData, error: favoriteError } = await client
-        .from('favorites')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('shop_name', currentShop.name)
-        .eq('shop_address', currentShop.address);
-      if (favoriteError) console.error('Error checking favorite status:', favoriteError);
-      const isCurrentlyFavorited = favoriteData && favoriteData.length > 0;
-
+      const shopKey = `${currentShop.name}-${currentShop.lat}-${currentShop.lng}`;
+      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
       if (isCurrentlyFavorited) {
-        const { error } = await client
-          .from('favorites')
-          .delete()
-          .eq('user_id', userId)
-          .eq('shop_name', currentShop.name)
-          .eq('shop_address', currentShop.address);
-        if (error) {
-          console.error('Error removing favorite:', error);
-        } else {
-          this.querySelector('svg').setAttribute('fill', 'none');
-          this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
-          console.log('Removed from favorites:', currentShop.name);
-        }
+        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
+        this.querySelector('svg').setAttribute('fill', 'none');
+        this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
+        console.log('Removed from favorites:', currentShop.name);
       } else {
-        await addToFavorites(currentShop);
+        addToFavorites(currentShop);
         this.querySelector('svg').setAttribute('fill', 'currentColor');
-        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
+        this.setAttribute('aria-label', `Remove ${currentShop.name} to favorites`);
         console.log('Added to favorites:', currentShop.name);
       }
-      updateFavoritesModal();
+      if (typeof updateFavoritesModal === 'function') {
+        updateFavoritesModal();
+      } else {
+        console.error('updateFavoritesModal is not defined');
+      }
     }
   });
 
+  // Add call button listener
   document.getElementById('call-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (shop && shop.phone) {
@@ -1127,16 +1030,19 @@ async function fetchCities() {
     }
   });
 
+  // Add directions button listener
   document.getElementById('directions-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (shop && shop.address) {
       console.log('Getting directions for:', shop.name);
       const encodedAddress = encodeURIComponent(shop.address);
+      // Use geo: URI for native maps app, fallback to Google Maps
       const mapsUrl = `geo:0,0?q=${encodedAddress}`;
       window.location.href = mapsUrl;
     }
   });
 
+  // Update the click handler to correctly identify the close button
   floatingCard.addEventListener('click', function(e) {
     if (
       e.target.closest('.floating-card-close-button') ||
@@ -1160,7 +1066,7 @@ async function fetchCities() {
   });
 }
 
-   async function showShopDetails(shop) {
+   function showShopDetails(shop) {
   if (!shop || !shop.name) {
     console.warn('Attempted to show shop details with invalid shop data:', shop);
     document.getElementById('shop-details-banner')?.classList.add('hidden');
@@ -1174,20 +1080,20 @@ async function fetchCities() {
     return;
   }
 
-  let averageRating = await calculateAverageRating(shop.name);
+  let averageRating = 0;
+  try {
+    averageRating = calculateAverageRating(shop.name);
+  } catch (error) {
+    console.error('Error calculating average rating:', error);
+  }
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : '0';
 
   const dotsHTML = Array.from({ length: 10 }, (_, i) => `
     <span class="shop-details-rating-dot" style="background-color: ${i < Math.floor(averageRating) ? '#4b5563' : '#d1d5db'};"></span>
   `).join('');
 
-  const { data: reviews, error } = await client
-    .from('reviews')
-    .select('*')
-    .eq('shop_name', shop.name);
-  if (error) console.error('Error fetching reviews:', error);
-
-  const totalReviews = reviews ? reviews.length : 0;
+  const reviews = JSON.parse(localStorage.getItem(`reviews-${shop.name}`)) || [];
+  const totalReviews = reviews.length;
   const breakdown = {
     Excellent: 0,
     'Very Good': 0,
@@ -1195,7 +1101,7 @@ async function fetchCities() {
     Poor: 0,
     Terrible: 0
   };
-  reviews?.forEach(review => {
+  reviews.forEach(review => {
     const rating = Number(review.rating);
     if (rating >= 8) breakdown.Excellent++;
     else if (rating >= 6) breakdown['Very Good']++;
@@ -1214,7 +1120,7 @@ async function fetchCities() {
   `).join('');
 
   let reviewsHTML = '';
-  if (!reviews || reviews.length === 0) {
+  if (reviews.length === 0) {
     reviewsHTML = '<p>No reviews yet.</p>';
   } else {
     reviewsHTML = `
@@ -1223,7 +1129,8 @@ async function fetchCities() {
           ${reviews.map(review => `
             <div class="shop-details-review-card">
               <p><strong>Rating:</strong> ${review.rating}/10</p>
-              <p>${review.review_text}</p>
+              <p>${review.text}</p>
+              <p></p> <!-- Removed amenities from here -->
             </div>
           `).join('')}
         </div>
@@ -1231,11 +1138,12 @@ async function fetchCities() {
     `;
   }
 
+  // Aggregate amenities from all reviews
   const amenities = new Set();
-  reviews?.forEach(review => {
+  reviews.forEach(review => {
     if (review.parking) amenities.add('Parking Available');
-    if (review.pet_friendly) amenities.add('Pet Friendly');
-    if (review.outside_seating) amenities.add('Outside Seating');
+    if (review.petFriendly) amenities.add('Pet Friendly');
+    if (review.outsideSeating) amenities.add('Outside Seating');
   });
   const amenitiesArray = Array.from(amenities);
   const amenitiesHTML = amenitiesArray.length > 0 ? `
@@ -1305,6 +1213,7 @@ async function fetchCities() {
   shopDetailsBanner.classList.remove('hidden');
   console.log('Shop details banner classes after show:', shopDetailsBanner.classList.toString());
 
+  // Add close button event listener
   const closeButton = shopDetailsBanner.querySelector('.shop-details-close-button');
   if (closeButton) {
     closeButton.addEventListener('click', (e) => {
@@ -1316,6 +1225,7 @@ async function fetchCities() {
     console.error('Close button not found in shop details banner');
   }
 
+  // Attach event listener to the "Leave a Review" button with enhanced logging
   const leaveReviewButton = shopDetailsBanner.querySelector('.shop-details-leave-review-button');
   if (leaveReviewButton) {
     console.log('Leave a Review button found, attaching click event listener');
@@ -1341,6 +1251,7 @@ async function fetchCities() {
     console.error('Leave a review button not found after rendering shop details');
   }
 
+  // Add call button listener
   const callButton = shopDetailsBanner.querySelector('#call-button');
   if (callButton) {
     callButton.addEventListener('click', (e) => {
@@ -1352,6 +1263,7 @@ async function fetchCities() {
     });
   }
 
+  // Add directions button listener
   const directionsButton = shopDetailsBanner.querySelector('#directions-button');
   if (directionsButton) {
     directionsButton.addEventListener('click', (e) => {
@@ -1365,6 +1277,7 @@ async function fetchCities() {
     });
   }
 
+  // Add website button listener
   const websiteButton = shopDetailsBanner.querySelector('#website-button');
   if (websiteButton) {
     websiteButton.addEventListener('click', (e) => {
@@ -1376,6 +1289,7 @@ async function fetchCities() {
     });
   }
 
+  // Ensure reviews track is scrollable
   const reviewsTrack = shopDetailsBanner.querySelector('.shop-details-reviews-track');
   if (reviewsTrack) {
     let isDragging = false;
@@ -1393,7 +1307,7 @@ async function fetchCities() {
       if (!isDragging) return;
       e.preventDefault();
       const x = e.pageX - reviewsTrack.offsetLeft;
-      const walk = (x - startX) * 1.5;
+      const walk = (x - startX) * 1.5; // Adjust scroll speed
       reviewsTrack.scrollLeft = scrollLeft - walk;
     });
 
