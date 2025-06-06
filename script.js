@@ -403,6 +403,23 @@ window.initGoogleMaps = function() {
       searchInput.placeholder = 'Search for coffee shops...';
       console.log('Search bar enabled');
 
+      // Initialize favorites
+      let favorites = [];
+      async function loadFavorites() {
+        try {
+          const { data, error } = await client
+            .from('favorites')
+            .select('name, address');
+          if (error) throw error;
+          favorites = data || [];
+          console.log('Favorites loaded:', favorites);
+        } catch (error) {
+          console.error('Error loading favorites:', error);
+          favorites = [];
+        }
+      }
+      loadFavorites();
+
       // Autocomplete event listener
       searchInput.addEventListener('input', debounce(function() {
         const query = searchInput.value.trim();
@@ -414,7 +431,7 @@ window.initGoogleMaps = function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: {}, // Adjust country as needed
+            componentRestrictions: { }, // South Africa, adjust as needed
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
@@ -438,34 +455,6 @@ window.initGoogleMaps = function() {
                         lng: place.geometry.location.lng(),
                         city: extractCityFromAddressComponents(place.address_components),
                       };
-
-                      // Insert shop into shops table if it doesn't exist
-                      const { data: existingShop, error: shopError } = await client
-                        .from('shops')
-                        .select('id')
-                        .eq('name', shop.name)
-                        .eq('address', shop.address)
-                        .limit(1)
-                        .single();
-
-                      if (shopError && shopError.code !== 'PGRST116') { // PGRST116: No rows found
-                        console.error('Error checking shop existence:', shopError);
-                      }
-
-                      if (!existingShop) {
-                        const { error: insertError } = await client
-                          .from('shops')
-                          .insert({
-                            name: shop.name,
-                            address: shop.address,
-                            city: shop.city || 'Unknown',
-                          });
-                        if (insertError) {
-                          console.error('Error inserting shop:', insertError);
-                        } else {
-                          console.log(`Inserted shop: ${shop.name}`);
-                        }
-                      }
 
                       currentShop = shop;
                       showFloatingCard(shop);
@@ -516,19 +505,18 @@ window.initGoogleMaps = function() {
         }
       });
     } else {
-      throw new Error('Google Maps Places API failed to load. Check your API key and ensure the Places library is included.');
+      throw new Error('Google Maps Places API failed to load.');
     }
   } catch (error) {
     console.error('Error initializing Google Maps services:', error);
     searchInput.disabled = true;
     searchInput.placeholder = 'Search unavailable (API failed)';
-    console.log('Search bar disabled due to API failure');
   }
 };
 
 setTimeout(() => {
   if (searchInput.disabled) {
-    console.warn('Google Maps API failed to load within 10 seconds. Enabling search bar as fallback (search functionality may not work).');
+    console.warn('Google Maps API failed to load within 10 seconds.');
     searchInput.disabled = false;
     searchInput.placeholder = 'Search unavailable (API timeout)';
   }
