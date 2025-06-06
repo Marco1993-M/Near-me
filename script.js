@@ -372,167 +372,132 @@ document.addEventListener('DOMContentLoaded', function() {
    async function fetchNearbyCities() {
   const citiesModal = document.getElementById('cities-modal');
   const cityButtonsContainer = document.getElementById('city-buttons');
-  if (!citiesModal) console.error('Cities modal not found');
-  if (!cityButtonsContainer) console.error('City buttons container not found');
-  if (!citiesModal || !cityButtonsContainer) return;
+  if (!citiesModal || !cityButtonsContainer) return console.error('Cities modal or buttons container not found');
 
-  // Fetch all cities from the shops table in Supabase
-  if (!supabase) {
-    console.error('Supabase not initialized. Aborting fetchNearbyCities.');
-    return;
-  }
-  const { data: shops, error } = await supabase
-    .from('shops')
-    .select('city')
-    .order('city', { ascending: true });
+  if (!supabase) return console.error('Supabase not initialized.');
 
-  if (error) {
-    console.error('Supabase error fetching cities:', error);
-    return;
-  }
-  console.log('Fetched shops from Supabase:', shops);
+  // Get user ID
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData?.user?.id;
 
-  // Extract unique cities and sort them
-  const allCities = new Set(shops.map(shop => shop.city.trim().toLowerCase()));
-  const sortedCities = Array.from(allCities).sort();
-  console.log('All cities from Supabase:', sortedCities);
+  // Fetch cities from Supabase
+  const { data: shops, error } = await supabase.from('shops').select('city');
+  if (error) return console.error('Error fetching cities:', error);
+  const allCities = [...new Set(shops.map(shop => shop.city.trim().toLowerCase()))].sort();
 
-  // Determine user's location to select hardcoded cities
-  let lat, lng;
-  if (userLocation && Array.isArray(userLocation) && userLocation.length === 2) {
-    [lat, lng] = userLocation;
-  } else {
-    const center = map.getCenter();
-    lat = typeof center.lat === 'function' ? center.lat() : center.lat;
-    lng = typeof center.lng === 'function' ? center.lng() : center.lng;
-  }
+  // Get location
+  let [lat, lng] = userLocation?.length === 2 ? userLocation : [map.getCenter().lat, map.getCenter().lng];
 
-  // Hardcoded city coordinates (South Africa focus)
   const cityCoords = {
     'cape town': [-33.9249, 18.4241],
     'johannesburg': [-26.2041, 28.0473],
-    'durban': [-29.8587, 31.0218]
+    'durban': [-29.8587, 31.0218],
   };
 
-  // Calculate distances and sort cities by proximity
-  const distances = Object.keys(cityCoords).map(city => {
-    const [cityLat, cityLng] = cityCoords[city];
-    const distance = Math.sqrt(Math.pow(cityLat - lat, 2) + Math.pow(cityLng - lng, 2));
-    return { city, distance };
-  }).sort((a, b) => a.distance - b.distance);
+  const distances = Object.entries(cityCoords).map(([city, [cLat, cLng]]) => ({
+    city,
+    distance: Math.hypot(cLat - lat, cLng - lng)
+  })).sort((a, b) => a.distance - b.distance);
 
-  // Select the 3 closest cities (or default to all if fewer than 3)
-  const hardcodedCities = distances.slice(0, 3).map(d => d.city);
+  const nearbyCities = distances.slice(0, 3).map(d => d.city);
 
-  // Render the modal with search bar and hardcoded city filters
-  cityButtonsContainer.innerHTML = `
-    <div class="city-search-wrapper">
-      <input type="text" id="city-search" placeholder="Search for a city..." class="city-search-input">
-      <div class="cities-modal-buttons" id="city-suggestions">
-        ${sortedCities.map(city => `
-          <button class="cities-modal-button" data-city="${city}">
+  // Fetch behavior-based cities
+  let recentCities = [], popularCities = [];
+  if (userId) {
+    const { data: recent } = await supabase
+      .from('city_activity')
+      .select('city')
+      .eq('user_id', userId)
+      .order('last_visited_at', { ascending: false })
+      .limit(5);
+    recentCities = recent?.map(c => c.city) || [];
+  }
+
+  const { data: popular } = await supabase
+    .from('city_activity')
+    .select('city, visit_count')
+    .order('visit_count', { ascending: false })
+    .limit(5);
+  popularCities = popular?.map(c => c.city) || [];
+
+  // Render helper
+  const renderButtons = (title, cities) => cities.length ? `
+    <div class="city-section mb-3">
+      <h4 class="section-title text-sm font-semibold mb-1">${title}</h4>
+      <div class="cities-modal-buttons flex flex-wrap gap-2">
+        ${cities.map(city => `
+          <button class="cities-modal-button px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition" data-city="${city}">
             ${city.charAt(0).toUpperCase() + city.slice(1)}
-          </button>
-        `).join('')}
+          </button>`).join('')}
       </div>
-    </div>
-    <div class="hardcoded-cities flex justify-between mb-4">
-      ${hardcodedCities.map(city => `
-        <button class="hardcoded-city-button cities-modal-button" data-city="${city}">
-          ${city.charAt(0).toUpperCase() + city.slice(1)}
-        </button>
-      `).join('')}
-    </div>
+    </div>` : '';
+
+  // Modal HTML
+  cityButtonsContainer.innerHTML = `
+    <input type="text" id="city-search" placeholder="Search for a city..." class="city-search-input w-full mb-4 px-2 py-1 border rounded">
+    ${renderButtons('Recently Visited', recentCities)}
+    ${renderButtons('Popular Cities', popularCities)}
+    ${renderButtons('Nearby Cities', nearbyCities)}
+    ${renderButtons('All Cities', allCities)}
   `;
+
   citiesModal.classList.remove('hidden');
-  console.log('Modal and search bar rendered. Checking DOM:', {
-    cityButtonsContainer: cityButtonsContainer.innerHTML,
-    searchInput: document.getElementById('city-search')
-  });
 
-  // Close button functionality
-  console.log('Cities modal in DOM:', document.getElementById('cities-modal'));
-  const closeButton = citiesModal.querySelector('.close-button');
-  console.log('Close button found:', closeButton);
-  if (closeButton) {
-    closeButton.addEventListener('click', () => {
-      console.log('Close button clicked');
-      citiesModal.classList.add('hidden');
-    });
-  } else {
-    console.error('Close button not found in citiesModal');
+  // City click handler
+  async function handleCityClick(city) {
+    const lowerCity = city.toLowerCase();
+    const [cityLat, cityLng] = cityCoords[lowerCity] || [lat, lng];
+    cityCoordinates[lowerCity] = [cityLat, cityLng];
+    map.setView([cityLat, cityLng], 13);
+    map.invalidateSize();
+    fetchShopsByCity(lowerCity, selectedRatingFilter);
+    citiesModal.classList.add('hidden');
+
+    if (userId) {
+      const { error } = await supabase
+        .from('city_activity')
+        .upsert({
+          user_id: userId,
+          city: lowerCity,
+          visit_count: 1,
+          last_visited_at: new Date().toISOString()
+        }, {
+          onConflict: ['user_id', 'city'],
+          update: {
+            visit_count: supabase.raw('visit_count + 1'),
+            last_visited_at: new Date().toISOString()
+          }
+        });
+      if (error) console.error('Tracking error:', error);
+    }
   }
 
-  // Combined search and event listener attachment
-  const searchInput = cityButtonsContainer.querySelector('#city-search');
-  const suggestionsDiv = cityButtonsContainer.querySelector('#city-suggestions');
-  if (!searchInput || !suggestionsDiv) {
-    console.error('Search input or suggestions div not found in DOM after render');
-    return;
-  }
-  console.log('Search input and suggestions div found after render:', { searchInput, suggestionsDiv });
+  // Attach listeners
+  cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
+    btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
+  );
 
+  // Search
+  const searchInput = document.getElementById('city-search');
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase().trim();
-    console.log('Search query:', query);
-
-    // Filter cities: prioritize startsWith, then includes
-    const filteredCities = sortedCities
-      .filter(city => city && city.toLowerCase().startsWith(query))
-      .concat(sortedCities.filter(city => city && !city.toLowerCase().startsWith(query) && city.toLowerCase().includes(query)));
-    console.log('Filtered cities before rendering:', filteredCities);
-
-    // Update suggestions
-    suggestionsDiv.innerHTML = filteredCities.length > 0
-      ? filteredCities.map(city => `
-          <button class="cities-modal-button" data-city="${city}">
-            ${city.charAt(0).toUpperCase() + city.slice(1)}
-          </button>
-        `).join('')
-      : '<p class="text-gray-500 p-2">No cities found.</p>';
-    suggestionsDiv.classList.toggle('active', filteredCities.length > 0);
-
-    // Attach click listeners to new buttons
-    const cityButtons = suggestionsDiv.querySelectorAll('.cities-modal-button');
-    cityButtons.forEach(button => {
-      button.removeEventListener('click', button._clickHandler);
-      const clickHandler = (e) => {
-        e.stopPropagation();
-        const city = button.dataset.city.toLowerCase();
-        console.log('Selected city:', city);
-
-        const [cityLat, cityLng] = cityCoords[city] || [lat, lng];
-        cityCoordinates[city] = [cityLat, cityLng];
-        map.setView([cityLat, cityLng], 13);
-        map.invalidateSize();
-
-        fetchShopsByCity(city, selectedRatingFilter);
-        citiesModal.classList.add('hidden');
-      };
-      button._clickHandler = clickHandler;
-      button.addEventListener('click', clickHandler);
-    });
+    const matches = allCities.filter(c => c.includes(query));
+    const suggestions = renderButtons('Search Results', matches);
+    cityButtonsContainer.innerHTML = `
+      <input type="text" id="city-search" value="${query}" class="city-search-input w-full mb-4 px-2 py-1 border rounded">
+      ${suggestions || '<p class="text-gray-500 px-2">No matches found.</p>'}
+    `;
+    // Re-bind
+    cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
+      btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
+    );
   });
 
-  // Attach listeners to hardcoded city buttons and initial suggestions
-  const allCityButtons = cityButtonsContainer.querySelectorAll('.cities-modal-button');
-  allCityButtons.forEach(button => {
-    const clickHandler = (e) => {
-      e.stopPropagation();
-      const city = button.dataset.city.toLowerCase();
-      console.log('Selected city:', city);
-
-      const [cityLat, cityLng] = cityCoords[city] || [lat, lng];
-      cityCoordinates[city] = [cityLat, cityLng];
-      map.setView([cityLat, cityLng], 13);
-      map.invalidateSize();
-
-      fetchShopsByCity(city, selectedRatingFilter);
-      citiesModal.classList.add('hidden');
-    };
-    button._clickHandler = clickHandler;
-    button.addEventListener('click', clickHandler);
-  });
+  // Close modal
+  const closeButton = citiesModal.querySelector('.close-button');
+  if (closeButton) {
+    closeButton.addEventListener('click', () => citiesModal.classList.add('hidden'));
+  }
 }
 
     function fetchPlaces(query) {
