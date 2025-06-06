@@ -398,6 +398,43 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('AutocompleteService initialized');
         console.log('PlacesService initialized');
         console.log('Geocoder initialized');
+        searchInput.addEventListener('input', debounce(function() {
+  const query = searchInput.value.trim();
+  if (!query || !autocompleteService) {
+    console.log('No query or AutocompleteService not initialized');
+    searchDropdown.innerHTML = '';
+    return;
+  }
+
+  console.log('Search query entered:', query); // Debug log
+  autocompleteService.getPlacePredictions({
+    input: query,
+    types: ['establishment'],
+    componentRestrictions: { country: 'za' } // Adjust country code as needed
+  }, (predictions, status) => {
+    console.log('Autocomplete status:', status); // Debug log
+    if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+      searchDropdown.innerHTML = predictions.map(prediction => `
+        <div class="search-dropdown-item p-2 hover:bg-gray-100 cursor-pointer" data-place-id="${prediction.place_id}">
+          ${prediction.description}
+        </div>
+      `).join('');
+      console.log('Autocomplete predictions:', predictions); // Debug log
+
+      // Add click handlers for dropdown items
+      searchDropdown.querySelectorAll('.search-dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const placeId = item.getAttribute('data-place-id');
+          fetchPlaceDetails(placeId);
+          searchDropdown.innerHTML = ''; // Clear dropdown after selection
+        });
+      });
+    } else {
+      console.error('Autocomplete failed:', status);
+      searchDropdown.innerHTML = '<p class="p-2">No results found.</p>';
+    }
+  });
+}, 300));
         searchInput.disabled = false;
         searchInput.placeholder = 'Search for coffee shops...';
         console.log('Search bar enabled');
@@ -574,6 +611,48 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 
+function fetchPlaceDetails(placeId) {
+  if (!placesService) {
+    console.error('PlacesService not initialized');
+    return;
+  }
+
+  placesService.getDetails({ placeId }, (place, status) => {
+    console.log('Place details status:', status); // Debug log
+    if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+      const shop = {
+        placeId: place.place_id,
+        name: place.name || 'Unknown Shop',
+        address: place.formatted_address || 'No address available',
+        rating: place.rating ? `${place.rating} / 5` : 'N/A',
+        phone: place.formatted_phone_number || 'No phone number available',
+        website: place.website || 'No website available',
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+        city: extractCityFromAddressComponents(place.address_components)
+      };
+      console.log('Fetched place details:', shop); // Debug log
+
+      // Clear existing markers
+      currentMarkers.forEach(marker => map.removeLayer(marker));
+      currentMarkers = [];
+
+      // Center map on the shop
+      map.setView([shop.lat, shop.lng], 15);
+      const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
+        .addTo(map)
+        .bindPopup(shop.name)
+        .openPopup();
+      currentMarkers.push(marker);
+
+      // Show floating card
+      currentShop = shop;
+      showFloatingCard(shop);
+    } else {
+      console.error('Failed to fetch place details:', status);
+    }
+  });
+}
 
     // Renamed to avoid naming conflict
 async function fetchCities() {
