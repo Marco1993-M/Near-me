@@ -1017,10 +1017,8 @@ async function fetchCities() {
     return;
   }
 
-  // Extract the first line of the address
   const addressFirstLine = shop.address ? shop.address.split('\n')[0].trim().split(',')[0].trim() : 'Unknown Location';
 
-  // Update dynamic content, replacing Website with Directions
   floatingCard.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1049,20 +1047,26 @@ async function fetchCities() {
       ` : ''}
       <button id="share-button" class="floating-card-action-button" aria-label="Share ${shop.name}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.441-6l6.632-3.316m0 0a3 3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
         </svg>
         <span>Share</span>
       </button>
       <button id="favorite-button" class="floating-card-action-button" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          <path stroke-linecap="round" stroke="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.318-1.318a4.5 0 00-6.364 0z" />
         </svg>
         <span>Favorite</span>
       </button>
     </div>
   `;
+  // Ensure visibility
+  floatingCard.style.display = 'block';
+  floatingCard.style.visibility = 'visible';
+  floatingCard.style.opacity = '1';
+  floatingCard.style.zIndex = '1007';
   floatingCard.classList.remove('hidden');
-  console.log('Floating card classes after show:', floatingCard.classList.toString());
+  console.log('Floating card HTML:', floatingCard.outerHTML);
+  console.log('Floating card position:', floatingCard.getBoundingClientRect());
 
   // Add close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
@@ -1072,11 +1076,31 @@ async function fetchCities() {
       floatingCard.classList.add('hidden');
       console.log('Floating card closed via close button');
     });
-  } else {
+  } {
     console.error('Close button not found in floating card');
   }
 
-  // Existing event listeners
+  // Add call button listener
+  document.getElementById('call-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (shop && shop.phone) {
+      console.log('Initiating call for:', shop.name);
+      window.location.href = `tel:${shop.phone};`;
+    }
+  });
+
+  // Add directions button listener
+  document.getElementById('directions-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (shop && shop.address) {
+      console.log('Getting directions for:', shop.name);
+      const encodedAddress = encodeURIComponent(shop.address);
+      const mapsUrl = `geo:0,0?q=${encodedAddress};`;
+      window.location.href = mapsUrl;
+    }
+  });
+
+  // Add share button listener
   document.getElementById('share-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (currentShop) {
@@ -1085,20 +1109,21 @@ async function fetchCities() {
     }
   });
 
-  document.getElementById('favorite-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
+  // Add favorite button listener
+ document.getElementById('favorite-button')?.addEventListener('click', function(e) {
+   e.stopPropagation();
     if (currentShop) {
-      const shopKey = `${currentShop.name}-${currentShop.lat}-${currentShop.lng}`;
-      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
+      const shopKey = `${currentShop.name}-${currentShop.lat}-${shop.lng}`;
+      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fave.address === currentShop.address);
       if (isCurrentlyFavorited) {
-        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
+        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fave.address === currentShop.address));
         this.querySelector('svg').setAttribute('fill', 'none');
         this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
         console.log('Removed from favorites:', currentShop.name);
       } else {
         addToFavorites(currentShop);
         this.querySelector('svg').setAttribute('fill', 'currentColor');
-        this.setAttribute('aria-label', `Remove ${currentShop.name} to favorites`);
+        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
         console.log('Added to favorites:', currentShop.name);
       }
       if (typeof updateFavoritesModal === 'function') {
@@ -1109,29 +1134,9 @@ async function fetchCities() {
     }
   });
 
-  // Add call button listener
-  document.getElementById('call-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (shop && shop.phone) {
-      console.log('Initiating call for:', shop.name);
-      window.location.href = `tel:${shop.phone}`;
-    }
-  });
-
-  // Add directions button listener
-  document.getElementById('directions-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (shop && shop.address) {
-      console.log('Getting directions for:', shop.name);
-      const encodedAddress = encodeURIComponent(shop.address);
-      // Use geo: URI for native maps app, fallback to Google Maps
-      const mapsUrl = `geo:0,0?q=${encodedAddress}`;
-      window.location.href = mapsUrl;
-    }
-  });
-
-  // Update the click handler to correctly identify the close button
+  // Add click handler for card to show details, but don't hide immediately
   floatingCard.addEventListener('click', function(e) {
+    e.stopPropagation();
     if (
       e.target.closest('.floating-card-close-button') ||
       e.target.closest('#call-button') ||
@@ -1146,8 +1151,9 @@ async function fetchCities() {
       console.log('Floating card clicked, showing shop details for:', shop.name);
       currentShop = shop;
       showShopDetails(shop);
-      floatingCard.classList.add('hidden');
-      console.log('Floating card hidden after opening shop details');
+      // Don't hide card immediately
+      // floatingCard.classList.add('hidden');
+      console.log('Shop details requested, card remains visible');
     } else {
       console.error('No shop data available for shop details. Current shop:', currentShop);
     }
