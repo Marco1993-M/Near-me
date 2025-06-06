@@ -5,24 +5,69 @@ const client = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
-// Store favorited shops (can use localStorage for persistence)
-let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-
-function saveFavorites() {
-  localStorage.setItem('favorites', JSON.stringify(favorites));
+async function fetchFavorites() {
+  const { data: authData } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+  if (!userId) {
+    console.error('No user authenticated');
+    return [];
+  }
+  const { data, error } = await client
+    .from('favorites')
+    .select('*')
+    .eq('user_id', userId);
+  if (error) {
+    console.error('Error fetching favorites:', error);
+    return [];
+  }
+  return data || [];
 }
 
-function addToFavorites(shop) {
-  if (!favorites.some(fav => fav.name === shop.name && fav.address === shop.address)) {
-    favorites.push(shop);
-    saveFavorites();
-    console.log(`Added to favorites: ${shop.name}`);
-  } else {
+
+
+async function addToFavorites(shop) {
+  const { data: authData } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+  if (!userId) {
+    console.error('No user authenticated');
+    return;
+  }
+
+  const { data: existingFavorites, error: fetchError } = await client
+    .from('favorites')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('shop_name', shop.name)
+    .eq('shop_address', shop.address);
+
+  if (fetchError) {
+    console.error('Error checking existing favorites:', fetchError);
+    return;
+  }
+
+  if (existingFavorites.length > 0) {
     console.log(`${shop.name} is already in favorites`);
+    return;
+  }
+
+  const { error } = await client
+    .from('favorites')
+    .insert({
+      user_id: userId,
+      shop_name: shop.name,
+      shop_address: shop.address,
+      rating: shop.rating || 'N/A'
+    });
+
+  if (error) {
+    console.error('Error adding to favorites:', error);
+  } else {
+    console.log(`Added to favorites: ${shop.name}`);
+    updateFavoritesModal(); // Update the UI after adding
   }
 }
 
-function updateFavoritesModal() {
+async function updateFavoritesModal() {
   console.log('Updating favorites modal');
   const favoritesList = document.getElementById('favorites-list');
   if (!favoritesList) {
@@ -30,6 +75,7 @@ function updateFavoritesModal() {
     return;
   }
 
+  const favorites = await fetchFavorites();
   if (favorites.length === 0) {
     favoritesList.innerHTML = '<p class="favorite-modal-loading">No favorite shops yet.</p>';
     console.log('No favorites to display');
@@ -43,15 +89,15 @@ function updateFavoritesModal() {
     const li = document.createElement('li');
     li.className = 'favorite-modal-list-item';
     li.innerHTML = `
-      <span class="favorite-modal-shop-info">${shop.name}</span>
+      <span class="favorite-modal-shop-info">${shop.shop_name}</span>
       <div class="favorite-modal-actions">
-        <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
+        <button class="favorite-modal-button view-shop" aria-label="View ${shop.shop_name}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         </button>
-        <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
+        <button class="favorite-modal-button remove" aria-label="Remove ${shop.shop_name} from favorites">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a2 2 0 00-2 2h8a2 2 0 00-2-2m-4 0H6m4 4v12m4-12v12" />
           </svg>
@@ -63,14 +109,19 @@ function updateFavoritesModal() {
 
   const viewButtons = document.querySelectorAll('.favorite-modal-button.view-shop');
   viewButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
+    button.addEventListener('click', async (e) => {
       e.stopPropagation();
       const shopName = button.parentElement.parentElement.querySelector('.favorite-modal-shop-info').textContent;
-      const shop = favorites.find(s => s.name === shopName);
+      const favorites = await fetchFavorites();
+      const shop = favorites.find(s => s.shop_name === shopName);
       if (shop) {
         console.log('Viewing shop from favorites:', shopName);
-        currentShop = shop;
-        showShopDetails(shop);
+        currentShop = {
+          name: shop.shop_name,
+          address: shop.shop_address,
+          rating: shop.rating
+        };
+        showShopDetails(currentShop);
         document.getElementById('favorite-modal').classList.add('hidden');
       } else {
         console.error('Shop not found in favorites:', shopName);
@@ -80,16 +131,30 @@ function updateFavoritesModal() {
 
   const removeButtons = document.querySelectorAll('.favorite-modal-button.remove');
   removeButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
+    button.addEventListener('click', async (e) => {
       e.stopPropagation();
       const shopName = button.parentElement.parentElement.querySelector('.favorite-modal-shop-info').textContent;
-      favorites = favorites.filter(fav => fav.name !== shopName);
-      console.log('Removed from favorites:', shopName);
-      updateFavoritesModal();
-      const floatingCard = document.getElementById('floating-card');
-      if (floatingCard && currentShop && currentShop.name === shopName) {
-        floatingCard.querySelector('#favorite-button svg').setAttribute('fill', 'none');
-        floatingCard.querySelector('#favorite-button').setAttribute('aria-label', `Add ${shopName} to favorites`);
+      const { data: authData } = await client.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        console.error('No user authenticated');
+        return;
+      }
+      const { error } = await client
+        .from('favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('shop_name', shopName);
+      if (error) {
+        console.error('Error removing favorite:', error);
+      } else {
+        console.log('Removed from favorites:', shopName);
+        updateFavoritesModal();
+        const floatingCard = document.getElementById('floating-card');
+        if (floatingCard && currentShop && currentShop.name === shopName) {
+          floatingCard.querySelector('#favorite-button svg').setAttribute('fill', 'none');
+          floatingCard.querySelector('#favorite-button').setAttribute('aria-label', `Add ${shopName} to favorites`);
+        }
       }
     });
   });
@@ -372,8 +437,10 @@ document.addEventListener('DOMContentLoaded', function() {
    async function fetchNearbyCities() {
   const citiesModal = document.getElementById('cities-modal');
   const cityButtonsContainer = document.getElementById('city-buttons');
-  if (!citiesModal || !cityButtonsContainer) return console.error('Cities modal or buttons container not found');
-
+  const searchInput = document.getElementById('city-search');
+  if (!citiesModal || !cityButtonsContainer || !searchInput) {
+    return console.error('Cities modal, buttons container, or search input not found');
+  }
   if (!supabase) return console.error('Supabase not initialized.');
 
   // Get user ID
@@ -386,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const allCities = [...new Set(shops.map(shop => shop.city.trim().toLowerCase()))].sort();
 
   // Get location
-  let [lat, lng] = userLocation?.length === 2 ? userLocation : [map.getCenter().lat, map.getCenter().lng];
+  let [lat, lng] = userLocation?.length === 2 ? userLocation : map?.getCenter ? [map.getCenter().lat, map.getCenter().lng] : [0, 0];
 
   const cityCoords = {
     'cape town': [-33.9249, 18.4241],
@@ -394,10 +461,12 @@ document.addEventListener('DOMContentLoaded', function() {
     'durban': [-29.8587, 31.0218],
   };
 
-  const distances = Object.entries(cityCoords).map(([city, [cLat, cLng]]) => ({
-    city,
-    distance: Math.hypot(cLat - lat, cLng - lng)
-  })).sort((a, b) => a.distance - b.distance);
+  const distances = Object.entries(cityCoords)
+    .map(([city, [cLat, cLng]]) => ({
+      city,
+      distance: Math.hypot(cLat - lat, cLng - lng)
+    }))
+    .sort((a, b) => a.distance - b.distance);
 
   const nearbyCities = distances.slice(0, 3).map(d => d.city);
 
@@ -410,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .eq('user_id', userId)
       .order('last_visited_at', { ascending: false })
       .limit(5);
-    recentCities = recent?.map(c => c.city) || [];
+    recentCities = recent?.map(c => c.city.toLowerCase()) || [];
   }
 
   const { data: popular } = await supabase
@@ -418,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .select('city, visit_count')
     .order('visit_count', { ascending: false })
     .limit(5);
-  popularCities = popular?.map(c => c.city) || [];
+  popularCities = popular?.map(c => c.city.toLowerCase()) || [];
 
   // Render helper
   const renderButtons = (title, cities) => cities.length ? `
@@ -432,65 +501,70 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>` : '';
 
-  // Modal HTML
-  cityButtonsContainer.innerHTML = `
-    <input type="text" id="city-search" placeholder="Search for a city..." class="city-search-input w-full mb-4 px-2 py-1 border rounded">
-    ${renderButtons('Recently Visited', recentCities)}
-    ${renderButtons('Popular Cities', popularCities)}
-    ${renderButtons('Nearby Cities', nearbyCities)}
-    ${renderButtons('All Cities', allCities)}
-  `;
-
-  citiesModal.classList.remove('hidden');
+  // Render initial city buttons
+  const renderCitySections = (searchQuery = '') => {
+    const matches = searchQuery ? allCities.filter(c => c.includes(searchQuery.toLowerCase().trim())) : allCities;
+    cityButtonsContainer.innerHTML = searchQuery
+      ? renderButtons('Search Results', matches)
+      : `
+        ${renderButtons('Recently Visited', recentCities)}
+        ${renderButtons('Popular Cities', popularCities)}
+        ${renderButtons('Nearby Cities', nearbyCities)}
+        ${renderButtons('All Cities', allCities)}
+      `;
+    // Bind city button listeners
+    cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
+      btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
+    );
+  };
 
   // City click handler
   async function handleCityClick(city) {
     const lowerCity = city.toLowerCase();
     const [cityLat, cityLng] = cityCoords[lowerCity] || [lat, lng];
     cityCoordinates[lowerCity] = [cityLat, cityLng];
-    map.setView([cityLat, cityLng], 13);
-    map.invalidateSize();
+    if (map) {
+      map.setView([cityLat, cityLng], 13);
+      map.invalidateSize();
+    }
     fetchShopsByCity(lowerCity, selectedRatingFilter);
     citiesModal.classList.add('hidden');
 
     if (userId) {
       const { error } = await supabase
         .from('city_activity')
-        .upsert({
-          user_id: userId,
-          city: lowerCity,
-          visit_count: 1,
-          last_visited_at: new Date().toISOString()
-        }, {
-          onConflict: ['user_id', 'city'],
-          update: {
-            visit_count: supabase.raw('visit_count + 1'),
+        .upsert(
+          {
+            user_id: userId,
+            city: lowerCity,
+            visit_count: 1,
             last_visited_at: new Date().toISOString()
+          },
+          {
+            onConflict: ['user_id', 'city'],
+            update: { visit_count: { increment: 1 }, last_visited_at: new Date().toISOString() }
           }
-        });
+        );
       if (error) console.error('Tracking error:', error);
     }
   }
 
-  // Attach listeners
-  cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
-    btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
-  );
+  // Initialize
+  renderCitySections();
+  citiesModal.classList.remove('hidden');
 
-  // Search
-  const searchInput = document.getElementById('city-search');
-  searchInput.addEventListener('input', () => {
-    const query = searchInput.value.toLowerCase().trim();
-    const matches = allCities.filter(c => c.includes(query));
-    const suggestions = renderButtons('Search Results', matches);
-    cityButtonsContainer.innerHTML = `
-      <input type="text" id="city-search" value="${query}" class="city-search-input w-full mb-4 px-2 py-1 border rounded">
-      ${suggestions || '<p class="text-gray-500 px-2">No matches found.</p>'}
-    `;
-    // Re-bind
-    cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
-      btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
-    );
+  // Search handler
+  searchInput.addEventListener('input', () => renderCitySections(searchInput.value));
+
+  // Rating filter handler
+  let selectedRatingFilter = '';
+  const ratingFilters = document.querySelectorAll('input[name="rating-filter"]');
+  ratingFilters.forEach(radio => {
+    radio.addEventListener('change', () => {
+      selectedRatingFilter = radio.value;
+      const selectedCity = cityButtonsContainer.querySelector('.cities-modal-button.active')?.dataset.city;
+      if (selectedCity) fetchShopsByCity(selectedCity, selectedRatingFilter);
+    });
   });
 
   // Close modal
@@ -500,166 +574,202 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 }
 
-    function fetchPlaces(query) {
-      if (!autocompleteService) {
-        console.error('AutocompleteService not initialized. Ensure Google Maps API loaded correctly.');
-        searchDropdown.innerHTML = '';
-        searchDropdown.classList.add('hidden');
-        return;
-      }
-      if (!query || query.length < 3) {
-        searchDropdown.innerHTML = '';
-        searchDropdown.classList.add('hidden');
-        console.log('Skipping fetch: Query too short or empty');
-        return;
-      }
 
-      const location = userLocation || map.getCenter();
-      const latLng = new google.maps.LatLng(location.lat, location.lng);
+    // Renamed to avoid naming conflict
+async function fetchCities() {
+  const citiesModal = document.getElementById('cities-modal');
+  const cityButtonsContainer = document.getElementById('city-buttons');
+  const searchInput = document.getElementById('city-search');
+  if (!citiesModal || !cityButtonsContainer || !searchInput) {
+    showError('Cities modal, buttons container, or search input not found');
+    return;
+  }
+  if (!supabase) {
+    showError('Supabase not initialized.');
+    return;
+  }
 
-      const request = {
-        input: query,
-        types: ['establishment'],
-        locationBias: latLng
-      };
+  // Initialize Leaflet map if not already set
+  if (!map) {
+    map = L.map('map').setView([-33.9249, 18.4241], 13); // Default: Cape Town
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+  }
 
-      console.log('Sending Autocomplete request:', request);
-      autocompleteService.getPlacePredictions(request, (predictions, status) => {
-        console.log('Places API response status:', status);
-        if (status === google.maps.places.PlacesServiceStatus.OK && predictions && predictions.length > 0) {
-          searchDropdown.innerHTML = predictions.map(prediction => `
-            <div class="search-option p-2 hover:bg-gray-100 cursor-pointer" data-place-id="${prediction.place_id}">
-              ${prediction.description}
-            </div>
-          `).join('');
-          searchDropdown.classList.remove('hidden');
-          console.log('Dropdown populated with predictions:', predictions);
-        } else {
-          searchDropdown.innerHTML = '<div class="p-2">No results found (Status: ' + status + ')</div>';
-          searchDropdown.classList.remove('hidden');
-          console.log('No predictions received, status:', status);
-        }
-      });
+  // Get user ID
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) {
+    console.error('Auth error:', authError);
+    showError('Failed to authenticate user. Please try again.');
+    return;
+  }
+  const userId = authData?.user?.id;
+
+  // Fetch cities from Supabase
+  const { data: shops, error: shopsError } = await supabase.from('shops').select('city');
+  if (shopsError) {
+    console.error('Error fetching cities:', shopsError);
+    showError('Failed to load cities. Please try again.');
+    return;
+  }
+  const allCities = [...new Set(shops.map(shop => shop.city.trim().toLowerCase()))].sort();
+
+  // Get location
+  let [lat, lng] = userLocation?.length === 2 ? userLocation : [map.getCenter().lat(), map.getCenter().lng()];
+
+  const cityCoords = {
+    'cape town': [-33.9249, 18.4241],
+    'johannesburg': [-26.2041, 28.0473],
+    'durban': [-29.8587, 31.0218],
+  };
+
+  const distances = Object.entries(cityCoords)
+    .map(([city, [cLat, cLng]]) => ({
+      city,
+      distance: Math.hypot(cLat - lat, cLng - lng)
+    }))
+    .sort((a, b) => a.distance - b.distance);
+
+  const nearbyCities = distances.slice(0, 3).map(d => d.city);
+
+  // Fetch behavior-based cities
+  let recentCities = [], popularCities = [];
+  if (userId) {
+    const { data: recent, error: recentError } = await supabase
+      .from('city_activity')
+      .select('city')
+      .eq('user_id', userId)
+      .order('last_visited_at', { ascending: false })
+      .limit(5);
+    if (recentError) {
+      console.error('Error fetching recent cities:', recentError);
+      showError('Failed to load recent cities.');
+    } else {
+      recentCities = recent?.map(c => c.city.toLowerCase()) || [];
     }
+  }
 
-    const debouncedFetchPlaces = debounce(fetchPlaces, 300);
-    searchInput?.addEventListener('input', function() {
-      console.log('Search input changed:', this.value);
-      if (!searchInput.disabled) {
-        debouncedFetchPlaces(this.value);
-      } else {
-        console.warn('Search disabled, API not ready');
-        searchDropdown.innerHTML = '<div class="p-2">Search unavailable (API not ready)</div>';
-        searchDropdown.classList.remove('hidden');
+  const { data: popular, error: popularError } = await supabase
+    .from('city_activity')
+    .select('city, visit_count')
+    .order('visit_count', { ascending: false })
+    .limit(5);
+  if (popularError) {
+    console.error('Error fetching popular cities:', popularError);
+    showError('Failed to load popular cities.');
+  } else {
+    popularCities = popular?.map(c => c.city.toLowerCase()) || [];
+  }
+
+  // Render helper
+  const renderButtons = (title, cities) => cities.length ? `
+    <div class="city-section mb-3">
+      <h4 class="section-title text-sm font-semibold mb-1">${title}</h4>
+      <div class="cities-modal-buttons flex flex-wrap gap-2">
+        ${cities.map(city => `
+          <button class="cities-modal-button px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition" data-city="${city}">
+            ${city.charAt(0).toUpperCase() + city.slice(1)}
+          </button>`).join('')}
+      </div>
+    </div>` : '';
+
+  // Render city sections
+  const renderCitySections = (searchQuery = '') => {
+    const matches = searchQuery ? allCities.filter(c => c.includes(searchQuery.toLowerCase().trim())) : allCities;
+    cityButtonsContainer.innerHTML = searchQuery
+      ? renderButtons('Search Results', matches)
+      : `
+        ${renderButtons('Recently Visited', recentCities)}
+        ${renderButtons('Popular Cities', popularCities)}
+        ${renderButtons('Nearby Cities', nearbyCities)}
+        ${renderButtons('All Cities', allCities)}
+      `;
+    // Bind city button listeners
+    cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        handleCityClick(btn.dataset.city);
+      });
+    });
+  };
+
+  // City click handler
+  async function handleCityClick(city) {
+    const lowerCity = city.toLowerCase();
+    const [cityLat, cityLng] = cityCoords[lowerCity] || [lat, lng];
+    window.cityCoordinates = window.cityCoordinates || {};
+    window.cityCoordinates[lowerCity] = [cityLat, cityLng];
+    map.setView([cityLat, cityLng], 13);
+    map.invalidateSize();
+    await fetchShopsByCity(lowerCity, selectedRatingFilter);
+    citiesModal.classList.add('hidden');
+
+    if (userId) {
+      const { error } = await supabase
+        .from('city_activity')
+        .upsert(
+          {
+            user_id: userId,
+            city: lowerCity,
+            visit_count: 1,
+            last_visited_at: new Date().toISOString(),
+          },
+          {
+            onConflict: ['user_id', 'city'],
+            update: {
+              visit_count: supabase.sql('visit_count + 1'),
+              last_visited_at: new Date().toISOString(),
+            }
+          }
+        );
+      if (error) {
+        console.error('Error tracking city activity:', error);
+        showError('Failed to track city selection.');
+      }
+    }
+  }
+
+  // Error display helper
+  function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'text-red-500 p-2 mb-2';
+    errorDiv.textContent = message;
+    cityButtonsContainer.prepend(errorDiv);
+    setTimeout(() => errorDiv.remove(), 3000);
+  }
+
+  // Initialize
+  let selectedRatingFilter = '';
+  renderCitySections();
+  citiesModal.classList.remove('hidden');
+
+  // Search handler (with debounce)
+  let debounceTimeout;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => renderCitySections(searchInput.value), 300);
+  });
+
+  // Rating filter handler
+  const ratingFilters = document.querySelectorAll('input[name="rating-filter"]');
+  ratingFilters.forEach(radio => {
+    radio.addEventListener('change', async () => {
+      selectedRatingFilter = radio.value;
+      const selectedCity = cityButtonsContainer.querySelector('.cities-modal-button.active')?.dataset.city;
+      if (selectedCity) {
+        await fetchShopsByCity(selectedCity, selectedRatingFilter);
       }
     });
-
-    let isMarkerClick = false;
-
-      searchDropdown?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    const option = e.target.closest('.search-option');
-    if (option) {
-      const placeId = option.getAttribute('data-place-id');
-      if (placesService && placeId) {
-        console.log('Search dropdown option clicked, placeId:', placeId);
-        searchDropdown.classList.add('hidden');
-        placesService.getDetails({ placeId: placeId, fields: ['name', 'geometry', 'rating', 'formatted_address', 'website', 'formatted_phone_number', 'address_components'] }, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place && place.geometry) {
-            console.log('Place details fetched successfully:', place);
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            const city = extractCityFromAddressComponents(place.address_components);
-
-            const shopReviews = reviews.filter(r => r.shopName === place.name);
-
-            const existingShop = shops.find(shop => shop.placeId === placeId);
-            if (!existingShop) {
-              shops.push({
-                placeId: placeId,
-                name: place.name || 'Unknown Shop',
-                city: city,
-                petFriendly: shopReviews.some(r => r.petFriendly) || false,
-                parking: shopReviews.some(r => r.parking) || false,
-                outsideSeating: shopReviews.some(r => r.outsideSeating) || false,
-                lat: lat,
-                lng: lng,
-                address: place.formatted_address || 'No address available',
-                website: place.website || 'No website available',
-                phone: place.formatted_phone_number || 'No phone number available'
-              });
-            }
-
-            currentMarkers.forEach(marker => map.removeLayer(marker));
-            currentMarkers = [];
-
-            map.setView([lat, lng], 15);
-            // Use coffeeIcon for the search result marker
-            const marker = L.marker([lat, lng], { icon: coffeeIcon })
-              .addTo(map)
-              .bindPopup(place.name);
-            marker.on('click', function() {
-              console.log('Marker clicked for:', place.name);
-              isMarkerClick = true;
-              currentShop = {
-                name: place.name || 'Unknown Shop',
-                rating: place.rating ? place.rating + ' / 5' : 'N/A',
-                address: place.formatted_address || 'No address available',
-                website: place.website || 'No website available',
-                phone: place.formatted_phone_number || 'No phone number available',
-                features: {
-                  parking: shopReviews.some(r => r.parking) || false,
-                  petFriendly: shopReviews.some(r => r.petFriendly) || false,
-                  specialtyCoffee: shopReviews.some(r => r.specialtyCoffee) || false
-                },
-                lat: lat,
-                lng: lng,
-                city: city
-              };
-              console.log('currentShop set from marker click:', currentShop);
-              showFloatingCard(currentShop);
-              console.log('Floating card state after show:', document.getElementById('floating-card').classList.toString());
-              setTimeout(() => { isMarkerClick = false; }, 100);
-            });
-            currentMarkers.push(marker);
-            marker.openPopup();
-
-            currentShop = {
-              name: place.name || 'Unknown Shop',
-              rating: place.rating ? place.rating + ' / 5' : 'N/A',
-              address: place.formatted_address || 'No address available',
-              website: place.website || 'No website available',
-              phone: place.formatted_phone_number || 'No phone number available',
-              features: {
-                parking: shopReviews.some(r => r.parking) || false,
-                petFriendly: shopReviews.some(r => r.petFriendly) || false,
-                specialtyCoffee: shopReviews.some(r => r.specialtyCoffee) || false
-              },
-              lat: lat,
-              lng: lng,
-              city: city
-            };
-            console.log('currentShop set from search selection:', currentShop);
-            showFloatingCard(currentShop);
-
-            searchDropdown.classList.add('hidden');
-            searchInput.value = '';
-            console.log('Search selection completed for:', place.name, 'Dropdown state:', searchDropdown.classList.contains('hidden') ? 'hidden' : 'visible');
-          } else {
-            console.error('Failed to fetch place details:', status, 'Place data:', place);
-            alert('Failed to fetch place details: ' + status);
-            searchDropdown.classList.add('hidden');
-          }
-        });
-      } else {
-        console.error('PlacesService not initialized or invalid placeId:', placeId);
-        alert('Search failed: Places service not ready or invalid place ID.');
-        searchDropdown.classList.add('hidden');
-      }
-    } else {
-      console.warn('Clicked element is not a search option:', e.target);
-    }
   });
+
+  // Close modal
+  const closeButton = citiesModal.querySelector('.close-button');
+  if (closeButton) {
+    closeButton.addEventListener('click', () => citiesModal.classList.add('hidden'));
+  }
+}
 
   // Update geolocation markers
   if (navigator.geolocation) {
@@ -769,14 +879,21 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('User location button not found in DOM');
   }
 
-    function calculateAverageRating(shopName) {
-      const reviews = JSON.parse(localStorage.getItem(`reviews-${shopName}`)) || [];
-      if (reviews.length === 0) return 0;
-      const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
-      return (total / reviews.length).toFixed(1);
-    }
+    async function calculateAverageRating(shopName) {
+  const { data: reviews, error } = await client
+    .from('reviews')
+    .select('rating')
+    .eq('shop_name', shopName);
+  if (error) {
+    console.error('Error fetching reviews for rating:', error);
+    return 0;
+  }
+  if (reviews.length === 0) return 0;
+  const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
+  return (total / reviews.length).toFixed(1);
+}
 
-    function showFloatingCard(shop) {
+    async function showFloatingCard(shop) {
   if (!shop || !shop.name) {
     console.warn('Attempted to show floating card with invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
@@ -784,16 +901,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   console.log('Showing floating card for:', shop.name);
 
-  let averageRating = 0;
-  try {
-    averageRating = calculateAverageRating(shop.name);
-  } catch (error) {
-    console.error('Error calculating average rating:', error);
-  }
+  let averageRating = await calculateAverageRating(shop.name);
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : 'No ratings yet';
 
-  const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
-  const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+  const { data: authData } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+  const { data: favoriteData, error: favoriteError } = await client
+    .from('favorites')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('shop_name', shop.name)
+    .eq('shop_address', shop.address);
+  if (favoriteError) console.error('Error checking favorite status:', favoriteError);
+  const isFavorited = favoriteData && favoriteData.length > 0;
 
   const coffeeIcon = `
     <svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24">
@@ -812,10 +932,8 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  // Extract the first line of the address
   const addressFirstLine = shop.address ? shop.address.split('\n')[0].trim().split(',')[0].trim() : 'Unknown Location';
 
-  // Update dynamic content, replacing Website with Directions
   floatingCard.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -880,31 +998,48 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  document.getElementById('favorite-button')?.addEventListener('click', function(e) {
+  document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
     if (currentShop) {
-      const shopKey = `${currentShop.name}-${currentShop.lat}-${currentShop.lng}`;
-      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
+      const { data: authData } = await client.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) {
+        console.error('No user authenticated');
+        return;
+      }
+      const { data: favoriteData, error: favoriteError } = await client
+        .from('favorites')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('shop_name', currentShop.name)
+        .eq('shop_address', currentShop.address);
+      if (favoriteError) console.error('Error checking favorite status:', favoriteError);
+      const isCurrentlyFavorited = favoriteData && favoriteData.length > 0;
+
       if (isCurrentlyFavorited) {
-        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
-        this.querySelector('svg').setAttribute('fill', 'none');
-        this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
-        console.log('Removed from favorites:', currentShop.name);
+        const { error } = await client
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('shop_name', currentShop.name)
+          .eq('shop_address', currentShop.address);
+        if (error) {
+          console.error('Error removing favorite:', error);
+        } else {
+          this.querySelector('svg').setAttribute('fill', 'none');
+          this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
+          console.log('Removed from favorites:', currentShop.name);
+        }
       } else {
-        addToFavorites(currentShop);
+        await addToFavorites(currentShop);
         this.querySelector('svg').setAttribute('fill', 'currentColor');
-        this.setAttribute('aria-label', `Remove ${currentShop.name} to favorites`);
+        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
         console.log('Added to favorites:', currentShop.name);
       }
-      if (typeof updateFavoritesModal === 'function') {
-        updateFavoritesModal();
-      } else {
-        console.error('updateFavoritesModal is not defined');
-      }
+      updateFavoritesModal();
     }
   });
 
-  // Add call button listener
   document.getElementById('call-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (shop && shop.phone) {
@@ -913,19 +1048,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Add directions button listener
   document.getElementById('directions-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (shop && shop.address) {
       console.log('Getting directions for:', shop.name);
       const encodedAddress = encodeURIComponent(shop.address);
-      // Use geo: URI for native maps app, fallback to Google Maps
       const mapsUrl = `geo:0,0?q=${encodedAddress}`;
       window.location.href = mapsUrl;
     }
   });
 
-  // Update the click handler to correctly identify the close button
   floatingCard.addEventListener('click', function(e) {
     if (
       e.target.closest('.floating-card-close-button') ||
@@ -949,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 }
 
-   function showShopDetails(shop) {
+   async function showShopDetails(shop) {
   if (!shop || !shop.name) {
     console.warn('Attempted to show shop details with invalid shop data:', shop);
     document.getElementById('shop-details-banner')?.classList.add('hidden');
@@ -963,20 +1095,20 @@ document.addEventListener('DOMContentLoaded', function() {
     return;
   }
 
-  let averageRating = 0;
-  try {
-    averageRating = calculateAverageRating(shop.name);
-  } catch (error) {
-    console.error('Error calculating average rating:', error);
-  }
+  let averageRating = await calculateAverageRating(shop.name);
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : '0';
 
   const dotsHTML = Array.from({ length: 10 }, (_, i) => `
     <span class="shop-details-rating-dot" style="background-color: ${i < Math.floor(averageRating) ? '#4b5563' : '#d1d5db'};"></span>
   `).join('');
 
-  const reviews = JSON.parse(localStorage.getItem(`reviews-${shop.name}`)) || [];
-  const totalReviews = reviews.length;
+  const { data: reviews, error } = await client
+    .from('reviews')
+    .select('*')
+    .eq('shop_name', shop.name);
+  if (error) console.error('Error fetching reviews:', error);
+
+  const totalReviews = reviews ? reviews.length : 0;
   const breakdown = {
     Excellent: 0,
     'Very Good': 0,
@@ -984,7 +1116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     Poor: 0,
     Terrible: 0
   };
-  reviews.forEach(review => {
+  reviews?.forEach(review => {
     const rating = Number(review.rating);
     if (rating >= 8) breakdown.Excellent++;
     else if (rating >= 6) breakdown['Very Good']++;
@@ -1003,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function() {
   `).join('');
 
   let reviewsHTML = '';
-  if (reviews.length === 0) {
+  if (!reviews || reviews.length === 0) {
     reviewsHTML = '<p>No reviews yet.</p>';
   } else {
     reviewsHTML = `
@@ -1012,8 +1144,7 @@ document.addEventListener('DOMContentLoaded', function() {
           ${reviews.map(review => `
             <div class="shop-details-review-card">
               <p><strong>Rating:</strong> ${review.rating}/10</p>
-              <p>${review.text}</p>
-              <p></p> <!-- Removed amenities from here -->
+              <p>${review.review_text}</p>
             </div>
           `).join('')}
         </div>
@@ -1021,12 +1152,11 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
   }
 
-  // Aggregate amenities from all reviews
   const amenities = new Set();
-  reviews.forEach(review => {
+  reviews?.forEach(review => {
     if (review.parking) amenities.add('Parking Available');
-    if (review.petFriendly) amenities.add('Pet Friendly');
-    if (review.outsideSeating) amenities.add('Outside Seating');
+    if (review.pet_friendly) amenities.add('Pet Friendly');
+    if (review.outside_seating) amenities.add('Outside Seating');
   });
   const amenitiesArray = Array.from(amenities);
   const amenitiesHTML = amenitiesArray.length > 0 ? `
@@ -1096,7 +1226,6 @@ document.addEventListener('DOMContentLoaded', function() {
   shopDetailsBanner.classList.remove('hidden');
   console.log('Shop details banner classes after show:', shopDetailsBanner.classList.toString());
 
-  // Add close button event listener
   const closeButton = shopDetailsBanner.querySelector('.shop-details-close-button');
   if (closeButton) {
     closeButton.addEventListener('click', (e) => {
@@ -1108,7 +1237,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Close button not found in shop details banner');
   }
 
-  // Attach event listener to the "Leave a Review" button with enhanced logging
   const leaveReviewButton = shopDetailsBanner.querySelector('.shop-details-leave-review-button');
   if (leaveReviewButton) {
     console.log('Leave a Review button found, attaching click event listener');
@@ -1134,7 +1262,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('Leave a review button not found after rendering shop details');
   }
 
-  // Add call button listener
   const callButton = shopDetailsBanner.querySelector('#call-button');
   if (callButton) {
     callButton.addEventListener('click', (e) => {
@@ -1146,7 +1273,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Add directions button listener
   const directionsButton = shopDetailsBanner.querySelector('#directions-button');
   if (directionsButton) {
     directionsButton.addEventListener('click', (e) => {
@@ -1160,7 +1286,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Add website button listener
   const websiteButton = shopDetailsBanner.querySelector('#website-button');
   if (websiteButton) {
     websiteButton.addEventListener('click', (e) => {
@@ -1172,7 +1297,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Ensure reviews track is scrollable
   const reviewsTrack = shopDetailsBanner.querySelector('.shop-details-reviews-track');
   if (reviewsTrack) {
     let isDragging = false;
@@ -1190,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!isDragging) return;
       e.preventDefault();
       const x = e.pageX - reviewsTrack.offsetLeft;
-      const walk = (x - startX) * 1.5; // Adjust scroll speed
+      const walk = (x - startX) * 1.5;
       reviewsTrack.scrollLeft = scrollLeft - walk;
     });
 
