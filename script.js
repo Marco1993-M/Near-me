@@ -389,33 +389,121 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     }
 
-    window.initGoogleMaps = function() {
-      console.log('Google Maps API loaded successfully');
-      if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-        autocompleteService = new google.maps.places.AutocompleteService();
-        placesService = new google.maps.places.PlacesService(document.createElement('div'));
-        geocoder = new google.maps.Geocoder();
-        console.log('AutocompleteService initialized');
-        console.log('PlacesService initialized');
-        console.log('Geocoder initialized');
-        searchInput.disabled = false;
-        searchInput.placeholder = 'Search for coffee shops...';
-        console.log('Search bar enabled');
-      } else {
-        console.error('Google Maps Places API failed to load. Check your API key and ensure the Places library is included.');
-        searchInput.disabled = true;
-        searchInput.placeholder = 'Search unavailable (API failed)';
-        console.log('Search bar disabled due to API failure');
-      }
-    };
+window.initGoogleMaps = function() {
+  console.log('Google Maps API loaded successfully');
+  try {
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      autocompleteService = new google.maps.places.AutocompleteService();
+      placesService = new google.maps.places.PlacesService(document.createElement('div'));
+      geocoder = new google.maps.Geocoder();
+      console.log('AutocompleteService initialized');
+      console.log('PlacesService initialized');
+      console.log('Geocoder initialized');
+      searchInput.disabled = false;
+      searchInput.placeholder = 'Search for coffee shops...';
+      console.log('Search bar enabled');
 
-    setTimeout(() => {
-      if (searchInput.disabled) {
-        console.warn('Google Maps API failed to load within 10 seconds. Enabling search bar as fallback (search functionality may not work).');
-        searchInput.disabled = false;
-        searchInput.placeholder = 'Search unavailable (API timeout)';
-      }
-    }, 10000);
+      // Add autocomplete event listener
+      searchInput.addEventListener('input', debounce(function() {
+        const query = searchInput.value.trim();
+        if (!query || !autocompleteService) {
+          searchDropdown.classList.add('hidden');
+          return;
+        }
+        autocompleteService.getPlacePredictions(
+          {
+            input: query,
+            types: ['establishment'],
+            componentRestrictions: { country: 'us' }, // Adjust country as needed
+          },
+          (predictions, status) => {
+            console.log('Autocomplete status:', status, 'Predictions:', predictions);
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+              searchDropdown.innerHTML = predictions
+                .map(pred => `<li data-place-id="${pred.place_id}">${pred.description}</li>`)
+                .join('');
+              searchDropdown.classList.remove('hidden');
+              searchDropdown.querySelectorAll('li').forEach(item => {
+                item.addEventListener('click', () => {
+                  const placeId = item.getAttribute('data-place-id');
+                  placesService.getDetails({ placeId }, (place, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK) {
+                      const shop = {
+                        name: place.name,
+                        address: place.formatted_address,
+                        phone: place.formatted_phone_number,
+                        website: place.website,
+                        rating: place.rating,
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                        city: extractCityFromAddressComponents(place.address_components),
+                      };
+                      currentShop = shop;
+                      showFloatingCard(shop);
+                      map.setView([shop.lat, shop.lng], 15);
+                      const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
+                        .addTo(map)
+                        .bindPopup(shop.name)
+                        .openPopup();
+                      currentMarkers.push(marker);
+                      searchDropdown.classList.add('hidden');
+                      searchInput.value = place.name;
+                    } else {
+                      console.error('Place details fetch failed:', status);
+                    }
+                  });
+                });
+              });
+            } else {
+              searchDropdown.classList.add('hidden');
+              console.error('Autocomplete failed:', status);
+            }
+          }
+        );
+      }, 300));
+
+      // Add direct search on Enter key
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          const query = searchInput.value.trim();
+          if (query && placesService) {
+            const request = {
+              query: `coffee shop ${query}`,
+              location: map.getCenter(),
+              radius: 5000,
+              type: 'cafe'
+            };
+            placesService.textSearch(request, (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                console.log('Search results:', results);
+                displayFilteredShops(results);
+                searchDropdown.classList.add('hidden');
+              } else {
+                console.error('Search failed:', status);
+                document.getElementById('filtered-shops-list').innerHTML = '<p>No shops found.</p>';
+              }
+            });
+          }
+        }
+      });
+    } else {
+      throw new Error('Google Maps Places API failed to load. Check your API key and ensure the Places library is included.');
+    }
+  } catch (error) {
+    console.error('Error initializing Google Maps services:', error);
+    searchInput.disabled = true;
+    searchInput.placeholder = 'Search unavailable (API failed)';
+    console.log('Search bar disabled due to API failure');
+  }
+};
+
+setTimeout(() => {
+  if (searchInput.disabled) {
+    console.warn('Google Maps API failed to load within 10 seconds. Enabling search bar as fallback (search functionality may not work).');
+    searchInput.disabled = false;
+    searchInput.placeholder = 'Search unavailable (API timeout)';
+  }
+}, 10000);
 
     function generatePointsAroundLocation(lat, lng, radius, numPoints = 8) {
       const points = [];
