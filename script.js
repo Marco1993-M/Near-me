@@ -403,7 +403,7 @@ window.initGoogleMaps = function() {
       searchInput.placeholder = 'Search for coffee shops...';
       console.log('Search bar enabled');
 
-      // Add autocomplete event listener
+      // Autocomplete event listener
       searchInput.addEventListener('input', debounce(function() {
         const query = searchInput.value.trim();
         if (!query || !autocompleteService) {
@@ -414,7 +414,7 @@ window.initGoogleMaps = function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: { }, // Adjust country as needed
+            componentRestrictions: { country: 'us' }, // Adjust country as needed
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
@@ -424,9 +424,9 @@ window.initGoogleMaps = function() {
                 .join('');
               searchDropdown.classList.remove('hidden');
               searchDropdown.querySelectorAll('li').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', async () => {
                   const placeId = item.getAttribute('data-place-id');
-                  placesService.getDetails({ placeId }, (place, status) => {
+                  placesService.getDetails({ placeId }, async (place, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK) {
                       const shop = {
                         name: place.name,
@@ -438,6 +438,35 @@ window.initGoogleMaps = function() {
                         lng: place.geometry.location.lng(),
                         city: extractCityFromAddressComponents(place.address_components),
                       };
+
+                      // Insert shop into shops table if it doesn't exist
+                      const { data: existingShop, error: shopError } = await client
+                        .from('shops')
+                        .select('id')
+                        .eq('name', shop.name)
+                        .eq('address', shop.address)
+                        .limit(1)
+                        .single();
+
+                      if (shopError && shopError.code !== 'PGRST116') { // PGRST116: No rows found
+                        console.error('Error checking shop existence:', shopError);
+                      }
+
+                      if (!existingShop) {
+                        const { error: insertError } = await client
+                          .from('shops')
+                          .insert({
+                            name: shop.name,
+                            address: shop.address,
+                            city: shop.city || 'Unknown',
+                          });
+                        if (insertError) {
+                          console.error('Error inserting shop:', insertError);
+                        } else {
+                          console.log(`Inserted shop: ${shop.name}`);
+                        }
+                      }
+
                       currentShop = shop;
                       showFloatingCard(shop);
                       map.setView([shop.lat, shop.lng], 15);
@@ -462,7 +491,7 @@ window.initGoogleMaps = function() {
         );
       }, 300));
 
-      // Add direct search on Enter key
+      // Direct search on Enter key
       searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
           const query = searchInput.value.trim();
