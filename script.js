@@ -967,18 +967,47 @@ async function fetchCities() {
     console.error('User location button not found in DOM');
   }
 
-    async function calculateAverageRating(shopName) {
-  const { data: reviews, error } = await client
-    .from('reviews')
-    .select('rating')
-    .eq('shop_name', shopName);
-  if (error) {
-    console.error('Error fetching reviews for rating:', error);
+  async function calculateAverageRating(shopName) {
+  try {
+    // Step 1: Get shop_id from shops table
+    const { data: shop, error: shopError } = await client
+      .from('shops')
+      .select('id')
+      .eq('name', shopName)
+      .limit(1)
+      .single();
+
+    if (shopError) {
+      console.error('Error fetching shop ID:', shopError);
+      return 0;
+    }
+    if (!shop) {
+      console.warn(`No shop found with name: ${shopName}`);
+      return 0;
+    }
+
+    // Step 2: Get ratings from reviews table
+    const { data: reviews, error: reviewError } = await client
+      .from('reviews')
+      .select('rating')
+      .eq('shop_id', shop.id);
+
+    if (reviewError) {
+      console.error('Error fetching reviews:', reviewError);
+      return 0;
+    }
+    if (!reviews || reviews.length === 0) {
+      console.log(`No reviews found for shop: ${shopName}`);
+      return 0;
+    }
+
+    // Calculate average rating
+    const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
+    return (total / reviews.length).toFixed(1);
+  } catch (error) {
+    console.error('Error in calculateAverageRating:', error);
     return 0;
   }
-  if (reviews.length === 0) return 0;
-  const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
-  return (total / reviews.length).toFixed(1);
 }
 
     function showFloatingCard(shop) {
