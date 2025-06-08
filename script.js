@@ -406,9 +406,16 @@ window.initGoogleMaps = async function() {
       // Load favorites from Supabase
       async function loadFavorites() {
         try {
+          const { data: user } = await client.auth.getUser();
+          if (!user?.user?.id) {
+            console.log('No authenticated user, setting empty favorites');
+            favorites = [];
+            return;
+          }
           const { data, error } = await client
             .from('favorites')
-            .select('name, address');
+            .select('name, address')
+            .eq('user_id', user.user.id);
           if (error) throw error;
           favorites = data || [];
           console.log('Favorites loaded:', favorites);
@@ -434,7 +441,7 @@ window.initGoogleMaps = async function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: {  },
+            componentRestrictions: { country: 'za' },
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
@@ -456,13 +463,15 @@ window.initGoogleMaps = async function() {
                         rating: place.rating,
                         lat: place.geometry.location.lat(),
                         lng: place.geometry.location.lng(),
-                        city: extractCityFromAddressComponents(place.address_components),
+                        city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
                       };
 
                       currentShop = shop;
                       showFloatingCard(shop);
                       if (map) {
                         map.setView([shop.lat, shop.lng], 15);
+                        currentMarkers.forEach(marker => map.removeLayer(marker));
+                        currentMarkers = [];
                         const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
                           .addTo(map)
                           .bindPopup(shop.name)
@@ -1029,7 +1038,7 @@ async function fetchCities() {
   }
 }
 
-   async function showFloatingCard(shop) {
+  async function showFloatingCard(shop) {
   if (!shop || !shop.name) {
     console.warn('Invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
@@ -1138,34 +1147,42 @@ async function fetchCities() {
 
   document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
-    if (currentShop) {
-      const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
-      try {
-        if (isCurrentlyFavorited) {
-          const { error } = await client
-            .from('favorites')
-            .delete()
-            .eq('name', currentShop.name)
-            .eq('address', currentShop.address);
-          if (error) throw error;
-          favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
-          this.querySelector('svg').setAttribute('fill', 'none');
-          this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
-          console.log('Removed from favorites:', currentShop.name);
-        } else {
-          const { error } = await client
-            .from('favorites')
-            .insert({ name: currentShop.name, address: currentShop.address });
-          if (error) throw error;
-          favorites.push({ name: currentShop.name, address: currentShop.address });
-          this.querySelector('svg').setAttribute('fill', 'currentColor');
-          this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
-          console.log('Added to favorites:', currentShop.name);
-        }
-        if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
-      } catch (error) {
-        console.error('Error updating favorites:', error);
+    if (!currentShop) return;
+
+    const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
+    try {
+      const { data: user } = await client.auth.getUser();
+      if (!user?.user?.id) {
+        console.warn('User not authenticated, cannot update favorites');
+        alert('Please log in to manage favorites.');
+        return;
       }
+      if (isCurrentlyFavorited) {
+        const { error } = await client
+          .from('favorites')
+          .delete()
+          .eq('name', currentShop.name)
+          .eq('address', currentShop.address)
+          .eq('user_id', user.user.id);
+        if (error) throw error;
+        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
+        this.querySelector('svg').setAttribute('fill', 'none');
+        this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
+        console.log('Removed from favorites:', currentShop.name);
+      } else {
+        const { error } = await client
+          .from('favorites')
+          .insert({ name: currentShop.name, address: currentShop.address, user_id: user.user.id });
+        if (error) throw error;
+        favorites.push({ name: currentShop.name, address: currentShop.address });
+        this.querySelector('svg').setAttribute('fill', 'currentColor');
+        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
+        console.log('Added to favorites:', currentShop.name);
+      }
+      if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+      alert('Failed to update favorites. Please try again.');
     }
   });
 
