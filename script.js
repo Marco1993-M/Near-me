@@ -1035,14 +1035,16 @@ async function fetchCities() {
 
   let averageRating = 0;
   try {
-    averageRating = calculateAverageRating(shop.name);
+    averageRating = await calculateAverageRating(shop.name); // Await async function
   } catch (error) {
     console.error('Error calculating average rating:', error);
   }
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : 'No ratings yet';
 
   const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
-  const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+  const isFavorited = favorites && Array.isArray(favorites) 
+    ? favorites.some(fav => fav.name === shop.name && fav.address === shop.address) 
+    : false;
 
   const coffeeIcon = `<svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>`;
   const starIcon = `<svg class="text-yellow-500" fill="black" viewBox="0 0 24 24" width="16" height="16"><path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/></svg>`;
@@ -1130,22 +1132,38 @@ async function fetchCities() {
     if (currentShop) shareShop(currentShop);
   });
 
-  document.getElementById('favorite-button')?.addEventListener('click', function(e) {
+  document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
     if (currentShop) {
       const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
-      if (isCurrentlyFavorited) {
-        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
-        this.querySelector('svg').setAttribute('fill', 'none');
-        this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
-        console.log('Removed from favorites:', currentShop.name);
-      } else {
-        favorites.push({ name: currentShop.name, address: currentShop.address });
-        this.querySelector('svg').setAttribute('fill', 'currentColor');
-        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
-        console.log('Added to favorites:', currentShop.name);
+      try {
+        if (isCurrentlyFavorited) {
+          // Remove from favorites
+          const { error } = await client
+            .from('favorites')
+            .delete()
+            .eq('name', currentShop.name)
+            .eq('address', currentShop.address);
+          if (error) throw error;
+          favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
+          this.querySelector('svg').setAttribute('fill', 'none');
+          this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
+          console.log('Removed from favorites:', currentShop.name);
+        } else {
+          // Add to favorites
+          const { error } = await client
+            .from('favorites')
+            .insert({ name: currentShop.name, address: currentShop.address });
+          if (error) throw error;
+          favorites.push({ name: currentShop.name, address: currentShop.address });
+          this.querySelector('svg').setAttribute('fill', 'currentColor');
+          this.setAttribute('aria-label', `Remove ${currentShop.name} to favorites`);
+          console.log('Added to favorites:', currentShop.name);
+        }
+        if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
+      } catch (error) {
+        console.error('Error updating favorites:', error);
       }
-      if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
     }
   });
 
