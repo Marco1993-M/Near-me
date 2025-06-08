@@ -476,6 +476,11 @@ window.initGoogleMaps = async function() {
                           .addTo(map)
                           .bindPopup(shop.name)
                           .openPopup();
+                        // Add click event to show floating card
+                        marker.on('click', () => {
+                          console.log('Marker clicked for:', shop.name);
+                          showFloatingCard(shop);
+                        });
                         currentMarkers.push(marker);
                       } else {
                         console.error('Leaflet map not initialized');
@@ -537,7 +542,6 @@ setTimeout(() => {
     searchInput.placeholder = 'Search unavailable';
   }
 }, 10000);
-
     function generatePointsAroundLocation(lat, lng, radius, numPoints = 8) {
       const points = [];
       const earthRadius = 6371000; // Earth's radius in meters
