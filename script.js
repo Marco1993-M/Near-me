@@ -1572,7 +1572,7 @@ async function fetchCities() {
       user_id: user.id,
       shop_id: shop.id,
       rating: selectedRating,
-      text: reviewText,
+      review_text: reviewText,
       parking: parking,
       pet_friendly: petFriendly,
       outside_seating: outsideSeating,
