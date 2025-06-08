@@ -434,7 +434,7 @@ window.initGoogleMaps = async function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: { country: 'za' },
+            componentRestrictions: {  },
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
