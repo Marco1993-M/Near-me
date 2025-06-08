@@ -1186,7 +1186,7 @@ async function fetchCities() {
     }
   });
 
-  // Card click to show details
+  // Card click to show details and hide floating banner
   floatingCard.addEventListener('click', function(e) {
     if (
       e.target.closest('.floating-card-close-button') ||
@@ -1198,7 +1198,8 @@ async function fetchCities() {
     if (shop) {
       currentShop = shop;
       showShopDetails(shop);
-      console.log('Shop details requested, card remains visible');
+      floatingCard.classList.add('hidden'); // Hide floating banner
+      console.log('Shop details displayed, floating card hidden');
     }
   });
 }
