@@ -1560,6 +1560,13 @@ async function fetchCities() {
       return;
     }
 
+    // Check if supabase client is available
+    if (!supabase || !supabase.auth) {
+      console.error('Supabase client is not initialized or auth is unavailable');
+      alert('Error: Database connection not available. Please try again later.');
+      return;
+    }
+
     // Get the current authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -1569,13 +1576,13 @@ async function fetchCities() {
     }
 
     // Look up shop_id based on shop.name
-    let shopId = shop.id; // Use shop.id if available
+    let shopId = shop.id;
     if (!shopId) {
       const { data: shopData, error: shopError } = await supabase
         .from('shops')
         .select('id')
         .eq('name', shop.name)
-        .maybeSingle(); // Use maybeSingle to handle 0 rows gracefully
+        .maybeSingle();
 
       if (shopError) {
         console.error('Error fetching shop ID:', shopError);
