@@ -1465,8 +1465,8 @@ async function fetchCities() {
   }
 }
 
-    function showReviewBanner(shop) {
-  if (!shop || !shop.name) {
+    async function showReviewBanner(shop) {
+  if (!shop || !shop.name || !shop.id) {
     console.warn('Attempted to show review banner with invalid shop data:', shop);
     document.getElementById('review-banner')?.classList.add('hidden');
     return;
@@ -1544,7 +1544,7 @@ async function fetchCities() {
     console.log('Review banner cancelled');
   });
 
-  reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', (e) => {
+  reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async (e) => {
     e.stopPropagation();
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
@@ -1560,48 +1560,41 @@ async function fetchCities() {
       return;
     }
 
+    // Get the current authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('Error getting authenticated user:', userError);
+      alert('You must be logged in to submit a review.');
+      return;
+    }
+
     const review = {
-      userId: currentUser,
-      shopName: shop.name,
+      user_id: user.id,
+      shop_id: shop.id,
       rating: selectedRating,
       text: reviewText,
       parking: parking,
-      petFriendly: petFriendly,
-      outsideSeating: outsideSeating,
-      date: new Date().toISOString()
+      pet_friendly: petFriendly,
+      outside_seating: outsideSeating,
+      created_at: new Date().toISOString()
     };
 
-    const shopReviews = JSON.parse(localStorage.getItem(`reviews-${shop.name}`)) || [];
-    shopReviews.push(review);
-    localStorage.setItem(`reviews-${shop.name}`, JSON.stringify(shopReviews));
+    // Save review to Supabase
+    const { data, error } = await supabase
+      .from('reviews')
+      .insert([review]);
 
-    console.log('Review submitted:', review);
+    if (error) {
+      console.error('Error saving review to Supabase:', error);
+      alert('Failed to submit review. Please try again.');
+      return;
+    }
+
+    console.log('Review submitted to Supabase:', data);
     reviewBanner.classList.add('hidden');
     showShopDetails(shop);
   });
 }
-
-    function shareShop(shop) {
-      if (navigator.share) {
-        navigator.share({
-          title: shop.name,
-          text: `Check out ${shop.name} at ${shop.address}!`,
-          url: shop.website || window.location.href
-        }).then(() => {
-          console.log('Shop shared successfully:', shop.name);
-        }).catch(error => {
-          console.error('Error sharing shop:', error);
-        });
-      } else {
-        console.warn('Web Share API not supported, falling back to clipboard');
-        const shareText = `${shop.name} at ${shop.address} (${shop.website || 'No website'})`;
-        navigator.clipboard.writeText(shareText).then(() => {
-          alert('Shop details copied to clipboard!');
-        }).catch(error => {
-          console.error('Error copying to clipboard:', error);
-        });
-      }
-    }
 
     const filtersButton = document.querySelector('.filters-button');
     if (filtersButton) {
