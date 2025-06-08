@@ -1465,8 +1465,8 @@ async function fetchCities() {
   }
 }
 
-    async function showReviewBanner(shop) {
-  if (!shop || !shop.name || !shop.id) {
+   async function showReviewBanner(shop) {
+  if (!shop || !shop.name) {
     console.warn('Attempted to show review banner with invalid shop data:', shop);
     document.getElementById('review-banner')?.classList.add('hidden');
     return;
@@ -1568,11 +1568,35 @@ async function fetchCities() {
       return;
     }
 
+    // Look up shop_id based on shop.name
+    let shopId = shop.id; // Use shop.id if available
+    if (!shopId) {
+      const { data: shopData, error: shopError } = await supabase
+        .from('shops')
+        .select('id')
+        .eq('name', shop.name)
+        .maybeSingle(); // Use maybeSingle to handle 0 rows gracefully
+
+      if (shopError) {
+        console.error('Error fetching shop ID:', shopError);
+        alert('Error finding shop. Please try again.');
+        return;
+      }
+
+      if (!shopData) {
+        console.warn('No shop found with name:', shop.name);
+        alert(`Shop "${shop.name}" not found. Please ensure the shop exists.`);
+        return;
+      }
+
+      shopId = shopData.id;
+    }
+
     const review = {
       user_id: user.id,
-      shop_id: shop.id,
+      shop_id: shopId,
       rating: selectedRating,
-      review_text: reviewText,
+      text: reviewText,
       parking: parking,
       pet_friendly: petFriendly,
       outside_seating: outsideSeating,
