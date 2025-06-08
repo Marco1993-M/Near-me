@@ -389,7 +389,10 @@ document.addEventListener('DOMContentLoaded', function() {
       };
     }
 
-window.initGoogleMaps = function() {
+// Global favorites array
+let favorites = [];
+
+window.initGoogleMaps = async function() {
   console.log('Google Maps API loaded successfully');
   try {
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
@@ -399,12 +402,8 @@ window.initGoogleMaps = function() {
       console.log('AutocompleteService initialized');
       console.log('PlacesService initialized');
       console.log('Geocoder initialized');
-      searchInput.disabled = false;
-      searchInput.placeholder = 'Search for coffee shops...';
-      console.log('Search bar enabled');
 
-      // Initialize favorites
-      let favorites = [];
+      // Load favorites from Supabase
       async function loadFavorites() {
         try {
           const { data, error } = await client
@@ -418,7 +417,11 @@ window.initGoogleMaps = function() {
           favorites = [];
         }
       }
-      loadFavorites();
+      await loadFavorites(); // Wait for favorites to load
+
+      searchInput.disabled = false;
+      searchInput.placeholder = 'Search for coffee shops...';
+      console.log('Search bar enabled');
 
       // Autocomplete event listener
       searchInput.addEventListener('input', debounce(function() {
@@ -431,7 +434,7 @@ window.initGoogleMaps = function() {
           {
             input: query,
             types: ['establishment'],
-            componentRestrictions: { }, // South Africa, adjust as needed
+            componentRestrictions: { country: 'za' }, // South Africa
           },
           (predictions, status) => {
             console.log('Autocomplete status:', status, 'Predictions:', predictions);
@@ -444,7 +447,7 @@ window.initGoogleMaps = function() {
                 item.addEventListener('click', async () => {
                   const placeId = item.getAttribute('data-place-id');
                   placesService.getDetails({ placeId }, async (place, status) => {
-                    if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    if (place && status === googleMaps.places.PlacesServiceStatus.OK) {
                       const shop = {
                         name: place.name,
                         address: place.formatted_address,
@@ -478,7 +481,7 @@ window.initGoogleMaps = function() {
             }
           }
         );
-      }, 300));
+      }, 500));
 
       // Direct search on Enter key
       searchInput.addEventListener('keypress', function(e) {
@@ -492,7 +495,7 @@ window.initGoogleMaps = function() {
               type: 'cafe'
             };
             placesService.textSearch(request, (results, status) => {
-              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+              if (status === googleMaps.places.PlacesServiceStatus.OK && results) {
                 console.log('Search results:', results);
                 displayFilteredShops(results);
                 searchDropdown.classList.add('hidden');
@@ -510,7 +513,7 @@ window.initGoogleMaps = function() {
   } catch (error) {
     console.error('Error initializing Google Maps services:', error);
     searchInput.disabled = true;
-    searchInput.placeholder = 'Search unavailable (API failed)';
+    searchInput.placeholder = 'Search unavailable';
   }
 };
 
@@ -518,7 +521,7 @@ setTimeout(() => {
   if (searchInput.disabled) {
     console.warn('Google Maps API failed to load within 10 seconds.');
     searchInput.disabled = false;
-    searchInput.placeholder = 'Search unavailable (API timeout)';
+    searchInput.placeholder = 'Search unavailable';
   }
 }, 10000);
 
