@@ -168,22 +168,27 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 
 
 async function fetchFavorites() {
-  const { data: authData } = await client.auth.getUser();
+  const { data: authData, error: authError } = await client.auth.getUser();
   const userId = authData?.user?.id;
-  if (!userId) {
-    console.error('No user authenticated');
+
+  if (authError || !userId) {
+    console.error('No user authenticated:', authError?.message);
     return [];
   }
+
   const { data, error } = await client
     .from('favorites')
-    .select('*')
+    .select('name, address')
     .eq('user_id', userId);
+
   if (error) {
-    console.error('Error fetching favorites:', error);
+    console.error('Error fetching favorites:', error.message);
     return [];
   }
+
   return data || [];
 }
+
 
 async function addToFavorites(shop) {
   const { data: authData } = await client.auth.getUser();
