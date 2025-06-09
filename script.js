@@ -178,7 +178,7 @@ async function fetchFavorites() {
 
   const { data, error } = await client
     .from('favorites')
-    .select('name, address')
+    .select('shop_id, address')
     .eq('user_id', userId);
 
   if (error) {
@@ -199,12 +199,11 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Check for existing favorite
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('*')
     .eq('user_id', userId)
-    .eq('name', shop.name)
+    .eq('shop_id', shop.shop_id)
     .eq('address', shop.address);
 
   if (fetchError) {
@@ -213,24 +212,23 @@ async function addToFavorites(shop) {
   }
 
   if (existingFavorites.length > 0) {
-    console.log(`${shop.name} is already in favorites`);
+    console.log(`${shop.shop_id} is already in favorites`);
     return;
   }
 
-  // Add to favorites
   const { error: insertError } = await client
     .from('favorites')
     .insert({
       user_id: userId,
-      name: shop.name,
+      shop_id: shop.shop_id,
       address: shop.address,
     });
 
   if (insertError) {
     console.error('Error adding to favorites:', insertError.message);
   } else {
-    console.log(`Added to favorites: ${shop.name}`);
-    updateFavoritesModal(); // Call your UI update logic
+    console.log(`Added to favorites: ${shop.shop_id}`);
+    updateFavoritesModal();
   }
 }
 
