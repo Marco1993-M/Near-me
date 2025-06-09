@@ -43,6 +43,64 @@ body, html {
   border: 1px solid #000000;
 }
 
+/* Basic styling for auth banner */
+    #auth-banner {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
+      box-shadow: inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; 
+      shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic shadow */
+      border-radius: 15px;
+      padding: 15px;
+      padding-top: 1px;
+      z-index: 1010;
+      width: 80%;
+      max-width: 400px;
+    }
+    #auth-banner.hidden {
+      display: none;
+    }
+    .auth-banner-heading {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    .auth-banner-input {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .auth-banner-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .auth-banner-submit-button, .auth-banner-toggle-button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .auth-banner-submit-button {
+      background: #007bff;
+      color: white;
+    }
+    .auth-banner-toggle-button {
+      background: none;
+      color: #007bff;
+      text-decoration: underline;
+    }
+    .auth-banner-close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
 /* Search container */
 #search-container {
   position: fixed;
