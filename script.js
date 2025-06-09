@@ -255,12 +255,12 @@ async function updateFavoritesModal() {
     const li = document.createElement('li');
     li.className = 'favorite-modal-list-item';
     li.innerHTML = `
-      <span class="favorite-modal-shop-info">${shop.name}</span>
+      <span class="favorite-modal-shop-info">${shop.shop_id}</span>
       <div class="favorite-modal-actions">
-        <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
+        <button class="favorite-modal-button view-shop" aria-label="View ${shop.shop_id}">
           <!-- eye icon SVG -->
         </button>
-        <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
+        <button class="favorite-modal-button remove" aria-label="Remove ${shop.shop_id} from favorites">
           <!-- trash icon SVG -->
         </button>
       </div>
@@ -275,9 +275,9 @@ async function updateFavoritesModal() {
       const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
       const shop = favorites.find(s => s.name === shopName);
       if (shop) {
-        console.log('Viewing shop from favorites:', shop.name);
+        console.log('Viewing shop from favorites:', shop.shop_id);
         currentShop = {
-          name: shop.name,
+          name: shop.shop_id,
           address: shop.address
         };
         showShopDetails(currentShop);
