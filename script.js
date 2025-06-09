@@ -1466,12 +1466,13 @@ async function fetchCities() {
 }
 
    async function showReviewBanner(shop) {
+  console.log('showReviewBanner version: 2025-06-09 with shop insertion and login required');
   if (!shop || !shop.name) {
     console.warn('Attempted to show review banner with invalid shop data:', shop);
     document.getElementById('review-banner')?.classList.add('hidden');
     return;
   }
-  console.log('Showing review banner for:', shop.name);
+  console.log('Showing review banner for:', shop.name, 'Shop object:', shop);
 
   // Check if supabase client is available
   if (!supabase || !supabase.auth) {
@@ -1480,11 +1481,11 @@ async function fetchCities() {
     return;
   }
 
-  // Check if user is authenticated
+  // Assume user is authenticated (checked at app startup)
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
-    console.log('User not authenticated, showing auth banner');
-    showAuthBanner(shop); // Show auth banner and pass shop to retry after auth
+    console.error('User not authenticated despite login requirement:', userError);
+    alert('Error: You must be logged in to leave a review. Please reload the app.');
     return;
   }
 
@@ -1575,13 +1576,18 @@ async function fetchCities() {
       return;
     }
 
+    // Normalize shop name to avoid case sensitivity issues
+    const normalizedShopName = shop.name.trim();
+    console.log('Attempting to find or create shop with name:', normalizedShopName);
+
     // Look up shop_id based on shop.name or insert new shop
     let shopId = shop.id;
     if (!shopId) {
+      console.log('No shop ID provided, querying shops table');
       const { data: shopData, error: shopError } = await supabase
         .from('shops')
         .select('id')
-        .eq('name', shop.name)
+        .ilike('name', normalizedShopName)
         .maybeSingle();
 
       if (shopError) {
@@ -1591,12 +1597,12 @@ async function fetchCities() {
       }
 
       if (!shopData) {
-        console.log(`Shop "${shop.name}" not found, creating new shop.`);
+        console.log(`Shop "${normalizedShopName}" not found, creating new shop`);
         const { data: newShop, error: insertError } = await supabase
           .from('shops')
           .insert([
             {
-              name: shop.name,
+              name: normalizedShopName,
               address: shop.address || 'Unknown',
               city: shop.city || 'Unknown'
             }
@@ -1606,13 +1612,15 @@ async function fetchCities() {
 
         if (insertError) {
           console.error('Error creating shop:', insertError);
-          alert('Failed to create shop. Please try again.');
+          alert(`Failed to create shop: ${insertError.message}`);
           return;
         }
 
         shopId = newShop.id;
+        console.log('New shop created with ID:', shopId);
       } else {
         shopId = shopData.id;
+        console.log('Existing shop found with ID:', shopId);
       }
     }
 
@@ -1627,14 +1635,14 @@ async function fetchCities() {
       created_at: new Date().toISOString()
     };
 
-    // Save review to Supabase
+    console.log('Submitting review:', review);
     const { data, error } = await supabase
       .from('reviews')
       .insert([review]);
 
     if (error) {
       console.error('Error saving review to Supabase:', error);
-      alert('Failed to submit review. Please try again.');
+      alert(`Failed to submit review: ${error.message}`);
       return;
     }
 
