@@ -272,18 +272,18 @@ async function updateFavoritesModal() {
   viewButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
-      const shop = favorites.find(s => s.shop_id === shopName);
+      const shopId = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
+      const shop = favorites.find(s => s.shop_id === shopId);
       if (shop) {
-        console.log('Viewing shop from favorites:', shop.shop_id);
+        console.log('Viewing shop from favorites:', shopId);
         currentShop = {
-          name: shop.shop_id,
+          shop_id: shop.shop_id,
           address: shop.address
         };
         showShopDetails(currentShop);
         document.getElementById('favorite-modal').classList.add('hidden');
       } else {
-        console.error('Shop not found in favorites:', shopName);
+        console.error('Shop not found in favorites:', shopId);
       }
     });
   });
@@ -292,7 +292,7 @@ async function updateFavoritesModal() {
   removeButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
+      const shopId = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
       const { data: authData } = await client.auth.getUser();
       const userId = authData?.user?.id;
       if (!userId) {
@@ -304,23 +304,24 @@ async function updateFavoritesModal() {
         .from('favorites')
         .delete()
         .eq('user_id', userId)
-        .eq('shop_id', shopName);
+        .eq('shop_id', shopId);
 
       if (error) {
         console.error('Error removing favorite:', error.message);
       } else {
-        console.log('Removed from favorites:', shopName);
+        console.log('Removed from favorites:', shopId);
         updateFavoritesModal();
 
         const floatingCard = document.getElementById('floating-card');
-        if (floatingCard && currentShop && currentShop.shop_id === shopName) {
+        if (floatingCard && currentShop && currentShop.shop_id === shopId) {
           floatingCard.querySelector('#favorite-button svg')?.setAttribute('fill', 'none');
-          floatingCard.querySelector('#favorite-button')?.setAttribute('aria-label', `Add ${shopName} to favorites`);
+          floatingCard.querySelector('#favorite-button')?.setAttribute('aria-label', `Add ${shopId} to favorites`);
         }
       }
     });
   });
 }
+
 
 
 document.addEventListener('DOMContentLoaded', async () => {
