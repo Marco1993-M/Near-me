@@ -2259,3 +2259,87 @@ document.getElementById('top-100-button').addEventListener('click', () => {
     document.getElementById('map')?.classList.add('map-failed');
   }
 }, false);
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const authBanner = document.getElementById('auth-banner');
+  const closeBtn = document.getElementById('auth-banner-close-button');
+  const submitBtn = document.getElementById('auth-submit');
+  const toggleBtn = document.getElementById('auth-toggle');
+  const resetBtn = document.getElementById('auth-reset');
+
+  const emailInput = document.getElementById('auth-email');
+  const passwordInput = document.getElementById('auth-password');
+
+  let isLoginMode = true;
+
+  // Auto-hide banner if user is already logged in
+  const { data: { session } } = await client.auth.getSession();
+  if (session) {
+    authBanner.classList.add('hidden');
+  } else {
+    authBanner.classList.remove('hidden');
+  }
+
+  // Close banner
+  closeBtn?.addEventListener('click', () => {
+    authBanner.classList.add('hidden');
+  });
+
+  // Login or Sign Up
+  submitBtn?.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
+
+    try {
+      const { error } = isLoginMode
+        ? await client.auth.signInWithPassword({ email, password })
+        : await client.auth.signUp({ email, password });
+
+      if (error) throw error;
+
+      alert(isLoginMode ? "Login successful!" : "Signup successful!");
+      authBanner.classList.add('hidden');
+    } catch (err) {
+      alert(err.message || "Authentication failed.");
+    }
+  });
+
+  // Toggle Login / Sign Up
+  toggleBtn?.addEventListener('click', () => {
+    isLoginMode = !isLoginMode;
+    submitBtn.textContent = isLoginMode ? "Login" : "Sign Up";
+    toggleBtn.textContent = isLoginMode ? "Sign Up" : "Already have an account?";
+    resetBtn.style.display = isLoginMode ? "inline-block" : "none"; // Hide reset for signup
+  });
+
+  // Password Reset
+  resetBtn?.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+      alert("Please enter your email to reset password.");
+      return;
+    }
+
+    try {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href // Can be a custom URL
+      });
+      if (error) throw error;
+      alert("Password reset link sent!");
+    } catch (err) {
+      alert(err.message || "Failed to send reset email.");
+    }
+  });
+
+  // Listen for auth state changes
+  client.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      authBanner.classList.add('hidden');
+    }
+  });
+});
