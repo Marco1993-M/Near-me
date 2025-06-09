@@ -24,14 +24,17 @@
   <div id="map"></div>
 
 
-     <!-- Login Banner  -->
-    <div id="auth-banner" class="hidden">
+    <!-- Login Banner -->
+<div id="auth-banner" class="hidden">
   <h2 class="auth-banner-heading">Login</h2>
-  <input type="text" placeholder="Email" class="auth-banner-input" />
-  <input type="password" placeholder="Password" class="auth-banner-input" />
+
+  <input type="text" id="auth-email" placeholder="Email" class="auth-banner-input" />
+  <input type="password" id="auth-password" placeholder="Password" class="auth-banner-input" />
+
   <div class="auth-banner-actions">
-    <button class="auth-banner-submit-button">Login</button>
-    <button class="auth-banner-toggle-button">Sign up</button>
+    <button id="auth-submit" class="auth-banner-submit-button">Login</button>
+    <button id="auth-toggle" class="auth-banner-toggle-button">Sign up</button>
+    <button id="auth-reset" class="auth-banner-toggle-button">Forgot Password?</button>
   </div>
 </div>
 
