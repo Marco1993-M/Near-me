@@ -191,22 +191,24 @@ async function fetchFavorites() {
 
 
 async function addToFavorites(shop) {
-  const { data: authData } = await client.auth.getUser();
+  const { data: authData, error: authError } = await client.auth.getUser();
   const userId = authData?.user?.id;
-  if (!userId) {
-    console.error('No user authenticated');
+
+  if (authError || !userId) {
+    console.error('No user authenticated:', authError?.message);
     return;
   }
 
+  // Check for existing favorite
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('*')
     .eq('user_id', userId)
-    .eq('shop_name', shop.name)
-    .eq('shop_address', shop.address);
+    .eq('name', shop.name)
+    .eq('address', shop.address);
 
   if (fetchError) {
-    console.error('Error checking existing favorites:', fetchError);
+    console.error('Error checking existing favorites:', fetchError.message);
     return;
   }
 
@@ -215,22 +217,23 @@ async function addToFavorites(shop) {
     return;
   }
 
-  const { error } = await client
+  // Add to favorites
+  const { error: insertError } = await client
     .from('favorites')
     .insert({
       user_id: userId,
-      shop_name: shop.name,
-      shop_address: shop.address,
-      rating: shop.rating || 'N/A'
+      name: shop.name,
+      address: shop.address,
     });
 
-  if (error) {
-    console.error('Error adding to favorites:', error);
+  if (insertError) {
+    console.error('Error adding to favorites:', insertError.message);
   } else {
     console.log(`Added to favorites: ${shop.name}`);
-    updateFavoritesModal(); // Update the UI after adding
+    updateFavoritesModal(); // Call your UI update logic
   }
 }
+
 
 async function updateFavoritesModal() {
   console.log('Updating favorites modal');
