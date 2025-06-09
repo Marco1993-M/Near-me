@@ -273,7 +273,7 @@ async function updateFavoritesModal() {
     button.addEventListener('click', async (e) => {
       e.stopPropagation();
       const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
-      const shop = favorites.find(s => s.name === shopName);
+      const shop = favorites.find(s => s.shop_id === shopName);
       if (shop) {
         console.log('Viewing shop from favorites:', shop.shop_id);
         currentShop = {
@@ -304,7 +304,7 @@ async function updateFavoritesModal() {
         .from('favorites')
         .delete()
         .eq('user_id', userId)
-        .eq('name', shopName);
+        .eq('shop_id', shopName);
 
       if (error) {
         console.error('Error removing favorite:', error.message);
@@ -313,7 +313,7 @@ async function updateFavoritesModal() {
         updateFavoritesModal();
 
         const floatingCard = document.getElementById('floating-card');
-        if (floatingCard && currentShop && currentShop.name === shopName) {
+        if (floatingCard && currentShop && currentShop.shop_id === shopName) {
           floatingCard.querySelector('#favorite-button svg')?.setAttribute('fill', 'none');
           floatingCard.querySelector('#favorite-button')?.setAttribute('aria-label', `Add ${shopName} to favorites`);
         }
