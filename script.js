@@ -262,41 +262,8 @@ async function updateFavoritesModal() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-  console.log('DOM loaded at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-
-  // Check authentication first
-  try {
-    const isAuthenticated = await checkAuthOnStartup();
-    if (!isAuthenticated) {
-      console.log('User not authenticated, halting initialization');
-      document.querySelectorAll('#cities-button, #top-100-button, #favorites-button, #user-location-button').forEach(btn => {
-        if (btn) {
-          btn.disabled = true;
-          btn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-      });
-      return;
-    }
-  } catch (err) {
-    console.error('Error during auth check on startup:', err);
-    showAuthBanner(null, () => window.location.reload());
-    return;
-  }
-
-  console.log('Initial floating-card state:', document.getElementById('floating-card')?.classList.contains('hidden') ? 'hidden' : 'visible');
-
-  // Initialize map
-  try {
-    window.map = L.map('map').setView([-33.9249, 18.4241], 13); // Default to Cape Town
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(window.map);
-    console.log('Map initialized successfully');
-  } catch (error) {
-    console.error('Error initializing map:', error);
-    document.getElementById('map')?.classList.add('map-failed');
-  }
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initial floating-card state:', document.getElementById('floating-card')?.classList.contains('hidden') ? 'hidden' : 'visible');
 
   const navButtons = [
     { id: 'cities-button', modalId: 'cities-modal' },
@@ -314,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     if (!modal) {
       console.error(`Modal not found: #${modalId}`);
-      button.disabled = true;
+      button.setAttribute('disabled', 'true');
       button.classList.add('opacity-50', 'cursor-not-allowed');
       return false;
     }
@@ -370,8 +337,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (successful < navButtons.length) {
       console.error(`Failed to set up ${navButtons.length - successful} navigation buttons`);
       const errorDiv = document.createElement('div');
-      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-3 rounded-lg shadow-md';
-      errorDiv.textContent = 'Some navigation features are unavailable. Please try again later.';
+      errorDiv.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white p-4 rounded';
+      errorDiv.textContent = 'Some navigation features are unavailable. Please refresh the page.';
       document.body.appendChild(errorDiv);
       setTimeout(() => errorDiv.remove(), 5000);
     } else {
@@ -389,20 +356,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       e.preventDefault();
       e.stopPropagation();
 
-      // Safely access DOM elements
-      const shopNameEl = floatingCard.querySelector('.shop-name');
-      const addressEl = floatingCard.querySelector('.shop-address');
-      const ratingEl = floatingCard.querySelector('.shop-rating');
-
-      if (!shopNameEl || !addressEl || !ratingEl) {
-        console.error('Shop details not found in floating card');
-        return;
-      }
+      const shopName = floatingCard.querySelector('h3').childNodes[2].textContent.trim();
+      const address = floatingCard.querySelectorAll('p')[0].childNodes[2].textContent.trim();
+      const rating = floatingCard.querySelectorAll('p')[1].childNodes[2].textContent.trim().replace('Rating: ', '');
 
       const shop = {
-        name: shopNameEl.textContent.trim(),
-        address: addressEl.textContent.trim(),
-        rating: ratingEl.textContent.trim().replace('Rating:\s*', '')
+        name: shopName,
+        address: address,
+        rating: rating
       };
 
       addToFavorites(shop);
@@ -417,8 +378,8 @@ document.addEventListener('DOMContentLoaded', async function() {
       modals.forEach(modal => {
         if (!modal.classList.contains('hidden')) {
           modal.classList.add('hidden');
-          console.log('Closed modal: ${modal.id} (clicked outside)');
-        });
+          console.log(`Closed modal: ${modal.id} (clicked outside)`);
+        }
       });
       document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
     }
@@ -432,17 +393,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   document.querySelectorAll('.close-button').forEach(button => {
     button.addEventListener('click', (e) => {
-      e.preventDefault();
       e.stopPropagation();
       const modal = button.closest('.modal');
       if (modal) {
         modal.classList.add('hidden');
-        console.log('Closed modal: ${modal.id} (via close button)');
+        console.log(`Closed modal: ${modal.id} (via close button)`);
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
       }
     });
   });
-});
 
   try {
   var map = L.map('map').setView([48.8566, 2.3522], 13);
