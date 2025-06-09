@@ -262,31 +262,8 @@ async function updateFavoritesModal() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-  console.log('DOM loaded at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
-
-  // Check authentication first
-  try {
-    const isAuthenticated = await checkAuthOnStartup();
-    if (!isAuthenticated) {
-      console.log('User not authenticated, halting initialization');
-      // Disable navigation buttons until authenticated
-      document.querySelectorAll('#cities-button, #top-100-button, #favorites-button, #user-location-button').forEach(btn => {
-        if (btn) {
-          btn.disabled = true;
-          btn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-      });
-      return; // Stop further initialization until auth is resolved
-    }
-  } catch (err) {
-    console.error('Error during auth check on startup:', err);
-    // Optionally show auth banner on error
-    showAuthBanner(null, () => window.location.reload());
-    return;
-  }
-
-  console.log('Initial floating-card state:', document.getElementById('floating-card')?.classList.contains('hidden') ? 'hidden' : 'visible');
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM loaded, initial floating-card state:', document.getElementById('floating-card')?.classList.contains('hidden') ? 'hidden' : 'visible');
 
   const navButtons = [
     { id: 'cities-button', modalId: 'cities-modal' },
@@ -425,7 +402,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       }
     });
   });
-});
 
   try {
   var map = L.map('map').setView([48.8566, 2.3522], 13);
