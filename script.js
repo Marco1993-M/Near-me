@@ -1674,7 +1674,7 @@ async function fetchCities() {
   });
 }
 
-async function showAuthBanner(shop) {
+async function showAuthBanner(shop, onSuccessCallback = null) {
   const authBanner = document.getElementById('auth-banner');
   if (!authBanner) {
     console.error('Auth banner element not found');
@@ -1696,7 +1696,7 @@ async function showAuthBanner(shop) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
-    <h3 id="auth-heading" class="auth-banner-heading">Sign In to Leave a Review</h3>
+    <h3 id="auth-heading" class="auth-banner-heading">${shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App'}</h3>
     <input id="auth-email" type="email" class="auth-banner-input" placeholder="Email" required>
     <input id="auth-password" type="password" class="auth-banner-input" placeholder="Password" required>
     <div class="auth-banner-actions">
@@ -1726,7 +1726,7 @@ async function showAuthBanner(shop) {
   toggleButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     isSignUp = !isSignUp;
-    authHeading.textContent = isSignUp ? 'Sign Up to Leave a Review' : 'Sign In to Leave a Review';
+    authHeading.textContent = isSignUp ? (shop ? `Sign Up to Leave a Review for ${shop.name}` : 'Sign Up to Use the App') : (shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App');
     submitButton.textContent = isSignUp ? 'Sign Up' : 'Sign In';
     toggleButton.textContent = isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up';
     console.log('Toggled to:', isSignUp ? 'Sign Up' : 'Sign In');
@@ -1773,9 +1773,14 @@ async function showAuthBanner(shop) {
       return;
     }
 
-    // Close auth banner and show review banner
+    // Close auth banner
     authBanner.classList.add('hidden');
-    showReviewBanner(shop);
+    // Call callback or show review banner
+    if (onSuccessCallback) {
+      onSuccessCallback();
+    } else if (shop) {
+      showReviewBanner(shop);
+    }
   });
 }
 
