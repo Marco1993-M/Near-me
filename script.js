@@ -5,6 +5,110 @@ const client = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
+// checkAuthOnStartup: Ensures user is logged in on app startup
+async function checkAuthOnStartup() {
+  console.log('Checking authentication on app startup at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
+  if (!client || !client.auth) {
+    console.error('Supabase client is not initialized or auth is unavailable');
+    alert('Error: Database connection not available. Please reload the app.');
+    return false;
+  }
+
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) {
+    console.log('No authenticated user found, showing auth banner');
+    showAuthBanner(null, () => {
+      console.log('User authenticated, reloading app');
+      window.location.reload();
+    });
+    return false;
+  }
+
+  console.log('User authenticated:', user.id);
+  return true;
+}
+
+// showAuthBanner: Displays login/signup form
+async function showAuthBanner(shop, onSuccessCallback = null) {
+  const authBanner = document.getElementById('auth-banner');
+  if (!authBanner) {
+    console.error('Auth banner element not found');
+    return;
+  }
+
+  if (!client || !client.auth) {
+    console.error('Supabase client is not initialized or auth is unavailable');
+    alert('Error: Database connection not available. Please try again later.');
+    return;
+  }
+
+  let isSignUp = false;
+
+  authBanner.innerHTML = `
+    <button class="auth-banner-close-button" aria-label="Close auth form">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <h3 id="auth-heading" class="auth-banner-heading">${shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App'}</h3>
+    <input id="auth-email" type="email" class="auth-banner-input" placeholder="Email" required>
+    <input id="auth-password" type="password" class="auth-banner-input" placeholder="Password" required>
+    <div class="auth-banner-actions">
+      <button id="auth-toggle-button" class="auth-btn">Need an account? Sign Up</button>
+      <button id="submit-auth-button" class="auth-btn">Sign In</button>
+    </div>
+  `;
+  authBanner.classList.remove('hidden');
+  authBanner.addEventListener('click', (e) => e.stopPropagation());
+
+  const toggleButton = authBanner.querySelector('#auth-toggle-button');
+  const authHeading = authBanner.querySelector('#auth-heading');
+  const submitButton = authBanner.querySelector('#submit-auth-button');
+
+  toggleButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSignUp = !isSignUp;
+    authHeading.textContent = isSignUp ? (shop ? `Sign Up to Leave a Review for ${shop.name}` : 'Sign Up to Use the App') : (shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App');
+    submitButton.textContent = isSignUp ? 'Sign Up' : 'Sign In';
+    toggleButton.textContent = isSignUp ? 'Already have an account?' : 'Need an account? Sign Up';
+    console.log('Toggled to:', isSignUp ? 'Sign Up' : 'Sign In');
+  });
+
+  submitButton?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const email = authBanner.querySelector('#auth-email').value.trim();
+    const password = authBanner.querySelector('#auth-password').value.trim();
+
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return;
+    }
+
+    let authError = null;
+    if (isSignUp) {
+      const { error } = await client.auth.signUp({ email, password });
+      authError = error;
+      if (!error) alert('Sign-up successful! Please check your email to confirm your account.');
+    } else {
+      const { error } = await client.auth.signInWithPassword({ email, password });
+      authError = error;
+    }
+
+    if (authError) {
+      console.error('Authentication error:', authError.message);
+      alert(`Authentication failed: ${authError.message}`);
+      return;
+    }
+
+    authBanner.classList.add('hidden');
+    if (onSuccessCallback) {
+      onSuccessCallback();
+    } else if (shop) {
+      showReviewBanner(shop);
+    }
+  });
+}
+
 async function fetchFavorites() {
   const { data: authData } = await client.auth.getUser();
   const userId = authData?.user?.id;
@@ -22,30 +126,6 @@ async function fetchFavorites() {
   }
   return data || [];
 }
-
-async function checkAuthOnStartup() {
-  console.log('Checking authentication on app startup');
-  if (!supabase || !supabase.auth) {
-    console.error('Supabase client is not initialized or auth is unavailable');
-    alert('Error: Database connection not available. Please reload the app.');
-    return false;
-  }
-
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    console.log('No authenticated user found, showing auth banner');
-    // Pass null as shop to show generic auth banner
-    showAuthBanner(null, () => {
-      console.log('User authenticated, reloading app');
-      window.location.reload(); // Reload to initialize app with authenticated user
-    });
-    return false;
-  }
-
-  console.log('User authenticated:', user.id);
-  return true;
-}
-
 
 async function addToFavorites(shop) {
   const { data: authData } = await client.auth.getUser();
