@@ -1473,6 +1473,21 @@ async function fetchCities() {
   }
   console.log('Showing review banner for:', shop.name);
 
+  // Check if supabase client is available
+  if (!supabase || !supabase.auth) {
+    console.error('Supabase client is not initialized or auth is unavailable');
+    alert('Error: Database connection not available. Please try again later.');
+    return;
+  }
+
+  // Check if user is authenticated
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    console.log('User not authenticated, showing auth banner');
+    showAuthBanner(shop); // Show auth banner and pass shop to retry after auth
+    return;
+  }
+
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) {
     console.error('Review banner element not found');
@@ -1548,7 +1563,7 @@ async function fetchCities() {
     e.stopPropagation();
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
-    const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
+    const petFriendly = review.getElementById('review-pet-friendly').checked;
     const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
 
     if (!selectedRating) {
@@ -1557,21 +1572,6 @@ async function fetchCities() {
     }
     if (!reviewText) {
       alert('Please write a review.');
-      return;
-    }
-
-    // Check if supabase client is available
-    if (!supabase || !supabase.auth) {
-      console.error('Supabase client is not initialized or auth is unavailable');
-      alert('Error: Database connection not available. Please try again later.');
-      return;
-    }
-
-    // Get the current authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('Error getting authenticated user:', userError);
-      alert('You must be logged in to submit a review.');
       return;
     }
 
@@ -1624,6 +1624,111 @@ async function fetchCities() {
     console.log('Review submitted to Supabase:', data);
     reviewBanner.classList.add('hidden');
     showShopDetails(shop);
+  });
+}
+
+async function showAuthBanner(shop) {
+  const authBanner = document.getElementById('auth-banner');
+  if (!authBanner) {
+    console.error('Auth banner element not found');
+    return;
+  }
+
+  // Check if supabase client is available
+  if (!supabase || !supabase.auth) {
+    console.error('Supabase client is not initialized or auth is unavailable');
+    alert('Error: Database connection not available. Please try again later.');
+    return;
+  }
+
+  let isSignUp = false; // Toggle between sign-in and sign-up modes
+
+  authBanner.innerHTML = `
+    <button class="auth-banner-close-button" aria-label="Close auth form">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <h3 id="auth-heading" class="auth-banner-heading">Sign In to Leave a Review</h3>
+    <input id="auth-email" type="email" class="auth-banner-input" placeholder="Email" required>
+    <input id="auth-password" type="password" class="auth-banner-input" placeholder="Password" required>
+    <div class="auth-banner-actions">
+      <button id="auth-toggle-button" class="auth-banner-toggle-button">Need an account? Sign Up</button>
+      <button id="auth-submit-button" class="auth-banner-submit-button">Sign In</button>
+    </div>
+  `;
+  authBanner.classList.remove('hidden');
+  console.log('Auth banner classes after show:', authBanner.classList.toString());
+
+  // Prevent clicks inside auth banner from closing it
+  authBanner.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  // Close button
+  authBanner.querySelector('.auth-banner-close-button')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    authBanner.classList.add('hidden');
+    console.log('Auth banner closed');
+  });
+
+  // Toggle between sign-in and sign-up
+  const toggleButton = authBanner.querySelector('#auth-toggle-button');
+  const authHeading = authBanner.querySelector('#auth-heading');
+  const submitButton = authBanner.querySelector('#auth-submit-button');
+  toggleButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSignUp = !isSignUp;
+    authHeading.textContent = isSignUp ? 'Sign Up to Leave a Review' : 'Sign In to Leave a Review';
+    submitButton.textContent = isSignUp ? 'Sign Up' : 'Sign In';
+    toggleButton.textContent = isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up';
+    console.log('Toggled to:', isSignUp ? 'Sign Up' : 'Sign In');
+  });
+
+  // Submit button
+  submitButton?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const email = authBanner.querySelector('#auth-email').value.trim();
+    const password = authBanner.querySelector('#auth-password').value.trim();
+
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return;
+    }
+
+    let authError = null;
+    if (isSignUp) {
+      // Sign up
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      authError = error;
+      if (!error) {
+        console.log('User signed up:', data.user);
+        alert('Sign-up successful! Please check your email to confirm your account.');
+      }
+    } else {
+      // Sign in
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      authError = error;
+      if (!error) {
+        console.log('User signed in:', data.user);
+      }
+    }
+
+    if (authError) {
+      console.error('Authentication error:', authError.message);
+      alert(`Authentication failed: ${authError.message}`);
+      return;
+    }
+
+    // Close auth banner and show review banner
+    authBanner.classList.add('hidden');
+    showReviewBanner(shop);
   });
 }
 
