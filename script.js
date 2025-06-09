@@ -1222,16 +1222,16 @@ async function fetchCities() {
 }
 
   async function showFloatingCard(shop) {
-  if (!shop || !shop.shop_id) {
+  if (!shop || !shop.name) {
     console.warn('Invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
     return;
   }
-  console.log('Showing floating card for:', shop.shop_id);
+  console.log('Showing floating card for:', shop.name);
 
   let averageRating = 0;
   try {
-    averageRating = await calculateAverageRating(shop.shop_id);
+    averageRating = await calculateAverageRating(shop.name);
   } catch (error) {
     console.error('Error calculating average rating:', error);
   }
@@ -1239,7 +1239,7 @@ async function fetchCities() {
 
   const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
   const isFavorited = favorites && Array.isArray(favorites)
-    ? favorites.some(fav => fav.name === shop.shop_id && fav.address === shop.address)
+    ? favorites.some(fav => fav.name === shop.name && fav.address === shop.address)
     : false;
 
   const coffeeIcon = `<svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>`;
@@ -1259,7 +1259,7 @@ async function fetchCities() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
-    <h3 class="floating-card-heading">${shop.shop_id}</h3>
+    <h3 class="floating-card-heading">${shop.name}</h3>
     <p class="floating-card-info">${addressFirstLine} ${starIcon} ${displayRating}</p>
     <div class="floating-card-actions">
       ${shop.phone ? `
@@ -1344,7 +1344,7 @@ async function fetchCities() {
         const { error } = await client
           .from('favorites')
           .delete()
-          .eq('shop_id', currentShop.name)
+          .eq('name', currentShop.name)
           .eq('address', currentShop.address)
           .eq('user_id', user.user.id);
         if (error) throw error;
