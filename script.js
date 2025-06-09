@@ -257,18 +257,13 @@ async function updateFavoritesModal() {
     const li = document.createElement('li');
     li.className = 'favorite-modal-list-item';
     li.innerHTML = `
-      <span class="favorite-modal-shop-info">${shop.shop_name}</span>
+      <span class="favorite-modal-shop-info">${shop.name}</span>
       <div class="favorite-modal-actions">
-        <button class="favorite-modal-button view-shop" aria-label="View ${shop.shop_name}">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
+        <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
+          <!-- eye icon SVG -->
         </button>
-        <button class="favorite-modal-button remove" aria-label="Remove ${shop.shop_name} from favorites">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a2 2 0 00-2 2h8a2 2 0 00-2-2m-4 0H6m4 4v12m4-12v12" />
-          </svg>
+        <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
+          <!-- trash icon SVG -->
         </button>
       </div>
     `;
@@ -279,15 +274,13 @@ async function updateFavoritesModal() {
   viewButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const shopName = button.parentElement.parentElement.querySelector('.favorite-modal-shop-info').textContent;
-      const favorites = await fetchFavorites();
-      const shop = favorites.find(s => s.shop_name === shopName);
+      const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
+      const shop = favorites.find(s => s.name === shopName);
       if (shop) {
-        console.log('Viewing shop from favorites:', shopName);
+        console.log('Viewing shop from favorites:', shop.name);
         currentShop = {
-          name: shop.shop_name,
-          address: shop.shop_address,
-          rating: shop.rating
+          name: shop.name,
+          address: shop.address
         };
         showShopDetails(currentShop);
         document.getElementById('favorite-modal').classList.add('hidden');
@@ -301,32 +294,36 @@ async function updateFavoritesModal() {
   removeButtons.forEach(button => {
     button.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const shopName = button.parentElement.parentElement.querySelector('.favorite-modal-shop-info').textContent;
+      const shopName = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
       const { data: authData } = await client.auth.getUser();
       const userId = authData?.user?.id;
       if (!userId) {
         console.error('No user authenticated');
         return;
       }
+
       const { error } = await client
         .from('favorites')
         .delete()
         .eq('user_id', userId)
-        .eq('shop_name', shopName);
+        .eq('name', shopName);
+
       if (error) {
-        console.error('Error removing favorite:', error);
+        console.error('Error removing favorite:', error.message);
       } else {
         console.log('Removed from favorites:', shopName);
         updateFavoritesModal();
+
         const floatingCard = document.getElementById('floating-card');
         if (floatingCard && currentShop && currentShop.name === shopName) {
-          floatingCard.querySelector('#favorite-button svg').setAttribute('fill', 'none');
-          floatingCard.querySelector('#favorite-button').setAttribute('aria-label', `Add ${shopName} to favorites`);
+          floatingCard.querySelector('#favorite-button svg')?.setAttribute('fill', 'none');
+          floatingCard.querySelector('#favorite-button')?.setAttribute('aria-label', `Add ${shopName} to favorites`);
         }
       }
     });
   });
 }
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await client.auth.getSession();
