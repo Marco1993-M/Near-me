@@ -23,6 +23,18 @@
 <body>
   <div id="map"></div>
 
+
+     <!-- Login Banner  -->
+    <div id="auth-banner" class="hidden">
+  <h2 class="auth-banner-heading">Login</h2>
+  <input type="text" placeholder="Email" class="auth-banner-input" />
+  <input type="password" placeholder="Password" class="auth-banner-input" />
+  <div class="auth-banner-actions">
+    <button class="auth-banner-submit-button">Login</button>
+    <button class="auth-banner-toggle-button">Sign up</button>
+  </div>
+</div>
+
   <!-- Search Bar -->
   <div id="search-container">
     <input type="text" id="search-bar" placeholder="Search for coffee shops..." disabled>
@@ -32,7 +44,7 @@
   <div id="floating-card" class="hidden"></div>
   <div id="shop-details-banner" class="hidden"></div>
   <div id="review-banner" class="hidden"></div>
-  <div id="auth-banner" class="hidden"></div>
+   <div id="auth-banner" class="hidden"></div>
   <div id="filtered-shops-list"></div>
 
   <!-- Filters Modal -->
@@ -49,6 +61,7 @@
   </div>
 
   <!-- Cities Modal -->
+
 <div id="cities-modal" class="hidden">
       <div class="modal-content">
         <button class="close-button" aria-label="Close cities modal">×</button>
