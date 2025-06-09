@@ -2277,4 +2277,4 @@ document.getElementById('top-100-button').addEventListener('click', () => {
     console.error('Error initializing map:', error);
     document.getElementById('map')?.classList.add('map-failed');
   }
-}, false);
+, false);
