@@ -23,6 +23,28 @@ async function fetchFavorites() {
   return data || [];
 }
 
+async function checkAuthOnStartup() {
+  console.log('Checking authentication on app startup');
+  if (!supabase || !supabase.auth) {
+    console.error('Supabase client is not initialized or auth is unavailable');
+    alert('Error: Database connection not available. Please reload the app.');
+    return false;
+  }
+
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    console.log('No authenticated user found, showing auth banner');
+    // Pass null as shop to show generic auth banner
+    showAuthBanner(null, () => {
+      console.log('User authenticated, reloading app');
+      window.location.reload(); // Reload to initialize app with authenticated user
+    });
+    return false;
+  }
+
+  console.log('User authenticated:', user.id);
+  return true;
+}
 
 
 async function addToFavorites(shop) {
