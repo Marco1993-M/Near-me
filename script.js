@@ -5,6 +5,11 @@ const client = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('auth-banner')?.classList.remove('hidden');
+});
+
+
 // checkAuthOnStartup: Ensures user is logged in on app startup
 async function checkAuthOnStartup() {
   console.log('Checking authentication on app startup at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
