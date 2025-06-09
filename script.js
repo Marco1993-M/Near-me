@@ -50,7 +50,7 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
   let isSignUp = false;
 
   authBanner.innerHTML = `
-    <button class="auth-banner-close-button" aria-label="Close auth form">
+    <button class="auth-banner-close-button" id="auth-banner-close-button" aria-label="Close auth form">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
@@ -61,28 +61,45 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     <div class="auth-banner-actions">
       <button id="auth-toggle-button" class="auth-btn">Need an account? Sign Up</button>
       <button id="submit-auth-button" class="auth-btn">Sign In</button>
+      <button id="auth-reset-button" class="auth-btn">Forgot Password?</button>
     </div>
   `;
+
   authBanner.classList.remove('hidden');
   authBanner.addEventListener('click', (e) => e.stopPropagation());
 
   const toggleButton = authBanner.querySelector('#auth-toggle-button');
   const authHeading = authBanner.querySelector('#auth-heading');
   const submitButton = authBanner.querySelector('#submit-auth-button');
+  const resetButton = authBanner.querySelector('#auth-reset-button');
+  const closeButton = authBanner.querySelector('#auth-banner-close-button');
+  const emailInput = authBanner.querySelector('#auth-email');
+  const passwordInput = authBanner.querySelector('#auth-password');
 
+  // Close banner
+  closeButton?.addEventListener('click', () => {
+    authBanner.classList.add('hidden');
+  });
+
+  // Toggle Login / Sign Up
   toggleButton?.addEventListener('click', (e) => {
     e.stopPropagation();
     isSignUp = !isSignUp;
-    authHeading.textContent = isSignUp ? (shop ? `Sign Up to Leave a Review for ${shop.name}` : 'Sign Up to Use the App') : (shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App');
+
+    authHeading.textContent = isSignUp
+      ? (shop ? `Sign Up to Leave a Review for ${shop.name}` : 'Sign Up to Use the App')
+      : (shop ? `Sign In to Leave a Review for ${shop.name}` : 'Sign In to Use the App');
+
     submitButton.textContent = isSignUp ? 'Sign Up' : 'Sign In';
     toggleButton.textContent = isSignUp ? 'Already have an account?' : 'Need an account? Sign Up';
-    console.log('Toggled to:', isSignUp ? 'Sign Up' : 'Sign In');
+    resetButton.style.display = isSignUp ? 'none' : 'inline-block';
   });
 
+  // Submit Login or Sign Up
   submitButton?.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const email = authBanner.querySelector('#auth-email').value.trim();
-    const password = authBanner.querySelector('#auth-password').value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
 
     if (!email || !password) {
       alert('Please enter both email and password.');
@@ -90,29 +107,65 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     }
 
     let authError = null;
-    if (isSignUp) {
-      const { error } = await client.auth.signUp({ email, password });
-      authError = error;
-      if (!error) alert('Sign-up successful! Please check your email to confirm your account.');
-    } else {
-      const { error } = await client.auth.signInWithPassword({ email, password });
-      authError = error;
-    }
+    try {
+      if (isSignUp) {
+        const { error } = await client.auth.signUp({ email, password });
+        authError = error;
+        if (!error) alert('Sign-up successful! Please check your email to confirm your account.');
+      } else {
+        const { error } = await client.auth.signInWithPassword({ email, password });
+        authError = error;
+      }
 
-    if (authError) {
-      console.error('Authentication error:', authError.message);
-      alert(`Authentication failed: ${authError.message}`);
+      if (authError) {
+        console.error('Authentication error:', authError.message);
+        alert(`Authentication failed: ${authError.message}`);
+        return;
+      }
+
+      authBanner.classList.add('hidden');
+
+      if (onSuccessCallback) {
+        onSuccessCallback();
+      } else if (shop) {
+        showReviewBanner(shop);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Authentication failed.');
+    }
+  });
+
+  // Password Reset
+  resetButton?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const email = emailInput.value.trim();
+    if (!email) {
+      alert('Please enter your email to reset your password.');
       return;
     }
 
-    authBanner.classList.add('hidden');
-    if (onSuccessCallback) {
-      onSuccessCallback();
-    } else if (shop) {
-      showReviewBanner(shop);
+    try {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href // Or a specific password reset page
+      });
+
+      if (error) throw error;
+      alert('Password reset link sent! Check your email.');
+    } catch (err) {
+      console.error('Password reset error:', err.message);
+      alert(err.message || 'Failed to send reset email.');
+    }
+  });
+
+  // Listen for session change
+  client.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+      authBanner.classList.add('hidden');
     }
   });
 }
+
 
 async function fetchFavorites() {
   const { data: authData } = await client.auth.getUser();
