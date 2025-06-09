@@ -1563,7 +1563,7 @@ async function fetchCities() {
     e.stopPropagation();
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
-    const petFriendly = review.getElementById('review-pet-friendly').checked;
+    const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
     const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
 
     if (!selectedRating) {
@@ -1575,7 +1575,7 @@ async function fetchCities() {
       return;
     }
 
-    // Look up shop_id based on shop.name
+    // Look up shop_id based on shop.name or insert new shop
     let shopId = shop.id;
     if (!shopId) {
       const { data: shopData, error: shopError } = await supabase
@@ -1591,12 +1591,29 @@ async function fetchCities() {
       }
 
       if (!shopData) {
-        console.warn('No shop found with name:', shop.name);
-        alert(`Shop "${shop.name}" not found. Please ensure the shop exists.`);
-        return;
-      }
+        console.log(`Shop "${shop.name}" not found, creating new shop.`);
+        const { data: newShop, error: insertError } = await supabase
+          .from('shops')
+          .insert([
+            {
+              name: shop.name,
+              address: shop.address || 'Unknown',
+              city: shop.city || 'Unknown'
+            }
+          ])
+          .select('id')
+          .single();
 
-      shopId = shopData.id;
+        if (insertError) {
+          console.error('Error creating shop:', insertError);
+          alert('Failed to create shop. Please try again.');
+          return;
+        }
+
+        shopId = newShop.id;
+      } else {
+        shopId = shopData.id;
+      }
     }
 
     const review = {
