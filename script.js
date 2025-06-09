@@ -320,6 +320,21 @@ async function updateFavoritesModal() {
   });
 }
 
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await client.auth.getSession();
+  const authBanner = document.getElementById('auth-banner');
+
+  if (session?.user) {
+    // User is logged in — hide the banner
+    authBanner?.classList.add('hidden');
+    console.log('User is already logged in:', session.user.email);
+  } else {
+    // User is not logged in — show the banner
+    showAuthBanner(); // only if you want dynamic rendering
+  }
+});
+
+
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM loaded, initial floating-card state:', document.getElementById('floating-card')?.classList.contains('hidden') ? 'hidden' : 'visible');
 
