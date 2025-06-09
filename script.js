@@ -199,12 +199,12 @@ async function addToFavorites(shop) {
     return;
   }
 
+  // Check for existing favorite by shop_id only
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
-    .select('*')
+    .select('shop_id')
     .eq('user_id', userId)
-    .eq('shop_id', shop.shop_id)
-    .eq('address', shop.address);
+    .eq('shop_id', shop.shop_id);
 
   if (fetchError) {
     console.error('Error checking existing favorites:', fetchError.message);
@@ -216,12 +216,13 @@ async function addToFavorites(shop) {
     return;
   }
 
+  // Insert new favorite
   const { error: insertError } = await client
     .from('favorites')
     .insert({
       user_id: userId,
       shop_id: shop.shop_id,
-      address: shop.address,
+      address: shop.address || '', // Fallback for undefined address
     });
 
   if (insertError) {
@@ -231,7 +232,6 @@ async function addToFavorites(shop) {
     updateFavoritesModal();
   }
 }
-
 
 async function updateFavoritesModal() {
   console.log('Updating favorites modal');
