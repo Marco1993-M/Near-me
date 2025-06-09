@@ -356,7 +356,7 @@ body, html {
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Matches search container gradient */
-  border: 1px solid #c7f5d3;
+  border: 0.5px solid black;
   border-radius: 15px;
   padding: 15px;
   padding-top: 1px;
