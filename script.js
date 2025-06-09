@@ -592,7 +592,7 @@ window.initGoogleMaps = async function() {
           }
           const { data, error } = await client
             .from('favorites')
-            .select('name, address')
+            .select('shop_id, address')
             .eq('user_id', user.user.id);
           if (error) throw error;
           favorites = data || [];
