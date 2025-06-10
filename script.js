@@ -5,6 +5,33 @@ const client = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
+async function getOrCreateShop(shopName, address, city) {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_or_create_shop', {
+        p_name: shopName,
+        p_address: address,
+        p_city: city
+      })
+      .single();
+
+    if (error) throw error;
+
+    return data.id; // Returns the shop's id
+  } catch (error) {
+    console.error('Error:', error.message);
+    throw error;
+  }
+}
+
+// Usage
+const shopName = 'Aroma coffee Roastery Shere Silverlakes';
+const address = '123 Shere Rd';
+const city = 'Silverlakes';
+
+getOrCreateShop(shopName, address, city)
+  .then(shopId => console.log('Shop ID:', shopId))
+  .catch(error => console.error('Failed:', error));
 window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('auth-banner')?.classList.remove('hidden');
 });
