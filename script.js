@@ -218,28 +218,49 @@ async function fetchFavorites() {
 
 
 async function addToFavorites(shop) {
+  console.log('Adding to favorites:', shop);
   const { data: authData, error: authError } = await client.auth.getUser();
   const userId = authData?.user?.id;
 
   if (authError || !userId) {
     console.error('No user authenticated:', authError?.message);
+    showAuthBanner(shop, () => addToFavorites(shop)); // Prompt login and retry
     return;
   }
 
-  // Check for existing favorite by shop_id only
+  if (!shop || !shop.name || !shop.address || !shop.city) {
+    console.error('Invalid shop data:', shop);
+    alert('Cannot add to favorites: Invalid shop data.');
+    return;
+  }
+
+  // Get or create shop in the shops table
+  let shopId;
+  try {
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    console.log('Shop ID retrieved or created:', shopId);
+  } catch (error) {
+    console.error('Error getting or creating shop:', error.message);
+    alert('Failed to add shop to favorites: Could not retrieve shop ID.');
+    return;
+  }
+
+  // Check for existing favorite
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('shop_id')
     .eq('user_id', userId)
-    .eq('shop_id', shop.shop_id);
+    .eq('shop_id', shopId);
 
   if (fetchError) {
     console.error('Error checking existing favorites:', fetchError.message);
+    alert('Failed to check favorites: ' + fetchError.message);
     return;
   }
 
   if (existingFavorites.length > 0) {
-    console.log(`${shop.shop_id} is already in favorites`);
+    console.log(`${shop.name} is already in favorites`);
+    alert(`${shop.name} is already in your favorites.`);
     return;
   }
 
@@ -248,15 +269,29 @@ async function addToFavorites(shop) {
     .from('favorites')
     .insert({
       user_id: userId,
-      shop_id: shop.shop_id,
-      address: shop.address || '', // Fallback for undefined address
+      shop_id: shopId,
+      address: shop.address,
     });
 
   if (insertError) {
     console.error('Error adding to favorites:', insertError.message);
-  } else {
-    console.log(`Added to favorites: ${shop.shop_id}`);
-    updateFavoritesModal();
+    alert('Failed to add to favorites: ' + insertError.message);
+    return;
+  }
+
+  console.log(`Added ${shop.name} to favorites with shop_id: ${shopId}`);
+  // Update local favorites array
+  favorites.push({ shop_id: shopId, address: shop.address });
+  await updateFavoritesModal();
+
+  // Update favorite button UI
+  const floatingCard = document.getElementById('floating-card');
+  if (floatingCard) {
+    const favoriteButton = floatingCard.querySelector('#favorite-button');
+    if (favoriteButton) {
+      favoriteButton.querySelector('svg').setAttribute('fill', 'currentColor');
+      favoriteButton.setAttribute('aria-label', `Remove ${shop.name} from favorites`);
+    }
   }
 }
 
@@ -1249,12 +1284,22 @@ async function fetchCities() {
 }
 
   async function showFloatingCard(shop) {
-  if (!shop || !shop.name) {
+  if (!shop || !shop.name || !shop.address || !shop.city) {
     console.warn('Invalid shop data:', shop);
     document.getElementById('floating-card')?.classList.add('hidden');
     return;
   }
   console.log('Showing floating card for:', shop.name);
+
+  // Get or create shop to ensure we have a shop_id
+  let shopId;
+  try {
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    shop.id = shopId; // Add shop_id to shop object
+  } catch (error) {
+    console.error('Error getting shop ID:', error);
+    shop.id = null;
+  }
 
   let averageRating = 0;
   try {
@@ -1264,9 +1309,8 @@ async function fetchCities() {
   }
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : 'No ratings yet';
 
-  const shopKey = `${shop.name}-${shop.lat}-${shop.lng}`;
-  const isFavorited = favorites && Array.isArray(favorites)
-    ? favorites.some(fav => fav.name === shop.name && fav.address === shop.address)
+  const isFavorited = shop.id
+    ? favorites.some(fav => fav.shop_id === shop.id)
     : false;
 
   const coffeeIcon = `<svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>`;
@@ -1326,8 +1370,7 @@ async function fetchCities() {
   floatingCard.style.opacity = '1';
   floatingCard.style.zIndex = '1007';
   floatingCard.classList.remove('hidden');
-  console.log('Floating card HTML:', floatingCard.outerHTML);
-  console.log('Floating card position:', floatingCard.getBoundingClientRect());
+  console.log('Floating card displayed for:', shop.name);
 
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
@@ -1358,45 +1401,11 @@ async function fetchCities() {
   document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
     if (!currentShop) return;
-
-    const isCurrentlyFavorited = favorites.some(fav => fav.name === currentShop.name && fav.address === currentShop.address);
-    try {
-      const { data: user } = await client.auth.getUser();
-      if (!user?.user?.id) {
-        console.warn('User not authenticated, cannot update favorites');
-        alert('Please log in to manage favorites.');
-        return;
-      }
-      if (isCurrentlyFavorited) {
-        const { error } = await client
-          .from('favorites')
-          .delete()
-          .eq('name', currentShop.name)
-          .eq('address', currentShop.address)
-          .eq('user_id', user.user.id);
-        if (error) throw error;
-        favorites = favorites.filter(fav => !(fav.name === currentShop.name && fav.address === currentShop.address));
-        this.querySelector('svg').setAttribute('fill', 'none');
-        this.setAttribute('aria-label', `Add ${currentShop.name} to favorites`);
-        console.log('Removed from favorites:', currentShop.name);
-      } else {
-        const { error } = await client
-          .from('favorites')
-          .insert({ name: currentShop.name, address: currentShop.address, user_id: user.user.id });
-        if (error) throw error;
-        favorites.push({ name: currentShop.name, address: currentShop.address });
-        this.querySelector('svg').setAttribute('fill', 'currentColor');
-        this.setAttribute('aria-label', `Remove ${currentShop.name} from favorites`);
-        console.log('Added to favorites:', currentShop.name);
-      }
-      if (typeof updateFavoritesModal === 'function') updateFavoritesModal();
-    } catch (error) {
-      console.error('Error updating favorites:', error);
-      alert('Failed to update favorites. Please try again.');
-    }
+    currentShop.id = shopId; // Ensure currentShop has the correct shop_id
+    await addToFavorites(currentShop);
   });
 
-  // Card click to show details and hide floating banner
+  // Card click to show details
   floatingCard.addEventListener('click', function(e) {
     if (
       e.target.closest('.floating-card-close-button') ||
@@ -1408,19 +1417,29 @@ async function fetchCities() {
     if (shop) {
       currentShop = shop;
       showShopDetails(shop);
-      floatingCard.classList.add('hidden'); // Hide floating banner
+      floatingCard.classList.add('hidden');
       console.log('Shop details displayed, floating card hidden');
     }
   });
 }
 
-   function showShopDetails(shop) {
-  if (!shop || !shop.name) {
-    console.warn('Attempted to show shop details with invalid shop data:', shop);
+  async function showShopDetails(shop) {
+  if (!shop || !shop.name || !shop.address || !shop.city) {
+    console.warn('Invalid shop data:', shop);
     document.getElementById('shop-details-banner')?.classList.add('hidden');
     return;
   }
   console.log('Showing shop details for:', shop.name);
+
+  // Get or create shop to ensure we have a shop_id
+  let shopId;
+  try {
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    shop.id = shopId;
+  } catch (error) {
+    console.error('Error getting shop ID:', error);
+    shop.id = null;
+  }
 
   const shopDetailsBanner = document.getElementById('shop-details-banner');
   if (!shopDetailsBanner) {
@@ -1429,18 +1448,27 @@ async function fetchCities() {
   }
 
   let averageRating = 0;
+  let reviews = [];
   try {
-    averageRating = calculateAverageRating(shop.name);
+    // Fetch reviews from Supabase
+    const { data: shopReviews, error } = await client
+      .from('reviews')
+      .select('rating, text, parking, pet_friendly, outside_seating')
+      .eq('shop_id', shopId);
+    if (error) throw error;
+    reviews = shopReviews || [];
+    averageRating = reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
+      : 0;
   } catch (error) {
-    console.error('Error calculating average rating:', error);
+    console.error('Error fetching reviews:', error);
   }
-  const displayRating = averageRating > 0 ? `${averageRating} / 10` : '0';
+  const displayRating = averageRating > 0 ? `${averageRating.toFixed(1)} / 10` : 'No ratings yet';
 
   const dotsHTML = Array.from({ length: 10 }, (_, i) => `
     <span class="shop-details-rating-dot" style="background-color: ${i < Math.floor(averageRating) ? '#4b5563' : '#d1d5db'};"></span>
   `).join('');
 
-  const reviews = JSON.parse(localStorage.getItem(`reviews-${shop.name}`)) || [];
   const totalReviews = reviews.length;
   const breakdown = {
     Excellent: 0,
@@ -1467,38 +1495,31 @@ async function fetchCities() {
     </div>
   `).join('');
 
-  let reviewsHTML = '';
-  if (reviews.length === 0) {
-    reviewsHTML = '<p>No reviews yet.</p>';
-  } else {
-    reviewsHTML = `
+  let reviewsHTML = reviews.length === 0
+    ? '<p>No reviews yet.</p>'
+    : `
       <div class="shop-details-reviews-container">
         <div class="shop-details-reviews-track">
           ${reviews.map(review => `
             <div class="shop-details-review-card">
               <p><strong>Rating:</strong> ${review.rating}/10</p>
               <p>${review.text}</p>
-              <p></p> <!-- Removed amenities from here -->
+              <p>${review.parking ? 'Parking Available ' : ''}${review.pet_friendly ? 'Pet Friendly ' : ''}${review.outside_seating ? 'Outside Seating' : ''}</p>
             </div>
           `).join('')}
         </div>
       </div>
     `;
-  }
 
-  // Aggregate amenities from all reviews
   const amenities = new Set();
   reviews.forEach(review => {
     if (review.parking) amenities.add('Parking Available');
-    if (review.petFriendly) amenities.add('Pet Friendly');
-    if (review.outsideSeating) amenities.add('Outside Seating');
+    if (review.pet_friendly) amenities.add('Pet Friendly');
+    if (review.outside_seating) amenities.add('Outside Seating');
   });
-  const amenitiesArray = Array.from(amenities);
-  const amenitiesHTML = amenitiesArray.length > 0 ? `
-    <div class="shop-details-amenities">
-      ${amenitiesArray.map(amenity => `<span class="shop-details-amenity">${amenity}</span>`).join('  ')}
-    </div>
-  ` : '';
+  const amenitiesHTML = amenities.size > 0
+    ? `<div class="shop-details-amenities">${Array.from(amenities).map(amenity => `<span class="shop-details-amenity">${amenity}</span>`).join(' ')}</div>`
+    : '';
 
   const coffeeIcon = `
     <svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24">
@@ -1508,7 +1529,7 @@ async function fetchCities() {
 
   shopDetailsBanner.innerHTML = `
     <button class="shop-details-close-button" aria-label="Close ${shop.name} details">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24 " stroke="currentColor">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
@@ -1559,7 +1580,7 @@ async function fetchCities() {
     </div>
   `;
   shopDetailsBanner.classList.remove('hidden');
-  console.log('Shop details banner classes after show:', shopDetailsBanner.classList.toString());
+  console.log('Shop details banner displayed for:', shop.name);
 
   // Add close button event listener
   const closeButton = shopDetailsBanner.querySelector('.shop-details-close-button');
@@ -1569,80 +1590,49 @@ async function fetchCities() {
       shopDetailsBanner.classList.add('hidden');
       console.log('Shop details banner closed');
     });
-  } else {
-    console.error('Close button not found in shop details banner');
   }
 
-  // Attach event listener to the "Leave a Review" button with enhanced logging
+  // Add event listener for "Leave a Review" button
   const leaveReviewButton = shopDetailsBanner.querySelector('.shop-details-leave-review-button');
   if (leaveReviewButton) {
-    console.log('Leave a Review button found, attaching click event listener');
     leaveReviewButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log('Leave a Review button clicked');
-      if (shop) {
-        console.log('Shop data available:', shop);
-        currentShop = shop;
-        try {
-          showReviewBanner(shop);
-          console.log('showReviewBanner called successfully');
-          shopDetailsBanner.classList.add('hidden');
-          console.log('Shop details banner hidden after opening review banner');
-        } catch (error) {
-          console.error('Error while calling showReviewBanner:', error);
-        }
-      } else {
-        console.error('No shop data available for leaving a review. Current shop:', currentShop);
-      }
+      currentShop = { ...shop, id: shopId };
+      showReviewBanner(currentShop);
+      shopDetailsBanner.classList.add('hidden');
     });
-  } else {
-    console.error('Leave a review button not found after rendering shop details');
   }
 
-  // Add call button listener
+  // Add action button listeners
   const callButton = shopDetailsBanner.querySelector('#call-button');
   if (callButton) {
     callButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (shop && shop.phone) {
-        console.log('Initiating call for:', shop.name);
-        window.location.href = `tel:${shop.phone}`;
-      }
+      if (shop.phone) window.location.href = `tel:${shop.phone}`;
     });
   }
 
-  // Add directions button listener
   const directionsButton = shopDetailsBanner.querySelector('#directions-button');
   if (directionsButton) {
     directionsButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (shop && shop.address) {
-        console.log('Getting directions for:', shop.name);
-        const encodedAddress = encodeURIComponent(shop.address);
-        const mapsUrl = `geo:0,0?q=${encodedAddress}`;
-        window.location.href = mapsUrl;
-      }
+      if (shop.address) window.location.href = `geo:0,0?q=${encodeURIComponent(shop.address)}`;
     });
   }
 
-  // Add website button listener
   const websiteButton = shopDetailsBanner.querySelector('#website-button');
   if (websiteButton) {
     websiteButton.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (shop && shop.website) {
-        console.log('Opening website for:', shop.name);
-        window.open(shop.website, '_blank');
-      }
+      if (shop.website) window.open(shop.website, '_blank');
     });
   }
 
-  // Ensure reviews track is scrollable
+  // Make reviews track scrollable
   const reviewsTrack = shopDetailsBanner.querySelector('.shop-details-reviews-track');
   if (reviewsTrack) {
     let isDragging = false;
-    let startX;
-    let scrollLeft;
+    let startX, scrollLeft;
 
     reviewsTrack.addEventListener('mousedown', (e) => {
       isDragging = true;
@@ -1655,7 +1645,7 @@ async function fetchCities() {
       if (!isDragging) return;
       e.preventDefault();
       const x = e.pageX - reviewsTrack.offsetLeft;
-      const walk = (x - startX) * 1.5; // Adjust scroll speed
+      const walk = (x - startX) * 1.5;
       reviewsTrack.scrollLeft = scrollLeft - walk;
     });
 
