@@ -1148,21 +1148,27 @@ body, html {
   display: none !important;
 }
 
-/* Base styling for the top 100 modal */
+/* Enhanced glassmorphism effect for the Top 100 modal */
 #top100-modal {
   display: block;
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(145deg, #e0e0e0, #ffffff);
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(5px); /* Safari support */
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
+              -5px -5px 10px rgba(255, 255, 255, 0.6),
+              inset 3px 3px 6px rgba(209, 209, 209, 0.4),
+              inset -3px -3px 6px rgba(255, 255, 255, 0.5);
   padding: 24px;
   border-radius: 12px;
   z-index: 1006; /* Matches #cities-modal and #favorite-modal */
   max-width: 500px;
   width: 85%;
-  min-height: 300px; /* Matches other banners */
+  min-height: 300px;
   font-family: Helvetica, Arial, sans-serif;
   color: #333;
 }
@@ -1293,6 +1299,7 @@ body, html {
 .hidden {
   display: none !important;
 }
+
 /* Base styling for the favorites modal */
 #favorite-modal {
    display: block;
@@ -1300,8 +1307,14 @@ body, html {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: linear-gradient(145deg, #e0e0e0, #ffffff);
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(5px); /* Safari support */
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
+              -5px -5px 10px rgba(255, 255, 255, 0.6),
+              inset 3px 3px 6px rgba(209, 209, 209, 0.4),
+              inset -3px -3px 6px rgba(255, 255, 255, 0.5);
   padding: 24px;
   border-radius: 12px;
   z-index: 1006; /* Matches #cities-modal and #favorite-modal */
@@ -1310,7 +1323,6 @@ body, html {
   min-height: 300px; /* Matches other banners */
   font-family: Helvetica, Arial, sans-serif;
   color: #333;
-  
 }
 
 /* Close button styling (consistent with other banners) */
