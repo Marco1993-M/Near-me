@@ -1015,6 +1015,7 @@ body, html {
               inset -3px -3px 6px rgba(255, 255, 255, 0.5);
   padding: 1.25rem;
   border-radius: 12px;
+  border: 0.5px solid black;
   z-index: 1006;
   max-width: 500px;
   width: 85%;
