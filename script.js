@@ -1245,27 +1245,25 @@ async function fetchCities() {
     console.error('User location button not found in DOM');
   }
 
-    async function calculateAverageRating(shopName) {
+    async function calculateAverageRating(shopName, shopId = null) {
   try {
-    // Get shop_id from shops table
-    const { data: shop, error: shopError } = await client
-      .from('shops')
-      .select('id')
-      .eq('name', shopName)
-      .limit(1)
-      .single();
-
-    if (shopError || !shop) {
-      console.log(`No shop found with name: ${shopName}`);
-      return 0;
+    let query = client.from('reviews').select('rating');
+    if (shopId) {
+      query = query.eq('shop_id', shopId);
+    } else {
+      const { data: shop, error: shopError } = await client
+        .from('shops')
+        .select('id')
+        .eq('name', shopName)
+        .single();
+      if (shopError || !shop) {
+        console.log(`No shop found with name: ${shopName}`);
+        return 0;
+      }
+      query = query.eq('shop_id', shop.id);
     }
 
-    // Get ratings from reviews table
-    const { data: reviews, error: reviewError } = await client
-      .from('reviews')
-      .select('rating')
-      .eq('shop_id', shop.id);
-
+    const { data: reviews, error: reviewError } = await query;
     if (reviewError) {
       console.error('Error fetching reviews:', reviewError);
       return 0;
