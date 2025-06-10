@@ -7,34 +7,40 @@ const client = window.supabase.createClient(
 
 async function getOrCreateShop(shopName, address, city) {
   try {
+    // Normalize inputs
+    const normalizedName = shopName?.trim().toLowerCase();
+    const normalizedAddress = address?.trim().toLowerCase();
+    const normalizedCity = city?.trim().toLowerCase();
+
+    if (!normalizedName || !normalizedAddress || !normalizedCity) {
+      throw new Error('Invalid shop data: name, address, or city is missing');
+    }
+
+    console.log('Calling getOrCreateShop with:', { normalizedName, normalizedAddress, normalizedCity });
+
     const { data, error } = await supabase
       .rpc('get_or_create_shop', {
-        p_name: shopName,
-        p_address: address,
-        p_city: city
-      })
-      .single();
+        p_name: normalizedName,
+        p_address: normalizedAddress,
+        p_city: normalizedCity
+      });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase RPC error:', error.message, error.details, error.hint, error.code);
+      throw error;
+    }
 
-    return data.id; // Returns the shop's id
+    if (!data || !data.id) {
+      console.error('No shop ID returned:', { normalizedName, normalizedAddress, normalizedCity });
+      throw new Error('Failed to get or create shop: No ID returned');
+    }
+
+    return data.id;
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('getOrCreateShop failed:', error);
     throw error;
   }
 }
-
-// Usage
-const shopName = 'Aroma coffee Roastery Shere Silverlakes';
-const address = '123 Shere Rd';
-const city = 'Silverlakes';
-
-getOrCreateShop(shopName, address, city)
-  .then(shopId => console.log('Shop ID:', shopId))
-  .catch(error => console.error('Failed:', error));
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('auth-banner')?.classList.remove('hidden');
-});
 
 
 // checkAuthOnStartup: Ensures user is logged in on app startup
