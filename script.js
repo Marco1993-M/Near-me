@@ -1661,27 +1661,24 @@ async function fetchCities() {
   }
 }
 
-   async function showReviewBanner(shop) {
-  console.log('showReviewBanner version: 2025-06-09 with shop insertion and login required');
-  if (!shop || !shop.name) {
-    console.warn('Attempted to show review banner with invalid shop data:', shop);
+  async function showReviewBanner(shop) {
+  console.log('showReviewBanner for:', shop.name, 'Shop object:', shop);
+  if (!shop || !shop.name || !shop.address || !shop.city) {
+    console.warn('Invalid shop data:', shop);
     document.getElementById('review-banner')?.classList.add('hidden');
     return;
   }
-  console.log('Showing review banner for:', shop.name, 'Shop object:', shop);
 
-  // Check if supabase client is available
-  if (!supabase || !supabase.auth) {
-    console.error('Supabase client is not initialized or auth is unavailable');
-    alert('Error: Database connection not available. Please try again later.');
+  if (!client || !client.auth) {
+    console.error('Supabase client is not initialized');
+    alert('Error: Database connection not available.');
     return;
   }
 
-  // Assume user is authenticated (checked at app startup)
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await client.auth.getUser();
   if (userError || !user) {
-    console.error('User not authenticated despite login requirement:', userError);
-    alert('Error: You must be logged in to leave a review. Please reload the app.');
+    console.error('User not authenticated:', userError?.message);
+    showAuthBanner(shop, () => showReviewBanner(shop));
     return;
   }
 
@@ -1722,15 +1719,8 @@ async function fetchCities() {
     </div>
   `;
   reviewBanner.classList.remove('hidden');
-  console.log('Review banner classes after show:', reviewBanner.classList.toString());
-  setTimeout(() => {
-    console.log('Review banner display style after delay:', window.getComputedStyle(reviewBanner).display);
-  }, 100);
 
-  // Prevent clicks inside review banner from closing it
-  reviewBanner.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
+  reviewBanner.addEventListener('click', (e) => e.stopPropagation());
 
   const ratingButtons = reviewBanner.querySelectorAll('#rating-container button');
   let selectedRating = null;
@@ -1772,51 +1762,16 @@ async function fetchCities() {
       return;
     }
 
-    // Normalize shop name to avoid case sensitivity issues
-    const normalizedShopName = shop.name.trim();
-    console.log('Attempting to find or create shop with name:', normalizedShopName);
-
-    // Look up shop_id based on shop.name or insert new shop
     let shopId = shop.id;
     if (!shopId) {
-      console.log('No shop ID provided, querying shops table');
-      const { data: shopData, error: shopError } = await supabase
-        .from('shops')
-        .select('id')
-        .ilike('name', normalizedShopName)
-        .maybeSingle();
-
-      if (shopError) {
-        console.error('Error fetching shop ID:', shopError);
-        alert('Error finding shop. Please try again.');
+      try {
+        shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+        shop.id = shopId;
+        console.log('Shop ID retrieved or created:', shopId);
+      } catch (error) {
+        console.error('Error getting or creating shop:', error.message);
+        alert('Failed to submit review: Could not retrieve shop ID.');
         return;
-      }
-
-      if (!shopData) {
-        console.log(`Shop "${normalizedShopName}" not found, creating new shop`);
-        const { data: newShop, error: insertError } = await supabase
-          .from('shops')
-          .insert([
-            {
-              name: normalizedShopName,
-              address: shop.address || 'Unknown',
-              city: shop.city || 'Unknown'
-            }
-          ])
-          .select('id')
-          .single();
-
-        if (insertError) {
-          console.error('Error creating shop:', insertError);
-          alert(`Failed to create shop: ${insertError.message}`);
-          return;
-        }
-
-        shopId = newShop.id;
-        console.log('New shop created with ID:', shopId);
-      } else {
-        shopId = shopData.id;
-        console.log('Existing shop found with ID:', shopId);
       }
     }
 
@@ -1825,24 +1780,24 @@ async function fetchCities() {
       shop_id: shopId,
       rating: selectedRating,
       text: reviewText,
-      parking: parking,
+      parking,
       pet_friendly: petFriendly,
       outside_seating: outsideSeating,
       created_at: new Date().toISOString()
     };
 
     console.log('Submitting review:', review);
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('reviews')
       .insert([review]);
 
     if (error) {
-      console.error('Error saving review to Supabase:', error);
+      console.error('Error saving review:', error.message);
       alert(`Failed to submit review: ${error.message}`);
       return;
     }
 
-    console.log('Review submitted to Supabase:', data);
+    console.log('Review submitted:', data);
     reviewBanner.classList.add('hidden');
     showShopDetails(shop);
   });
