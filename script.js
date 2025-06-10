@@ -7,34 +7,23 @@ const client = window.supabase.createClient(
 
 async function getOrCreateShop(shopName, address, city) {
   try {
-    // Normalize inputs
     const normalizedName = shopName?.trim().toLowerCase();
     const normalizedAddress = address?.trim().toLowerCase();
     const normalizedCity = city?.trim().toLowerCase();
 
     if (!normalizedName || !normalizedAddress || !normalizedCity) {
-      throw new Error('Invalid shop data: name, address, or city is missing');
+      throw new Error('Invalid shop data');
     }
 
-    console.log('Calling getOrCreateShop with:', { normalizedName, normalizedAddress, normalizedCity });
-
-    const { data, error } = await supabase
+    const { data, error } = await client // Change from supabase to client
       .rpc('get_or_create_shop', {
         p_name: normalizedName,
         p_address: normalizedAddress,
         p_city: normalizedCity
       });
 
-    if (error) {
-      console.error('Supabase RPC error:', error.message, error.details, error.hint, error.code);
-      throw error;
-    }
-
-    if (!data || !data.id) {
-      console.error('No shop ID returned:', { normalizedName, normalizedAddress, normalizedCity });
-      throw new Error('Failed to get or create shop: No ID returned');
-    }
-
+    if (error) throw error;
+    if (!data || !data.id) throw new Error('No shop ID returned');
     return data.id;
   } catch (error) {
     console.error('getOrCreateShop failed:', error);
