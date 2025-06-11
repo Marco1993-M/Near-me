@@ -1253,15 +1253,17 @@ async function fetchCities() {
   try {
     // If no shopId is provided, attempt to look it up by name
     if (!shopId) {
-      console.log(`Looking up shop ID for name: "${shopName}"`);
+      const trimmedName = shopName.trim();
+      console.log(`Looking up shop ID for name: "${trimmedName}"`);
+
       const { data, error } = await client
         .from('shops')
         .select('id')
-        .eq('name', shopName);
+        .ilike('name', `%${trimmedName}%`); // Case-insensitive + partial match
 
       if (error) throw new Error(`Supabase error: ${error.message}`);
       if (!data || data.length === 0) {
-        console.warn(`No shop found with name: "${shopName}"`);
+        console.warn(`No shop found with name: "${trimmedName}"`);
         return 0;
       }
 
@@ -1293,6 +1295,7 @@ async function fetchCities() {
     return 0;
   }
 }
+
 
 
   async function showFloatingCard(shop) {
