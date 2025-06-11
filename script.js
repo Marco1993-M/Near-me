@@ -821,7 +821,7 @@ setTimeout(() => {
     // Fetch reviews with associated shop details
     const { data: reviews, error } = await client
       .from('reviews')
-      .select('rating, shop:shop_id(id, name, lat, lng, address, city)');
+      .select('rating, shop:shop_id(id, name, address, city, lat, lng)')
 
     if (error) {
       console.error('Error fetching reviews:', error.message);
