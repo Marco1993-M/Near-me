@@ -818,10 +818,10 @@ setTimeout(() => {
       return;
     }
 
+    // Fetch reviews with associated shop details
     const { data: reviews, error } = await client
       .from('reviews')
-      .select('rating, shop:shop_id(id, name, lat, lng, address, city)')
-
+      .select('rating, shop:shop_id(id, name, lat, lng, address, city)');
 
     if (error) {
       console.error('Error fetching reviews:', error.message);
@@ -837,8 +837,14 @@ setTimeout(() => {
 
     reviews.forEach(review => {
       const shop = review.shop;
-      if (!shop || !shop.id || !shop.lat || !shop.lng || addedShops.has(shop.id)) {
-        console.warn('Skipping review due to invalid shop data or duplicate:', shop);
+      if (
+        !shop ||
+        !shop.id ||
+        typeof shop.lat !== 'number' ||
+        typeof shop.lng !== 'number' ||
+        addedShops.has(shop.id)
+      ) {
+        console.warn('Skipping review due to invalid or duplicate shop data:', shop);
         return;
       }
 
@@ -849,8 +855,8 @@ setTimeout(() => {
       marker.on('click', () => {
         showFloatingCard({
           ...shop,
-          address: shop.address || 'Unknown Address', // Ensure address is available
-          city: shop.city || 'Unknown City' // Ensure city is available
+          address: shop.address || 'Unknown Address',
+          city: shop.city || 'Unknown City',
         });
       });
 
@@ -863,6 +869,7 @@ setTimeout(() => {
     console.error('Error loading review markers:', err);
   }
 }
+
 
 
    async function fetchNearbyCities() {
