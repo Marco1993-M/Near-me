@@ -41,7 +41,6 @@ async function calculateAverageRating(shopName, shopId = null) {
   }
 }
 
-
 // checkAuthOnStartup: Ensures user is logged in on app startup
 async function checkAuthOnStartup() {
   console.log('Checking authentication on app startup at', new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' }));
