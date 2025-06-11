@@ -808,7 +808,7 @@ setTimeout(() => {
 
     async function loadReviewMarkers() {
   try {
-    const { data: reviews, error } = await supabase
+    const { data: reviews, error } = await client
       .from('reviews')
       .select('rating, shop:shop_id(name, lat, lng)');
 
