@@ -5,31 +5,43 @@ const client = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
-async function getOrCreateShop(shopName, address, city) {
+async function calculateAverageRating(shopName, shopId = null) {
   try {
-    const normalizedName = shopName?.trim().toLowerCase();
-    const normalizedAddress = address?.trim().toLowerCase();
-    const normalizedCity = city?.trim().toLowerCase();
+    let query = client.from('reviews').select('rating');
 
-    if (!normalizedName || !normalizedAddress || !normalizedCity) {
-      throw new Error('Invalid shop data');
+    if (shopId) {
+      query = query.eq('shop_id', shopId);
+    } else {
+      const { data, error } = await client
+        .from('shops')
+        .select('id')
+        .eq('name', shopName); // no .single()
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        console.log(`No shop found with name: ${shopName}`);
+        return 0;
+      }
+
+      shopId = data[0].id;
+      query = query.eq('shop_id', shopId);
     }
 
-    const { data, error } = await client.rpc('get_or_create_shop', {
-      p_name: normalizedName,
-      p_address: normalizedAddress,
-      p_city: normalizedCity
-    });
-
-    if (error) throw error;
-    if (!data || data.length === 0 || !data[0].id) {
-      throw new Error('No shop ID returned');
+    const { data: reviews, error: reviewError } = await query;
+    if (reviewError) {
+      console.error('Error fetching reviews:', reviewError);
+      return 0;
+    }
+    if (!reviews || reviews.length === 0) {
+      console.log(`No reviews found for shop: ${shopName}`);
+      return 0;
     }
 
-    return data[0].id;
+    const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
+    return (total / reviews.length).toFixed(1);
   } catch (error) {
-    console.error('getOrCreateShop failed:', error);
-    throw error;
+    console.error('Error in calculateAverageRating:', error);
+    return 0;
   }
 }
 
