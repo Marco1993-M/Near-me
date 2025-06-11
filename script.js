@@ -820,7 +820,8 @@ setTimeout(() => {
 
     const { data: reviews, error } = await client
       .from('reviews')
-      .select('rating, shop:shop_id(id, name, lat, lng)'); // Include id in selection
+      .select('rating, shop:shop_id(id, name, lat, lng, address, city)')
+
 
     if (error) {
       console.error('Error fetching reviews:', error.message);
