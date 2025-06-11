@@ -1526,7 +1526,7 @@ async function fetchCities() {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
-    <h3 class="shop-details-heading">${coffeeIcon} ${shop.name}</h3>
+    <h3 class="shop-details-heading"> ${shop.name}</h3>
     <div class="shop-details-actions" style="display: flex; gap: 10px;">
       ${shop.phone ? `
         <button id="call-button" class="floating-card-action-button" aria-label="Call ${shop.name}">
