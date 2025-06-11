@@ -746,6 +746,8 @@ window.initGoogleMaps = async function() {
         );
       }, 300));
 
+      await loadReviewMarkers();
+
       // Direct search on Enter key
       searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
