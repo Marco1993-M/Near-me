@@ -8,23 +8,19 @@ const client = window.supabase.createClient(
 async function calculateAverageRating(shopName, shopId = null) {
   try {
     let query = client.from('reviews').select('rating');
-
     if (shopId) {
       query = query.eq('shop_id', shopId);
     } else {
-      const { data, error } = await client
+      const { data: shop, error: shopError } = await client
         .from('shops')
         .select('id')
-        .eq('name', shopName); // no .single()
-
-      if (error) throw error;
-      if (!data || data.length === 0) {
+        .eq('name', shopName)
+        .single();
+      if (shopError || !shop) {
         console.log(`No shop found with name: ${shopName}`);
         return 0;
       }
-
-      shopId = data[0].id;
-      query = query.eq('shop_id', shopId);
+      query = query.eq('shop_id', shop.id);
     }
 
     const { data: reviews, error: reviewError } = await query;
@@ -44,7 +40,6 @@ async function calculateAverageRating(shopName, shopId = null) {
     return 0;
   }
 }
-
 
 
 // checkAuthOnStartup: Ensures user is logged in on app startup
