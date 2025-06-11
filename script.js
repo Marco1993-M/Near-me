@@ -1249,17 +1249,16 @@ async function fetchCities() {
     if (shopId) {
       query = query.eq('shop_id', shopId);
     } else {
-      const { data: shop, error: shopError } = await client
-        .from('shops')
-        .select('id')
-        .eq('name', shopName)
-        .single();
-      if (shopError || !shop) {
-        console.log(`No shop found with name: ${shopName}`);
-        return 0;
-      }
-      query = query.eq('shop_id', shop.id);
-    }
+      const { data, error } = await client
+  .from('shops')
+  .select('id')
+  .eq('name', 'Platō Coffee - Sea Point'); // <- normal `.select()`, no `.single()`
+
+if (error) throw error;
+if (!data || data.length === 0) throw new Error('Shop not found');
+
+const shopId = data[0].id;
+
 
     const { data: reviews, error: reviewError } = await query;
     if (reviewError) {
