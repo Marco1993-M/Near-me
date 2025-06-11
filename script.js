@@ -1252,25 +1252,31 @@ async function fetchCities() {
     async function calculateAverageRating(shopName, shopId = null) {
   try {
     let query = client.from('reviews').select('rating');
+
     if (shopId) {
       query = query.eq('shop_id', shopId);
     } else {
       const { data, error } = await client
-  .from('shops')
-  .select('id')
-  .eq('name', 'Platō Coffee - Sea Point'); // <- normal `.select()`, no `.single()`
+        .from('shops')
+        .select('id')
+        .eq('name', shopName); // <- no `.single()`
 
-if (error) throw error;
-if (!data || data.length === 0) throw new Error('Shop not found');
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        console.log(`No shop found with name: ${shopName}`);
+        return 0;
+      }
 
-const shopId = data[0].id;
-
+      shopId = data[0].id;
+      query = query.eq('shop_id', shopId);
+    }
 
     const { data: reviews, error: reviewError } = await query;
     if (reviewError) {
       console.error('Error fetching reviews:', reviewError);
       return 0;
     }
+
     if (!reviews || reviews.length === 0) {
       console.log(`No reviews found for shop: ${shopName}`);
       return 0;
@@ -1283,6 +1289,7 @@ const shopId = data[0].id;
     return 0;
   }
 }
+
 
   async function showFloatingCard(shop) {
   if (!shop || !shop.name || !shop.address || !shop.city) {
