@@ -1251,27 +1251,29 @@ async function fetchCities() {
 
     async function calculateAverageRating(shopName, shopId = null) {
   try {
-    let query = client.from('reviews').select('rating');
-
-    if (shopId) {
-      query = query.eq('shop_id', shopId);
-    } else {
+    // If no shopId is provided, attempt to look it up by name
+    if (!shopId) {
+      console.log(`Looking up shop ID for name: "${shopName}"`);
       const { data, error } = await client
         .from('shops')
         .select('id')
-        .eq('name', shopName); // <- no `.single()`
+        .eq('name', shopName);
 
-      if (error) throw error;
+      if (error) throw new Error(`Supabase error: ${error.message}`);
       if (!data || data.length === 0) {
-        console.log(`No shop found with name: ${shopName}`);
+        console.warn(`No shop found with name: "${shopName}"`);
         return 0;
       }
 
       shopId = data[0].id;
-      query = query.eq('shop_id', shopId);
     }
 
-    const { data: reviews, error: reviewError } = await query;
+    // Fetch reviews for the identified shop
+    const { data: reviews, error: reviewError } = await client
+      .from('reviews')
+      .select('rating')
+      .eq('shop_id', shopId);
+
     if (reviewError) {
       console.error('Error fetching reviews:', reviewError);
       return 0;
@@ -1282,10 +1284,12 @@ async function fetchCities() {
       return 0;
     }
 
+    // Calculate average rating
     const total = reviews.reduce((sum, review) => sum + Number(review.rating), 0);
-    return (total / reviews.length).toFixed(1);
+    const average = total / reviews.length;
+    return average.toFixed(1);
   } catch (error) {
-    console.error('Error in calculateAverageRating:', error);
+    console.error('Error in calculateAverageRating:', error.message || error);
     return 0;
   }
 }
