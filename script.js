@@ -808,11 +808,24 @@ setTimeout(() => {
 
     async function loadReviewMarkers() {
   try {
+    // Check map and icon availability
+    if (!map) {
+      console.error('Leaflet map is not initialized');
+      return;
+    }
+    if (!coffeeIcon) {
+      console.error('coffeeIcon is not defined');
+      return;
+    }
+
     const { data: reviews, error } = await client
       .from('reviews')
-      .select('rating, shop:shop_id(name, lat, lng)');
+      .select('rating, shop:shop_id(id, name, lat, lng)'); // Include id in selection
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching reviews:', error.message);
+      throw error;
+    }
 
     if (!reviews || reviews.length === 0) {
       console.warn('No reviews found in database.');
@@ -823,21 +836,28 @@ setTimeout(() => {
 
     reviews.forEach(review => {
       const shop = review.shop;
-      if (!shop || !shop.lat || !shop.lng || addedShops.has(shop.name)) return;
+      if (!shop || !shop.id || !shop.lat || !shop.lng || addedShops.has(shop.id)) {
+        console.warn('Skipping review due to invalid shop data or duplicate:', shop);
+        return;
+      }
 
       const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
         .addTo(map)
         .bindPopup(`${shop.name}<br>Rating: ${review.rating}`);
 
       marker.on('click', () => {
-        showFloatingCard(shop);
+        showFloatingCard({
+          ...shop,
+          address: shop.address || 'Unknown Address', // Ensure address is available
+          city: shop.city || 'Unknown City' // Ensure city is available
+        });
       });
 
       currentMarkers.push(marker);
-      addedShops.add(shop.name); // Avoid duplicates
+      addedShops.add(shop.id);
     });
 
-    console.log('Review markers added to the map');
+    console.log(`Added ${addedShops.size} review markers to the map`);
   } catch (err) {
     console.error('Error loading review markers:', err);
   }
