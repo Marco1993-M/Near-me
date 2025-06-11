@@ -1248,6 +1248,35 @@ async function fetchCities() {
   } else {
     console.error('User location button not found in DOM');
   }
+    async function getOrCreateShop(name, address, city) {
+  try {
+    // Attempt to find an existing shop
+    const { data: existing, error: fetchError } = await client
+      .from('shops')
+      .select('id')
+      .eq('name', name)
+      .eq('address', address)
+      .eq('city', city);
+
+    if (fetchError) throw new Error(`Error fetching shop: ${fetchError.message}`);
+    if (existing && existing.length > 0) return existing[0].id;
+
+    // If not found, insert the new shop
+    const { data: inserted, error: insertError } = await client
+      .from('shops')
+      .insert([{ name, address, city }])
+      .select('id');
+
+    if (insertError) throw new Error(`Error inserting shop: ${insertError.message}`);
+    if (!inserted || inserted.length === 0) throw new Error('Failed to insert shop');
+
+    return inserted[0].id;
+  } catch (error) {
+    console.error('Error in getOrCreateShop:', error.message || error);
+    throw error;
+  }
+}
+
 
     async function calculateAverageRating(shopName, shopId = null) {
   try {
