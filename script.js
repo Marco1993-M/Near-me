@@ -804,6 +804,44 @@ setTimeout(() => {
       return points;
     }
 
+    async function loadReviewMarkers() {
+  try {
+    const { data: reviews, error } = await supabase
+      .from('reviews')
+      .select('rating, shop:shop_id(name, lat, lng)');
+
+    if (error) throw error;
+
+    if (!reviews || reviews.length === 0) {
+      console.warn('No reviews found in database.');
+      return;
+    }
+
+    const addedShops = new Set();
+
+    reviews.forEach(review => {
+      const shop = review.shop;
+      if (!shop || !shop.lat || !shop.lng || addedShops.has(shop.name)) return;
+
+      const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
+        .addTo(map)
+        .bindPopup(`${shop.name}<br>Rating: ${review.rating}`);
+
+      marker.on('click', () => {
+        showFloatingCard(shop);
+      });
+
+      currentMarkers.push(marker);
+      addedShops.add(shop.name); // Avoid duplicates
+    });
+
+    console.log('Review markers added to the map');
+  } catch (err) {
+    console.error('Error loading review markers:', err);
+  }
+}
+
+
    async function fetchNearbyCities() {
   const citiesModal = document.getElementById('cities-modal');
   const cityButtonsContainer = document.getElementById('city-buttons');
