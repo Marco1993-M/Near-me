@@ -520,6 +520,7 @@ body, html {
   border-radius: 12px;
   box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Outer and inner shadows for 3D effect */
   z-index: 1005;
+  padding: 15px;
   max-width: 85%;
   width: 90%;
   font-family: Arial, sans-serif;
