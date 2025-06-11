@@ -15,21 +15,24 @@ async function getOrCreateShop(shopName, address, city) {
       throw new Error('Invalid shop data');
     }
 
-    const { data, error } = await client // Change from supabase to client
-      .rpc('get_or_create_shop', {
-        p_name: normalizedName,
-        p_address: normalizedAddress,
-        p_city: normalizedCity
-      });
+    const { data, error } = await client.rpc('get_or_create_shop', {
+      p_name: normalizedName,
+      p_address: normalizedAddress,
+      p_city: normalizedCity
+    });
 
     if (error) throw error;
-    if (!data || !data.id) throw new Error('No shop ID returned');
-    return data.id;
+    if (!data || data.length === 0 || !data[0].id) {
+      throw new Error('No shop ID returned');
+    }
+
+    return data[0].id;
   } catch (error) {
     console.error('getOrCreateShop failed:', error);
     throw error;
   }
 }
+
 
 
 // checkAuthOnStartup: Ensures user is logged in on app startup
