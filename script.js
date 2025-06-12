@@ -241,7 +241,7 @@ async function addToFavorites(shop) {
   // Get or create shop in the shops table
   let shopId;
   try {
-    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     console.log('Shop ID retrieved or created:', shopId);
   } catch (error) {
     console.error('Error getting or creating shop:', error.message);
@@ -1539,7 +1539,7 @@ async function fetchCities() {
   // Get or create shop to ensure we have a shop_id
   let shopId;
   try {
-    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     shop.id = shopId;
   } catch (error) {
     console.error('Error getting shop ID:', error);
@@ -1870,7 +1870,7 @@ async function fetchCities() {
     let shopId = shop.id;
     if (!shopId) {
       try {
-        shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+        shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
         shop.id = shopId;
         console.log('Shop ID retrieved or created:', shopId);
       } catch (error) {
