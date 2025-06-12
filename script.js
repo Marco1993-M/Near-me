@@ -1316,34 +1316,27 @@ async function fetchCities() {
   } else {
     console.error('User location button not found in DOM');
   }
-    async function getOrCreateShop(name, address, city) {
+    
+    async function getOrCreateShop(name, address, city, lat, lng) {
   try {
-    // Attempt to find an existing shop
-    const { data: existing, error: fetchError } = await client
-      .from('shops')
-      .select('id')
-      .eq('name', name)
-      .eq('address', address)
-      .eq('city', city);
+    const { data, error } = await client.rpc('get_or_create_shop', {
+      p_name: name,
+      p_address: address,
+      p_city: city,
+      p_lat: lat,
+      p_lng: lng,
+    });
 
-    if (fetchError) throw new Error(`Error fetching shop: ${fetchError.message}`);
-    if (existing && existing.length > 0) return existing[0].id;
+    if (error) throw new Error(`Supabase RPC error: ${error.message}`);
+    if (!data || data.length === 0) throw new Error('No shop ID returned');
 
-    // If not found, insert the new shop
-    const { data: inserted, error: insertError } = await client
-      .from('shops')
-      .insert([{ name, address, city }])
-      .select('id');
-
-    if (insertError) throw new Error(`Error inserting shop: ${insertError.message}`);
-    if (!inserted || inserted.length === 0) throw new Error('Failed to insert shop');
-
-    return inserted[0].id;
-  } catch (error) {
-    console.error('Error in getOrCreateShop:', error.message || error);
-    throw error;
+    return data[0].id;
+  } catch (err) {
+    console.error('Error in getOrCreateShop:', err.message || err);
+    throw err;
   }
 }
+
 
 
     async function calculateAverageRating(shopName, shopId = null) {
