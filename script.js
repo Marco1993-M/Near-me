@@ -1567,59 +1567,6 @@ async function fetchCities() {
   floatingCard.classList.remove('hidden');
   console.log('Floating card displayed for:', shop.name);
 
-    // Share shop function
-  async function shareShop(shop) {
-    if (!shop || !shop.name) {
-      console.error('Invalid shop data for sharing');
-      alert('Unable to share: Invalid shop data.');
-      return;
-    }
-
-    // Construct shareable text
-    const shopAddress = `${shop.address}, ${shop.city}`;
-    let shareUrl;
-    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}&query_place_id=${shop.id || ''}`;
-    } else {
-      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}`;
-    }
-
-    const shareText = `Check out ${shop.name} at ${shopAddress}!${shop.phone ? ` Phone: ${shop.phone}` : ''}\n${shareUrl}`;
-
-    // Try Web Share API
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shop.title,
-          text: shareText,
-          url: shareUrl,
-        });
-        console.log('Shop shared successfully:', shop.name);
-      } catch (error) {
-        console.error('Error sharing shop:', error);
-        alert('Failed to share. Copying link to clipboard instead.');
-        // Fallback to clipboard
-        try {
-          await navigator.clipboard.writeText(shareText);
-          console.log('Link copied to clipboard:', shareUrl);
-          alert('Shop details copied to clipboard!');
-        } catch (clipError) {
-          console.error('Error copying to clipboard:', clipError);
-          alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
-        }
-      }
-    } else {
-      // Fallback to clipboard if Web Share API is not supported
-      try {
-        await navigator.clipboard.writeText(shareText);
-        console.log('Link copied to clipboard:', shareUrl);
-        alert('Shop details copied to clipboard!');
-      } catch (clipError) {
-        console.error('Error copying to clipboard:', clipError);
-        alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
-      }
-    }
-  }
 
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
