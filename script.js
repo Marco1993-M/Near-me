@@ -1536,14 +1536,23 @@ async function fetchCities() {
           <span>Call</span>
         </button>
       ` : ''}
-      ${shop.address ? `
-        <button id="directions-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <span>Directions</span>
-        </button>
+      ${shop.address || (shop.lat && shop.lng) ? `
+        <div class="directions-buttons">
+          <button id="google-maps-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name} with Google Maps">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Google Maps</span>
+          </button>
+          <button id="apple-maps-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name} with Apple Maps">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Apple Maps</span>
+          </button>
+        </div>
       ` : ''}
       <button id="share-button" class="floating-card-action-button" aria-label="Share ${shop.name}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1567,6 +1576,59 @@ async function fetchCities() {
   floatingCard.classList.remove('hidden');
   console.log('Floating card displayed for:', shop.name);
 
+  // Share shop function
+  async function shareShop(shop) {
+    if (!shop || !shop.name) {
+      console.error('Invalid shop data for sharing');
+      alert('Unable to share: Invalid shop data.');
+      return;
+    }
+
+    // Construct shareable text
+    const shopAddress = `${shop.address}, ${shop.city}`;
+    let shareUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}&query_place_id=${shop.id || ''}`;
+    } else {
+      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}`;
+    }
+
+    const shareText = `Check out ${shop.name} at ${shopAddress}!${shop.phone ? ` Phone: ${shop.phone}` : ''}\n${shareUrl}`;
+
+    // Try Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shop.name,
+          text: shareText,
+          url: shareUrl,
+        });
+        console.log('Shop shared successfully:', shop.name);
+      } catch (error) {
+        console.error('Error sharing shop:', error);
+        alert('Failed to share. Copying link to clipboard instead.');
+        try {
+          await navigator.clipboard.writeText(shareText);
+          console.log('Link copied to clipboard:', shareUrl);
+          alert('Shop details copied to clipboard!');
+        } catch (clipError) {
+          console.error('Error copying to clipboard:', clipError);
+          alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
+        }
+      }
+    } else {
+      // Fallback to clipboard if Web Share API is not supported
+      try {
+        await navigator.clipboard.writeText(shareText);
+        console.log('Link copied to clipboard:', shareUrl);
+        alert('Shop details copied to clipboard!');
+      } catch (clipError) {
+        console.error('Error copying to clipboard:', clipError);
+        alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
+      }
+    }
+  }
+
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
   if (closeButton) {
@@ -1583,8 +1645,9 @@ async function fetchCities() {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-   document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
+  document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
+    console.log('Google Maps button clicked for:', shop.name);
     if (!shop.address && (!shop.lat || !shop.lng)) {
       console.error('No valid address or coordinates provided for directions');
       alert('Unable to get directions: No valid address or coordinates available.');
@@ -1609,6 +1672,7 @@ async function fetchCities() {
 
   document.getElementById('apple-maps-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
+    console.log('Apple Maps button clicked for:', shop.name);
     if (!shop.address && (!shop.lat || !shop.lng)) {
       console.error('No valid address or coordinates provided for directions');
       alert('Unable to get directions: No valid address or coordinates available.');
@@ -1633,16 +1697,18 @@ async function fetchCities() {
     }
   });
 
-  document.getElementById('share-button')?.addEventListener('click', function(e) {
+  document.getElementById('share-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
-    if (currentShop) shareShop(currentShop);
+    console.log('Share button clicked for:', shop.name);
+    await shareShop(shop);
   });
 
   document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
-    if (!currentShop) return;
-    currentShop.id = shopId; // Ensure currentShop has the correct shop_id
-    await addToFavorites(currentShop);
+    console.log('Favorite button clicked for:', shop.name);
+    if (!shop) return;
+    shop.id = shopId; // Ensure shop has the correct shop_id
+    await addToFavorites(shop);
   });
 
   // Card click to show details
@@ -1650,7 +1716,8 @@ async function fetchCities() {
     if (
       e.target.closest('.floating-card-close-button') ||
       e.target.closest('#call-button') ||
-      e.target.closest('#directions-button') ||
+      e.target.closest('#google-maps-button') ||
+      e.target.closest('#apple-maps-button') ||
       e.target.closest('#share-button') ||
       e.target.closest('#favorite-button')
     ) return;
