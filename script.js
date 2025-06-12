@@ -199,6 +199,7 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 
 
 async function fetchFavorites() {
+  console.log('Fetching favorites');
   const { data: authData, error: authError } = await client.auth.getUser();
   const userId = authData?.user?.id;
 
@@ -209,20 +210,49 @@ async function fetchFavorites() {
 
   const { data, error } = await client
     .from('favorites')
-    .select('shop_id, address')
-    .eq('user_id', userId);
+    .select(`
+      id,
+      shop_id,
+      address,
+      created_at,
+      shops (
+        id,
+        name,
+        address,
+        city,
+        lat,
+        lng
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching favorites:', error.message);
     return [];
   }
 
-  return data || [];
+  // Map data to a consistent format
+  return (
+    data?.map(fav => ({
+      id: fav.id,
+      shop_id: fav.shop_id,
+      address: fav.address,
+      created_at: fav.created_at,
+      shop: {
+        id: fav.shops?.id,
+        name: fav.shops?.name,
+        address: fav.shops?.address,
+        city: fav.shops?.city,
+        lat: fav.shops?.lat,
+        lng: fav.shops?.lng,
+      },
+    })) || []
+  );
 }
 
-
 async function addToFavorites(shop) {
-  console.log('Adding to favorites:', shop);
+  console.log('Adding to favorites:', shop.name);
   const { data: authData, error: authError } = await client.auth.getUser();
   const userId = authData?.user?.id;
 
@@ -252,7 +282,7 @@ async function addToFavorites(shop) {
   // Check for existing favorite
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
-    .select('shop_id')
+    .select('id')
     .eq('user_id', userId)
     .eq('shop_id', shopId);
 
@@ -269,13 +299,15 @@ async function addToFavorites(shop) {
   }
 
   // Insert new favorite
-  const { error: insertError } = await client
+  const { data, error: insertError } = await client
     .from('favorites')
     .insert({
       user_id: userId,
       shop_id: shopId,
       address: shop.address,
-    });
+    })
+    .select('id, shop_id, address, created_at')
+    .single();
 
   if (insertError) {
     console.error('Error adding to favorites:', insertError.message);
@@ -285,7 +317,20 @@ async function addToFavorites(shop) {
 
   console.log(`Added ${shop.name} to favorites with shop_id: ${shopId}`);
   // Update local favorites array
-  favorites.push({ shop_id: shopId, address: shop.address });
+  favorites.push({
+    id: data.id,
+    shop_id: shopId,
+    address: shop.address,
+    created_at: data.created_at,
+    shop: {
+      id: shopId,
+      name: shop.name,
+      address: shop.address,
+      city: shop.city,
+      lat: shop.lat,
+      lng: shop.lng,
+    },
+  });
   await updateFavoritesModal();
 
   // Update favorite button UI
@@ -307,85 +352,130 @@ async function updateFavoritesModal() {
     return;
   }
 
-  const favorites = await fetchFavorites();
-  if (favorites.length === 0) {
-    favoritesList.innerHTML = '<p class="favorite-modal-loading">No favorite shops yet.</p>';
-    console.log('No favorites to display');
+  favoritesList.innerHTML = '<p class="favorite-modal-loading">Loading favorites...</p>';
+
+  try {
+    const favoritesData = await fetchFavorites();
+    if (favoritesData.length === 0) {
+      favoritesList.innerHTML = '<p class="favorite-modal-loading">No favorite shops yet.</p>';
+      console.log('No favorites to display');
+      return;
+    }
+
+    favoritesList.className = 'favorite-modal-list';
+    favoritesList.innerHTML = '';
+
+    // Update global favorites array
+    favorites = favoritesData;
+
+    favoritesData.forEach(fav => {
+      const shop = fav.shop;
+      if (!shop) {
+        console.warn('No shop data for favorite:', fav.shop_id);
+        return;
+      }
+      const li = document.createElement('li');
+      li.className = 'favorite-modal-list-item';
+      li.dataset.shopId = fav.shop_id; // Store shop_id for event handling
+      li.innerHTML = `
+        <span class="favorite-modal-shop-info">${shop.name} (${shop.address}, ${shop.city})</span>
+        <div class="favorite-modal-actions">
+          <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+          <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      `;
+      favoritesList.appendChild(li);
+    });
+
+    // Remove existing listeners to prevent duplicates
+    favoritesList.removeEventListener('click', handleFavoritesButtonClick);
+
+    // Add delegated event listener
+    favoritesList.addEventListener('click', handleFavoritesButtonClick);
+    console.log('Attached delegated click listener to favoritesList');
+  } catch (error) {
+    console.error('Error updating favorites modal:', error.message);
+    favoritesList.innerHTML = '<p class="favorite-modal-loading">Error loading favorites.</p>';
+  }
+}
+
+// Delegated event handler for favorites modal buttons
+async function handleFavoritesButtonClick(e) {
+  const target = e.target.closest('.favorite-modal-button');
+  if (!target) return;
+
+  e.stopPropagation();
+  const li = target.closest('li');
+  const shopId = li.dataset.shopId;
+  const fav = favorites.find(f => f.shop_id === shopId);
+
+  if (!fav || !fav.shop) {
+    console.error('Favorite or shop not found for shop_id:', shopId);
     return;
   }
 
-  favoritesList.className = 'favorite-modal-list';
-  favoritesList.innerHTML = '';
+  const shop = fav.shop;
 
-  favorites.forEach(shop => {
-    const li = document.createElement('li');
-    li.className = 'favorite-modal-list-item';
-    li.innerHTML = `
-      <span class="favorite-modal-shop-info">${shop.shop_id}</span>
-      <div class="favorite-modal-actions">
-        <button class="favorite-modal-button view-shop" aria-label="View ${shop.shop_id}">
-          <!-- eye icon SVG -->
-        </button>
-        <button class="favorite-modal-button remove" aria-label="Remove ${shop.shop_id} from favorites">
-          <!-- trash icon SVG -->
-        </button>
-      </div>
-    `;
-    favoritesList.appendChild(li);
-  });
+  if (target.classList.contains('view-shop')) {
+    console.log('Viewing shop from favorites:', shop.name);
+    currentShop = {
+      id: shop.id,
+      name: shop.name,
+      address: shop.address,
+      city: shop.city,
+      lat: shop.lat,
+      lng: shop.lng,
+    };
+    try {
+      showShopDetails(currentShop);
+      document.getElementById('favorite-modal').classList.add('hidden');
+      console.log('Favorite modal hidden');
+    } catch (error) {
+      console.error('Error showing shop details:', error);
+    }
+  } else if (target.classList.contains('remove')) {
+    const { data: authData, error: authError } = await client.auth.getUser();
+    const userId = authData?.user?.id;
+    if (authError || !userId) {
+      console.error('No user authenticated:', authError?.message);
+      showAuthBanner(null, () => handleFavoritesButtonClick(e)); // Prompt login and retry
+      return;
+    }
 
-  const viewButtons = document.querySelectorAll('.favorite-modal-button.view-shop');
-  viewButtons.forEach(button => {
-    button.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const shopId = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
-      const shop = favorites.find(s => s.shop_id === shopId);
-      if (shop) {
-        console.log('Viewing shop from favorites:', shopId);
-        currentShop = {
-          shop_id: shop.shop_id,
-          address: shop.address
-        };
-        showShopDetails(currentShop);
-        document.getElementById('favorite-modal').classList.add('hidden');
-      } else {
-        console.error('Shop not found in favorites:', shopId);
-      }
-    });
-  });
+    const { error } = await client
+      .from('favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('shop_id', shopId);
 
-  const removeButtons = document.querySelectorAll('.favorite-modal-button.remove');
-  removeButtons.forEach(button => {
-    button.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const shopId = button.closest('li').querySelector('.favorite-modal-shop-info').textContent;
-      const { data: authData } = await client.auth.getUser();
-      const userId = authData?.user?.id;
-      if (!userId) {
-        console.error('No user authenticated');
-        return;
-      }
+    if (error) {
+      console.error('Error removing favorite:', error.message);
+      alert('Failed to remove favorite: ' + error.message);
+    } else {
+      console.log('Removed from favorites:', shop.name);
+      favorites = favorites.filter(f => f.shop_id !== shopId);
+      await updateFavoritesModal();
 
-      const { error } = await client
-        .from('favorites')
-        .delete()
-        .eq('user_id', userId)
-        .eq('shop_id', shopId);
-
-      if (error) {
-        console.error('Error removing favorite:', error.message);
-      } else {
-        console.log('Removed from favorites:', shopId);
-        updateFavoritesModal();
-
-        const floatingCard = document.getElementById('floating-card');
-        if (floatingCard && currentShop && currentShop.shop_id === shopId) {
-          floatingCard.querySelector('#favorite-button svg')?.setAttribute('fill', 'none');
-          floatingCard.querySelector('#favorite-button')?.setAttribute('aria-label', `Add ${shopId} to favorites`);
+      // Update floating card if showing the removed shop
+      const floatingCard = document.getElementById('floating-card');
+      if (floatingCard && currentShop && currentShop.id === shopId) {
+        const favoriteButton = floatingCard.querySelector('#favorite-button');
+        if (favoriteButton) {
+          favoriteButton.querySelector('svg')?.setAttribute('fill', 'none');
+          favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
         }
       }
-    });
-  });
+    }
+  }
 }
 
 
