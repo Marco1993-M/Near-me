@@ -1567,6 +1567,158 @@ async function fetchCities() {
   floatingCard.classList.remove('hidden');
   console.log('Floating card displayed for:', shop.name);
 
+    // Share shop function
+  async function shareShop(shop) {
+    if (!shop || !shop.name) {
+      console.error('Invalid shop data for sharing');
+      alert('Unable to share: Invalid shop data.');
+      return;
+    }
+
+    // Construct shareable text
+    const shopAddress = `${shop.address}, ${shop.city}`;
+    let shareUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}&query_place_id=${shop.id || ''}`;
+    } else {
+      shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.name + ', ' + shopAddress)}`;
+    }
+
+    const shareText = `Check out ${shop.name} at ${shopAddress}!${shop.phone ? ` Phone: ${shop.phone}` : ''}\n${shareUrl}`;
+
+    // Try Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shop.title,
+          text: shareText,
+          url: shareUrl,
+        });
+        console.log('Shop shared successfully:', shop.name);
+      } catch (error) {
+        console.error('Error sharing shop:', error);
+        alert('Failed to share. Copying link to clipboard instead.');
+        // Fallback to clipboard
+        try {
+          await navigator.clipboard.writeText(shareText);
+          console.log('Link copied to clipboard:', shareUrl);
+          alert('Shop details copied to clipboard!');
+        } catch (clipError) {
+          console.error('Error copying to clipboard:', clipError);
+          alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
+        }
+      }
+    } else {
+      // Fallback to clipboard if Web Share API is not supported
+      try {
+        await navigator.clipboard.writeText(shareText);
+        console.log('Link copied to clipboard:', shareUrl);
+        alert('Shop details copied to clipboard!');
+      } catch (clipError) {
+        console.error('Error copying to clipboard:', clipError);
+        alert('Failed to copy shop details. Please copy manually: ' + shareUrl);
+      }
+    }
+  }
+
+  // Close button listener
+  const closeButton = floatingCard.querySelector('.floating-card-close-button');
+  if (closeButton) {
+    closeButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      floatingCard.classList.add('hidden');
+      console.log('Floating card closed');
+    });
+  }
+
+  // Button listeners
+  document.getElementById('call-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (shop.phone) window.location.href = `tel:${shop.phone}`;
+  });
+
+  document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (!shop.address && (!shop.lat || !shop.lng)) {
+      console.error('No valid address or coordinates provided for directions');
+      alert('Unable to get directions: No valid address or coordinates available.');
+      return;
+    }
+
+    let directionsUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
+    } else {
+      directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+    }
+
+    try {
+      console.log(`Opening Google Maps directions: ${directionsUrl}`);
+      window.location.href = directionsUrl;
+    } catch (error) {
+      console.error('Error opening Google Maps directions:', error);
+      alert('Failed to open Google Maps. Please try again.');
+    }
+  });
+
+  document.getElementById('apple-maps-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (!shop.address && (!shop.lat || !shop.lng)) {
+      console.error('No valid address or coordinates provided for directions');
+      alert('Unable to get directions: No valid address or coordinates available.');
+      return;
+    }
+
+    let directionsUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
+    } else {
+      directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+    }
+
+    try {
+      console.log(`Opening Apple Maps directions: ${directionsUrl}`);
+      window.location.href = directionsUrl;
+    } catch (error) {
+      console.error('Error opening Apple Maps directions:', error);
+      // Fallback to Google Maps web
+      const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      window.location.href = fallbackUrl;
+    }
+  });
+
+  document.getElementById('share-button')?.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    if (!shop) return;
+    await shareShop(shop);
+  });
+
+  document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    if (!currentShop) return;
+    currentShop.id = shopId; // Ensure currentShop has the correct shop_id
+    await addToFavorites(currentShop);
+  });
+
+  // Card click to show details
+  floatingCard.addEventListener('click', function(e) {
+    if (
+      e.target.closest('.floating-card-close-button') ||
+      e.target.closest('#call-button') ||
+      e.target.closest('#google-maps-button') ||
+      e.target.closest('#apple-maps-button') ||
+      e.target.closest('#share-button') ||
+      e.target.closest('#favorite-button')
+    ) return;
+    if (shop) {
+      currentShop = shop;
+      showShopDetails(shop);
+      floatingCard.classList.add('hidden');
+      console.log('Shop details displayed, floating card hidden');
+    }
+  });
+}
+
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
   if (closeButton) {
