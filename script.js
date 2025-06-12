@@ -1399,7 +1399,7 @@ async function fetchCities() {
   // Get or create shop to ensure we have a shop_id
   let shopId;
   try {
-    shopId = await getOrCreateShop(shop.name, shop.address, shop.city);
+    shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     shop.id = shopId; // Add shop_id to shop object
   } catch (error) {
     console.error('Error getting shop ID:', error);
