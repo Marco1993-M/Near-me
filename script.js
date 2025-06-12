@@ -1537,13 +1537,22 @@ async function fetchCities() {
         </button>
       ` : ''}
       ${shop.address || (shop.lat && shop.lng) ? `
-        <button id="directions-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-          <span>Directions</span>
-        </button>
+        <div class="directions-buttons">
+          <button id="google-maps-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name} with Google Maps">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Google Maps</span>
+          </button>
+          <button id="apple-maps-button" class="floating-card-action-button" aria-label="Get directions to ${shop.name} with Apple Maps">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Apple Maps</span>
+          </button>
+        </div>
       ` : ''}
       <button id="share-button" class="floating-card-action-button" aria-label="Share ${shop.name}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1575,6 +1584,7 @@ async function fetchCities() {
       return;
     }
 
+    // Construct shareable text
     const shopAddress = `${shop.address}, ${shop.city}`;
     let shareUrl;
     if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
@@ -1585,6 +1595,7 @@ async function fetchCities() {
 
     const shareText = `Check out ${shop.name} at ${shopAddress}!${shop.phone ? ` Phone: ${shop.phone}` : ''}\n${shareUrl}`;
 
+    // Try Web Share API
     if (navigator.share) {
       try {
         await navigator.share({
@@ -1606,6 +1617,7 @@ async function fetchCities() {
         }
       }
     } else {
+      // Fallback to clipboard if Web Share API is not supported
       try {
         await navigator.clipboard.writeText(shareText);
         console.log('Link copied to clipboard:', shareUrl);
@@ -1630,85 +1642,59 @@ async function fetchCities() {
   // Button listeners
   document.getElementById('call-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    console.log('Call button clicked for:', shop.name);
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-  document.getElementById('directions-button')?.addEventListener('click', function(e) {
+  document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    console.log('Directions button clicked for:', shop.name);
-
+    console.log('Google Maps button clicked for:', shop.name);
     if (!shop.address && (!shop.lat || !shop.lng)) {
       console.error('No valid address or coordinates provided for directions');
       alert('Unable to get directions: No valid address or coordinates available.');
       return;
     }
 
-    // Create modal for map service selection
-    const modal = document.createElement('div');
-    modal.style.position = 'fixed';
-    modal.style.top = '0';
-    modal.style.left = '0';
-    modal.style.width = '100%';
-    modal.style.height = '100%';
-    modal.style.background = 'rgba(0,0,0,0.5)';
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-    modal.style.zIndex = '1008';
-    modal.innerHTML = `
-      <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; max-width: 300px;">
-        <h3 style="margin: 0 0 10px;">Choose Map Service</h3>
-        <button id="google-maps-option" class="floating-card-action-button" style="margin: 5px; padding: 8px 16px;">Google Maps</button>
-        <button id="apple-maps-option" class="floating-card-action-button" style="margin: 5px; padding: 8px 16px;">Apple Maps</button>
-        <button id="cancel-modal" style="margin: 5px; padding: 8px 16px; background: #ccc; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    console.log('Map service selection modal displayed');
+    let directionsUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
+    } else {
+      directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+    }
 
-    // Modal button listeners
-    document.getElementById('google-maps-option').addEventListener('click', function() {
-      console.log('Google Maps selected for:', shop.name);
-      let directionsUrl;
-      if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-        directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
-      } else {
-        directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-      }
-      try {
-        console.log(`Opening Google Maps directions: ${directionsUrl}`);
-        window.location.href = directionsUrl;
-      } catch (error) {
-        console.error('Error opening Google Maps directions:', error);
-        alert('Failed to open Google Maps. Please try again.');
-      }
-      modal.remove();
-    });
+    try {
+      console.log(`Opening Google Maps directions: ${directionsUrl}`);
+      window.location.href = directionsUrl;
+    } catch (error) {
+      console.error('Error opening Google Maps directions:', error);
+      alert('Failed to open Google Maps. Please try again.');
+    }
+  });
 
-    document.getElementById('apple-maps-option').addEventListener('click', function() {
-      console.log('Apple Maps selected for:', shop.name);
-      let directionsUrl;
-      if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-        directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
-      } else {
-        directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-      }
-      try {
-        console.log(`Opening Apple Maps directions: ${directionsUrl}`);
-        window.location.href = directionsUrl;
-      } catch (error) {
-        console.error('Error opening Apple Maps directions:', error);
-        const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-        window.location.href = fallbackUrl;
-      }
-      modal.remove();
-    });
+  document.getElementById('apple-maps-button')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    console.log('Apple Maps button clicked for:', shop.name);
+    if (!shop.address && (!shop.lat || !shop.lng)) {
+      console.error('No valid address or coordinates provided for directions');
+      alert('Unable to get directions: No valid address or coordinates available.');
+      return;
+    }
 
-    document.getElementById('cancel-modal').addEventListener('click', function() {
-      console.log('Map service selection canceled');
-      modal.remove();
-    });
+    let directionsUrl;
+    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+      directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
+    } else {
+      directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+    }
+
+    try {
+      console.log(`Opening Apple Maps directions: ${directionsUrl}`);
+      window.location.href = directionsUrl;
+    } catch (error) {
+      console.error('Error opening Apple Maps directions:', error);
+      // Fallback to Google Maps web
+      const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      window.location.href = fallbackUrl;
+    }
   });
 
   document.getElementById('share-button')?.addEventListener('click', async function(e) {
@@ -1730,7 +1716,8 @@ async function fetchCities() {
     if (
       e.target.closest('.floating-card-close-button') ||
       e.target.closest('#call-button') ||
-      e.target.closest('#directions-button') ||
+      e.target.closest('#google-maps-button') ||
+      e.target.closest('#apple-maps-button') ||
       e.target.closest('#share-button') ||
       e.target.closest('#favorite-button')
     ) return;
