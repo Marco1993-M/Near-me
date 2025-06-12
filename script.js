@@ -1584,9 +1584,51 @@ async function fetchCities() {
   });
 
   document.getElementById('directions-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (shop.address) window.location.href = `geo:0,0?q=${encodeURIComponent(shop.address)}`;
-  });
+  e.stopPropagation();
+
+  if (!shop.address && (!shop.lat || !shop.lng)) {
+    console.error('No valid address or coordinates provided for directions');
+    alert('Unable to get directions: No valid address or coordinates available.');
+    return;
+  }
+
+  let directionsUrl;
+
+  // Prefer coordinates for precision if available
+  if (shop.lat && shop.lng) {
+    // Use coordinates for the geo URI
+    directionsUrl = `geo:${shop.lat},${shop.lng}?q=${shop.lat},${shop.lng}(${encodeURIComponent(shop.name)})`;
+    
+    // Detect the user's platform for a better experience
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+
+    if (isIOS) {
+      // Apple Maps for iOS
+      directionsUrl = `maps://?q=${shop.lat},${shop.lng}&daddr=${shop.lat},${shop.lng}&dirflg=d`;
+    } else if (isAndroid) {
+      // Google Maps for Android
+      directionsUrl = `google.navigation:q=${shop.lat},${shop.lng}&mode=d`;
+    } else {
+      // Fallback to Google Maps web for other platforms
+      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`;
+    }
+  } else {
+    // Fallback to address-based directions if coordinates are unavailable
+    directionsUrl = `geo:0,0?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+  }
+
+  try {
+    console.log(`Opening directions to: ${directionsUrl}`);
+    window.location.href = directionsUrl;
+  } catch (error) {
+    console.error('Error opening directions:', error);
+    // Fallback to a web-based map if the geo URI fails
+    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+    window.location.href = fallbackUrl;
+  }
+});
 
   document.getElementById('share-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
