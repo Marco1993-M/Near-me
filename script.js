@@ -1567,7 +1567,6 @@ async function fetchCities() {
   floatingCard.classList.remove('hidden');
   console.log('Floating card displayed for:', shop.name);
 
-
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
   if (closeButton) {
@@ -1584,7 +1583,7 @@ async function fetchCities() {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-  document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
+   document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
     if (!shop.address && (!shop.lat || !shop.lng)) {
       console.error('No valid address or coordinates provided for directions');
@@ -1633,101 +1632,6 @@ async function fetchCities() {
       window.location.href = fallbackUrl;
     }
   });
-
-  document.getElementById('share-button')?.addEventListener('click', async function(e) {
-    e.stopPropagation();
-    if (!shop) return;
-    await shareShop(shop);
-  });
-
-  document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
-    e.stopPropagation();
-    if (!currentShop) return;
-    currentShop.id = shopId; // Ensure currentShop has the correct shop_id
-    await addToFavorites(currentShop);
-  });
-
-  // Card click to show details
-  floatingCard.addEventListener('click', function(e) {
-    if (
-      e.target.closest('.floating-card-close-button') ||
-      e.target.closest('#call-button') ||
-      e.target.closest('#google-maps-button') ||
-      e.target.closest('#apple-maps-button') ||
-      e.target.closest('#share-button') ||
-      e.target.closest('#favorite-button')
-    ) return;
-    if (shop) {
-      currentShop = shop;
-      showShopDetails(shop);
-      floatingCard.classList.add('hidden');
-      console.log('Shop details displayed, floating card hidden');
-    }
-  });
-}
-
-  // Close button listener
-  const closeButton = floatingCard.querySelector('.floating-card-close-button');
-  if (closeButton) {
-    closeButton.addEventListener('click', function(e) {
-      e.stopPropagation();
-      floatingCard.classList.add('hidden');
-      console.log('Floating card closed');
-    });
-  }
-
-  // Button listeners
-  document.getElementById('call-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (shop.phone) window.location.href = `tel:${shop.phone}`;
-  });
-
-  document.getElementById('directions-button')?.addEventListener('click', function(e) {
-  e.stopPropagation();
-
-  if (!shop.address && (!shop.lat || !shop.lng)) {
-    console.error('No valid address or coordinates provided for directions');
-    alert('Unable to get directions: No valid address or coordinates available.');
-    return;
-  }
-
-  let directionsUrl;
-
-  // Prefer coordinates for precision if available
-  if (shop.lat && shop.lng) {
-    // Use coordinates for the geo URI
-    directionsUrl = `geo:${shop.lat},${shop.lng}?q=${shop.lat},${shop.lng}(${encodeURIComponent(shop.name)})`;
-    
-    // Detect the user's platform for a better experience
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
-
-    if (isIOS) {
-      // Apple Maps for iOS
-      directionsUrl = `maps://?q=${shop.lat},${shop.lng}&daddr=${shop.lat},${shop.lng}&dirflg=d`;
-    } else if (isAndroid) {
-      // Google Maps for Android
-      directionsUrl = `google.navigation:q=${shop.lat},${shop.lng}&mode=d`;
-    } else {
-      // Fallback to Google Maps web for other platforms
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}`;
-    }
-  } else {
-    // Fallback to address-based directions if coordinates are unavailable
-    directionsUrl = `geo:0,0?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-  }
-
-  try {
-    console.log(`Opening directions to: ${directionsUrl}`);
-    window.location.href = directionsUrl;
-  } catch (error) {
-    console.error('Error opening directions:', error);
-    // Fallback to a web-based map if the geo URI fails
-    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-    window.location.href = fallbackUrl;
-  }
-});
 
   document.getElementById('share-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
