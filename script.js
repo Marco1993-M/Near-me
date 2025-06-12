@@ -2244,7 +2244,7 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     });
   }
 
-    function displayTop100Shops() {
+   async function displayTop100Shops() {
   console.log('Displaying top 100 shops');
   const top100List = document.getElementById('top100-list');
   if (!top100List) {
@@ -2252,111 +2252,155 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     return;
   }
 
-  const allShops = [];
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith('reviews-')) {
-      const shopName = key.replace('reviews-', '');
-      const reviews = JSON.parse(localStorage.getItem(key)) || [];
-      if (reviews.length > 0) {
-        const averageRating = reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length;
-        allShops.push({ name: shopName, averageRating, reviews });
-      }
+  top100List.innerHTML = '<p class="top100-modal-loading">Loading top shops...</p>';
+
+  try {
+    // Query Supabase for top 100 shops by average rating
+    const { data: topShops, error } = await client
+      .from('shops')
+      .select(`
+        id,
+        name,
+        address,
+        city,
+        lat,
+        lng,
+        reviews (
+          rating
+        )
+      `)
+      .returns([
+        {
+          id: 'uuid',
+          name: 'string',
+          address: 'string',
+          city: 'string',
+          lat: 'number',
+          lng: 'number',
+          reviews: [{ rating: 'number' }],
+        },
+      ])
+      .limit(100);
+
+    if (error) {
+      console.error('Error fetching top shops:', error);
+      top100List.innerHTML = '<p class="top100-modal-loading">Error loading top shops.</p>';
+      return;
     }
-  });
 
-  allShops.sort((a, b) => b.averageRating - a.averageRating);
-  const topShops = allShops.slice(0, 100);
+    // Process shops to calculate average ratings
+    const processedShops = topShops
+      .map(shop => {
+        const reviews = shop.reviews || [];
+        const averageRating =
+          reviews.length > 0
+            ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
+            : 0;
+        return {
+          id: shop.id,
+          name: shop.name,
+          address: shop.address,
+          city: shop.city,
+          lat: shop.lat,
+          lng: shop.lng,
+          averageRating,
+          reviewCount: reviews.length,
+        };
+      })
+      .filter(shop => shop.reviewCount > 0) // Only include shops with reviews
+      .sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount) // Sort by rating, then review count
+      .slice(0, 100); // Limit to top 100
 
-  if (topShops.length === 0) {
-    top100List.innerHTML = '<p class="top100-modal-loading">No rated shops available.</p>';
-    console.log('No top shops to display');
-    return;
+    if (processedShops.length === 0) {
+      top100List.innerHTML = '<p class="top100-modal-loading">No rated shops available.</p>';
+      console.log('No top shops to display');
+      return;
+    }
+
+    top100List.className = 'top100-modal-list';
+    top100List.innerHTML = '';
+
+    processedShops.forEach(shop => {
+      const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+      const li = document.createElement('li');
+      li.className = 'top100-modal-list-item';
+      li.innerHTML = `
+        <div class="top100-modal-shop-info">
+          <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
+          </svg>
+          ${shop.name} (${shop.averageRating.toFixed(1)}/10)
+        </div>
+        <div class="top100-modal-actions">
+          <button class="top100-modal-button view-shop" data-shop-id="${shop.id}" aria-label="View ${shop.name}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+          <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
+        </div>
+      `;
+      top100List.appendChild(li);
+    });
+
+    // Remove any existing listeners to avoid duplicates
+    top100List.removeEventListener('click', handleTop100ButtonClick);
+
+    // Add a single delegated event listener to top100List
+    top100List.addEventListener('click', handleTop100ButtonClick);
+    console.log('Attached delegated click listener to top100List');
+  } catch (error) {
+    console.error('Error in displayTop100Shops:', error);
+    top100List.innerHTML = '<p class="top100-modal-loading">Error loading top shops.</p>';
   }
-
-  top100List.className = 'top100-modal-list';
-  top100List.innerHTML = '';
-
-  topShops.forEach(shop => {
-    const isFavorited = favorites.some(fav => fav.name === shop.name);
-    const li = document.createElement('li');
-    li.className = 'top100-modal-list-item';
-    li.innerHTML = `
-      <div class="top100-modal-shop-info">
-        <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
-        </svg>
-        ${shop.name} (${shop.averageRating.toFixed(1)}/10)
-      </div>
-      <div class="top100-modal-actions">
-        <button class="top100-modal-button view-shop" aria-label="View ${shop.name}">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-        <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-        </button>
-      </div>
-    `;
-    top100List.appendChild(li);
-  });
-
-  // Remove any existing listeners to avoid duplicates
-  top100List.removeEventListener('click', handleTop100ButtonClick);
-
-  // Add a single delegated event listener to top100List
-  top100List.addEventListener('click', handleTop100ButtonClick);
-  console.log('Attached delegated click listener to top100List');
 }
 
-// Delegated event handler for view and favorite buttons
+// Updated delegated event handler for view and favorite buttons
 function handleTop100ButtonClick(e) {
   const target = e.target.closest('.top100-modal-button');
   if (!target) return;
 
   e.stopPropagation();
-  const shopName = target.parentElement.parentElement.querySelector('.top100-modal-shop-info').textContent.split('(')[0].trim();
-  const shop = shops.find(s => s.name === shopName);
+  const shopId = target.dataset.shopId;
+  const shop = topShops.find(s => s.id === shopId); // Use topShops instead of global shops
+
+  if (!shop) {
+    console.error('Shop not found for ID:', shopId);
+    return;
+  }
 
   if (target.classList.contains('view-shop')) {
-    if (shop) {
-      console.log('Viewing shop from Top 100:', shopName);
-      currentShop = shop;
-      try {
-        showShopDetails(shop);
-        console.log('Shop details banner shown for:', shop.name);
-        document.getElementById('top100-modal').classList.add('hidden');
-        console.log('Top 100 modal hidden');
-      } catch (error) {
-        console.error('Error showing shop details:', error);
-      }
-    } else {
-      console.error('Shop not found in shops array:', shopName);
-      console.log('Available shops:', shops.map(s => s.name));
+    console.log('Viewing shop from Top 100:', shop.name);
+    currentShop = shop;
+    try {
+      showShopDetails(shop);
+      console.log('Shop details banner shown for:', shop.name);
+      document.getElementById('top100-modal').classList.add('hidden');
+      console.log('Top 100 modal hidden');
+    } catch (error) {
+      console.error('Error showing shop details:', error);
     }
   } else if (target.classList.contains('favorite-shop')) {
-    if (shop) {
-      const isCurrentlyFavorited = favorites.some(fav => fav.name === shop.name);
-      if (isCurrentlyFavorited) {
-        favorites = favorites.filter(fav => fav.name !== shop.name);
-        target.classList.remove('favorited');
-        target.querySelector('svg').setAttribute('fill', 'none');
-        target.setAttribute('aria-label', `Add ${shop.name} to favorites`);
-        console.log('Removed from favorites:', shop.name);
-      } else {
-        addToFavorites(shop);
-        target.classList.add('favorited');
-        target.querySelector('svg').setAttribute('fill', 'currentColor');
-        target.setAttribute('aria-label', `Remove ${shop.name} from favorites`);
-        console.log('Added to favorites:', shop.name);
-      }
-      updateFavoritesModal();
+    const isCurrentlyFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+    if (isCurrentlyFavorited) {
+      favorites = favorites.filter(fav => fav.name !== shop.name || fav.address !== shop.address);
+      target.classList.remove('favorited');
+      target.querySelector('svg').setAttribute('fill', 'none');
+      target.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+      console.log('Removed from favorites:', shop.name);
     } else {
-      console.error('Shop not found for favoriting:', shopName);
+      addToFavorites(shop);
+      target.classList.add('favorited');
+      target.querySelector('svg').setAttribute('fill', 'currentColor');
+      target.setAttribute('aria-label', `Remove ${shop.name} from favorites`);
+      console.log('Added to favorites:', shop.name);
     }
+    updateFavoritesModal();
   }
 }
 
