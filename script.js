@@ -1498,15 +1498,13 @@ async function fetchCities() {
 
   let averageRating = 0;
   try {
-    averageRating = await calculateAverageRating(shop.name);
+    averageRating = await calculateAverageRating(shop.name, shopId);
   } catch (error) {
     console.error('Error calculating average rating:', error);
   }
   const displayRating = averageRating > 0 ? `${averageRating} / 10` : 'No ratings yet';
 
-  const isFavorited = shop.id
-    ? favorites.some(fav => fav.shop_id === shop.id)
-    : false;
+  const isFavorited = shop.id && favorites.some(fav => fav.shop_id === shop.id);
 
   const coffeeIcon = `<svg class="text-brown-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>`;
   const starIcon = `<svg class="text-yellow-500" fill="black" viewBox="0 0 24 24" width="16" height="16"><path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/></svg>`;
@@ -1569,7 +1567,6 @@ async function fetchCities() {
 
   // Function to create and show the custom maps prompt modal
   function showMapsPrompt(shop, callback) {
-    // Create modal container
     const modal = document.createElement('div');
     modal.id = 'maps-prompt-modal';
     modal.style.position = 'fixed';
@@ -1583,7 +1580,6 @@ async function fetchCities() {
     modal.style.justifyContent = 'center';
     modal.style.zIndex = '1008';
 
-    // Create modal content with floating-card styling
     modal.innerHTML = `
       <div style="backdrop-filter: blur(50px); -webkit-backdrop-filter: blur(5px); background: rgba(255, 255, 255, 0.15); border: 0.5px solid black; box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.6), inset 3px 3px 6px rgba(209, 209, 209, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; width: 85%; max-width: 350px; text-align: center;">
         <p style="margin-bottom: 20px; color: #333; font-size: 16px;">Choose a maps service for directions to ${shop.name}</p>
@@ -1593,17 +1589,15 @@ async function fetchCities() {
     `;
     document.body.appendChild(modal);
 
-    // Add event listeners for the buttons
     document.getElementById('google-maps-btn').addEventListener('click', () => {
-      callback(true); // true for Google Maps
+      callback(true);
       modal.remove();
     });
     document.getElementById('apple-maps-btn').addEventListener('click', () => {
-      callback(false); // false for Apple Maps
+      callback(false);
       modal.remove();
     });
 
-    // Close modal if clicking outside
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.remove();
@@ -1635,12 +1629,10 @@ async function fetchCities() {
       return;
     }
 
-    // Show custom modal
     showMapsPrompt(shop, (useGoogleMaps) => {
       let directionsUrl;
       try {
         if (useGoogleMaps) {
-          // Google Maps directions
           if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
             directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
           } else {
@@ -1648,7 +1640,6 @@ async function fetchCities() {
           }
           console.log(`Opening Google Maps directions: ${directionsUrl}`);
         } else {
-          // Apple Maps directions
           if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
             directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
           } else {
@@ -1661,7 +1652,6 @@ async function fetchCities() {
       } catch (error) {
         console.error(`Error opening ${useGoogleMaps ? 'Google' : 'Apple'} Maps directions:`, error);
         if (!useGoogleMaps) {
-          // Fallback to Google Maps web for Apple Maps errors
           const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
           console.log(`Falling back to Google Maps: ${fallbackUrl}`);
           window.location.href = fallbackUrl;
@@ -1675,7 +1665,6 @@ async function fetchCities() {
   document.getElementById('share-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
     try {
-      // Create a shareable Google Maps URL
       let shareUrl;
       if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
         shareUrl = `https://www.google.com/maps/search/?api=1&query=${shop.lat},${shop.lng}`;
@@ -1683,19 +1672,16 @@ async function fetchCities() {
         shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
       }
 
-      // Share data
       const shareData = {
         title: `Check out ${shop.name}`,
         text: `Visit ${shop.name} at ${shop.address}, ${shop.city}! ${averageRating > 0 ? `Rated ${averageRating}/10.` : ''}`,
         url: shareUrl,
       };
 
-      // Try Web Share API
       if (navigator.share && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         console.log(`Shared ${shop.name} successfully`);
       } else {
-        // Fallback to copying URL to clipboard
         await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
         alert('Shop details copied to clipboard!');
         console.log(`Copied ${shop.name} details to clipboard`);
@@ -1710,10 +1696,23 @@ async function fetchCities() {
     e.stopPropagation();
     if (!shop) return;
     shop.id = shopId; // Ensure shop has the correct shop_id
-    await addToFavorites(shop);
+    const isCurrentlyFavorited = shop.id && favorites.some(fav => fav.shop_id === shop.id);
+    const favoriteButton = document.getElementById('favorite-button');
+    const heartIcon = favoriteButton.querySelector('svg');
+
+    if (isCurrentlyFavorited) {
+      await removeFromFavorites(shop);
+      heartIcon.setAttribute('fill', 'none');
+      favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+      alert(`${shop.name} removed from favorites.`);
+    } else {
+      await addToFavorites(shop);
+      heartIcon.setAttribute('fill', 'currentColor');
+      favoriteButton.setAttribute('aria-label', `Remove ${shop.name} from favorites`);
+      // Alert is handled in addToFavorites if already favorited
+    }
   });
 
-  // Card click to show details
   floatingCard.addEventListener('click', function(e) {
     if (
       e.target.closest('.floating-card-close-button') ||
@@ -1728,6 +1727,61 @@ async function fetchCities() {
       console.log('Shop details displayed, floating card hidden');
     }
   });
+}
+
+async function removeFromFavorites(shop) {
+  console.log('Removing from favorites:', shop.name);
+  const { data: authData, error: authError } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+
+  if (authError || !userId) {
+    console.error('No user authenticated:', authError?.message);
+    showAuthBanner(shop, () => removeFromFavorites(shop)); // Prompt login and retry
+    return;
+  }
+
+  if (!shop || !shop.id) {
+    console.error('Invalid shop data or no shop_id:', shop);
+    alert('Cannot remove from favorites: Invalid shop data.');
+    return;
+  }
+
+  // Check for existing favorite
+  const { data: existingFavorites, error: fetchError } = await client
+    .from('favorites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('shop_id', shop.id);
+
+  if (fetchError) {
+    console.error('Error checking existing favorites:', fetchError.message);
+    alert('Failed to check favorites: ' + fetchError.message);
+    return;
+  }
+
+  if (existingFavorites.length === 0) {
+    console.log(`${shop.name} is not in favorites`);
+    alert(`${shop.name} is not in your favorites.`);
+    return;
+  }
+
+  // Delete favorite
+  const { error: deleteError } = await client
+    .from('favorites')
+    .delete()
+    .eq('user_id', userId)
+    .eq('shop_id', shop.id);
+
+  if (deleteError) {
+    console.error('Error removing from favorites:', deleteError.message);
+    alert('Failed to remove from favorites: ' + deleteError.message);
+    return;
+  }
+
+  console.log(`Removed ${shop.name} from favorites with shop_id: ${shop.id}`);
+  // Update local favorites array
+  favorites = favorites.filter(fav => fav.shop_id !== shop.id);
+  await updateFavoritesModal();
 }
   async function showShopDetails(shop) {
   if (!shop || !shop.name || !shop.address || !shop.city) {
