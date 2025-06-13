@@ -892,7 +892,7 @@ body, html {
 
 .review-banner-rating-button.selected {
   box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
-  color: #4b5563; /* Matches hover for consistency */
+  color: #c7f5d3; /* Matches hover for consistency */
 }
 
 .review-banner-rating-button:focus {
