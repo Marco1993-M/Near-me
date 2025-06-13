@@ -1583,55 +1583,52 @@ async function fetchCities() {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-   document.getElementById('google-maps-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (!shop.address && (!shop.lat || !shop.lng)) {
-      console.error('No valid address or coordinates provided for directions');
-      alert('Unable to get directions: No valid address or coordinates available.');
-      return;
-    }
+   // Remove the existing Google and Apple Maps button listeners since those buttons don't exist
+// Replace with a single directions-button listener
+document.getElementById('directions-button')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (!shop.address && (!shop.lat || !shop.lng)) {
+    console.error('No valid address or coordinates provided for directions');
+    alert('Unable to get directions: No valid address or coordinates available.');
+    return;
+  }
 
-    let directionsUrl;
-    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-      directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
-    } else {
-      directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-    }
+  // Prompt user to choose between Google Maps and Apple Maps
+  const useGoogleMaps = confirm('Open directions in Google Maps? Click "OK" for Google Maps or "Cancel" for Apple Maps.');
 
-    try {
+  let directionsUrl;
+  try {
+    if (useGoogleMaps) {
+      // Google Maps directions
+      if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+        directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
+      } else {
+        directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      }
       console.log(`Opening Google Maps directions: ${directionsUrl}`);
-      window.location.href = directionsUrl;
-    } catch (error) {
-      console.error('Error opening Google Maps directions:', error);
-      alert('Failed to open Google Maps. Please try again.');
-    }
-  });
-
-  document.getElementById('apple-maps-button')?.addEventListener('click', function(e) {
-    e.stopPropagation();
-    if (!shop.address && (!shop.lat || !shop.lng)) {
-      console.error('No valid address or coordinates provided for directions');
-      alert('Unable to get directions: No valid address or coordinates available.');
-      return;
-    }
-
-    let directionsUrl;
-    if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-      directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
     } else {
-      directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      // Apple Maps directions
+      if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+        directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
+      } else {
+        directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      }
+      console.log(`Opening Apple Maps directions: ${directionsUrl}`);
     }
 
-    try {
-      console.log(`Opening Apple Maps directions: ${directionsUrl}`);
-      window.location.href = directionsUrl;
-    } catch (error) {
-      console.error('Error opening Apple Maps directions:', error);
-      // Fallback to Google Maps web
+    window.location.href = directionsUrl;
+  } catch (error) {
+    console.error(`Error opening ${useGoogleMaps ? 'Google' : 'Apple'} Maps directions:`, error);
+    if (!useGoogleMaps) {
+      // Fallback to Google Maps web for Apple Maps errors
       const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      console.log(`Falling back to Google Maps: ${fallbackUrl}`);
       window.location.href = fallbackUrl;
+    } else {
+      alert('Failed to open directions. Please try again.');
     }
-  });
+  }
+});
 
   document.getElementById('share-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
