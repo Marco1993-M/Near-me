@@ -1583,3 +1583,48 @@ body, html {
 .hardcoded-city-button:hover {
   background-color: #e5e7eb;
 }
+
+#maps-prompt-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1008;
+}
+#maps-prompt-modal > div {
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(5px);
+  background: rgba(255, 255, 255, 0.15);
+  border: 0.5px solid black;
+  box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.6), inset 3px 3px 6px rgba(209, 209, 209, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.6);
+  border-radius: 15px;
+  padding: 15px;
+  width: 85%;
+  max-width: 350px;
+  text-align: center;
+}
+#maps-prompt-modal p {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 16px;
+}
+#google-maps-btn, #apple-maps-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 0.5px solid #333;
+  box-shadow: 2px 2px 4px rgba(209, 209, 209, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  color: #333;
+  font-size: 14px;
+}
+#google-maps-btn {
+  margin-right: 10px;
+}
+
+
