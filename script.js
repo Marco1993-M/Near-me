@@ -962,146 +962,154 @@ setTimeout(() => {
 
 
 
-   async function fetchNearbyCities() {
+  async function fetchNearbyCities() {
   const citiesModal = document.getElementById('cities-modal');
   const cityButtonsContainer = document.getElementById('city-buttons');
   const searchInput = document.getElementById('city-search');
   if (!citiesModal || !cityButtonsContainer || !searchInput) {
     return console.error('Cities modal, buttons container, or search input not found');
   }
-  if (!supabase) return console.error('Supabase not initialized.');
+  if (!client) return console.error('Supabase client not initialized.');
 
-  // Get user ID
-  const { data: authData } = await supabase.auth.getUser();
-  const userId = authData?.user?.id;
+  console.log('Fetching nearby cities from Supabase');
 
-  // Fetch cities from Supabase
-  const { data: shops, error } = await supabase.from('shops').select('city');
-  if (error) return console.error('Error fetching cities:', error);
-  const allCities = [...new Set(shops.map(shop => shop.city.trim().toLowerCase()))].sort();
+  try {
+    // Get user ID
+    const { data: authData } = await client.auth.getUser();
+    const userId = authData?.user?.id;
 
-  // Get location
-  let [lat, lng] = userLocation?.length === 2 ? userLocation : map?.getCenter ? [map.getCenter().lat, map.getCenter().lng] : [0, 0];
-
-  const cityCoords = {
-    'cape town': [-33.9249, 18.4241],
-    'johannesburg': [-26.2041, 28.0473],
-    'durban': [-29.8587, 31.0218],
-  };
-
-  const distances = Object.entries(cityCoords)
-    .map(([city, [cLat, cLng]]) => ({
-      city,
-      distance: Math.hypot(cLat - lat, cLng - lng)
-    }))
-    .sort((a, b) => a.distance - b.distance);
-
-  const nearbyCities = distances.slice(0, 3).map(d => d.city);
-
-  // Fetch behavior-based cities
-  let recentCities = [], popularCities = [];
-  if (userId) {
-    const { data: recent } = await supabase
-      .from('city_activity')
-      .select('city')
-      .eq('user_id', userId)
-      .order('last_visited_at', { ascending: false })
-      .limit(5);
-    recentCities = recent?.map(c => c.city.toLowerCase()) || [];
-  }
-
-  const { data: popular } = await supabase
-    .from('city_activity')
-    .select('city, visit_count')
-    .order('visit_count', { ascending: false })
-    .limit(5);
-  popularCities = popular?.map(c => c.city.toLowerCase()) || [];
-
-  // Render helper
-  const renderButtons = (title, cities) => cities.length ? `
-    <div class="city-section mb-3">
-      <h4 class="section-title text-sm font-semibold mb-1">${title}</h4>
-      <div class="cities-modal-buttons flex flex-wrap gap-2">
-        ${cities.map(city => `
-          <button class="cities-modal-button px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition" data-city="${city}">
-            ${city.charAt(0).toUpperCase() + city.slice(1)}
-          </button>`).join('')}
-      </div>
-    </div>` : '';
-
-  // Render initial city buttons
-  const renderCitySections = (searchQuery = '') => {
-    const matches = searchQuery ? allCities.filter(c => c.includes(searchQuery.toLowerCase().trim())) : allCities;
-    cityButtonsContainer.innerHTML = searchQuery
-      ? renderButtons('Search Results', matches)
-      : `
-        ${renderButtons('Recently Visited', recentCities)}
-        ${renderButtons('Popular Cities', popularCities)}
-        ${renderButtons('Nearby Cities', nearbyCities)}
-        ${renderButtons('All Cities', allCities)}
-      `;
-    // Bind city button listeners
-    cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
-      btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
-    );
-  };
-
-  // City click handler
-  async function handleCityClick(city) {
-    const lowerCity = city.toLowerCase();
-    const [cityLat, cityLng] = cityCoords[lowerCity] || [lat, lng];
-    cityCoordinates[lowerCity] = [cityLat, cityLng];
-    if (map) {
-      map.setView([cityLat, cityLng], 13);
-      map.invalidateSize();
+    // Fetch cities from Supabase
+    const { data: shops, error } = await client.from('shops').select('city');
+    if (error) {
+      console.error('Error fetching cities:', error.message);
+      cityButtonsContainer.innerHTML = '<p>Error loading cities.</p>';
+      return;
     }
-    fetchShopsByCity(lowerCity, selectedRatingFilter);
-    citiesModal.classList.add('hidden');
+    const allCities = [...new Set(shops.map(shop => shop.city.trim().toLowerCase()))].sort();
 
+    // Get location
+    let [lat, lng] = userLocation?.length === 2 ? userLocation : map?.getCenter ? [map.getCenter().lat, map.getCenter().lng] : [0, 0];
+
+    const cityCoords = {
+      'cape town': [-33.9249, 18.4241],
+      'johannesburg': [-26.2041, 28.0473],
+      'durban': [-29.8587, 31.0218],
+    };
+
+    const distances = Object.entries(cityCoords)
+      .map(([city, [cLat, cLng]]) => ({
+        city,
+        distance: Math.hypot(cLat - lat, cLng - lng)
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    const nearbyCities = distances.slice(0, 3).map(d => d.city);
+
+    // Fetch behavior-based cities
+    let recentCities = [], popularCities = [];
     if (userId) {
-      const { error } = await supabase
+      const { data: recent } = await client
         .from('city_activity')
-        .upsert(
-          {
-            user_id: userId,
-            city: lowerCity,
-            visit_count: 1,
-            last_visited_at: new Date().toISOString()
-          },
-          {
-            onConflict: ['user_id', 'city'],
-            update: { visit_count: { increment: 1 }, last_visited_at: new Date().toISOString() }
-          }
-        );
-      if (error) console.error('Tracking error:', error);
+        .select('city')
+        .eq('user_id', userId)
+        .order('last_visited_at', { ascending: false })
+        .limit(5);
+      recentCities = recent?.map(c => c.city.toLowerCase()) || [];
     }
-  }
 
-  // Initialize
-  renderCitySections();
-  citiesModal.classList.remove('hidden');
+    const { data: popular } = await client
+      .from('city_activity')
+      .select('city, visit_count')
+      .order('visit_count', { ascending: false })
+      .limit(5);
+    popularCities = popular?.map(c => c.city.toLowerCase()) || [];
 
-  // Search handler
-  searchInput.addEventListener('input', () => renderCitySections(searchInput.value));
+    // Render helper
+    const renderButtons = (title, cities) => cities.length ? `
+      <div class="city-section mb-3">
+        <h4 class="section-title text-sm font-semibold mb-1">${title}</h4>
+        <div class="cities-modal-buttons flex flex-wrap gap-2">
+          ${cities.map(city => `
+            <button class="cities-modal-button px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 transition" data-city="${city}">
+              ${city.charAt(0).toUpperCase() + city.slice(1)}
+            </button>`).join('')}
+        </div>
+      </div>` : '';
 
-  // Rating filter handler
-  let selectedRatingFilter = '';
-  const ratingFilters = document.querySelectorAll('input[name="rating-filter"]');
-  ratingFilters.forEach(radio => {
-    radio.addEventListener('change', () => {
-      selectedRatingFilter = radio.value;
-      const selectedCity = cityButtonsContainer.querySelector('.cities-modal-button.active')?.dataset.city;
-      if (selectedCity) fetchShopsByCity(selectedCity, selectedRatingFilter);
+    // Render city sections
+    const renderCitySections = (searchQuery = '') => {
+      const matches = searchQuery ? allCities.filter(c => c.includes(searchQuery.toLowerCase().trim())) : allCities;
+      cityButtonsContainer.innerHTML = searchQuery
+        ? renderButtons('Search Results', matches)
+        : `
+          ${renderButtons('Recently Visited', recentCities)}
+          ${renderButtons('Popular Cities', popularCities)}
+          ${renderButtons('Nearby Cities', nearbyCities)}
+          ${renderButtons('All Cities', allCities)}
+        `;
+      cityButtonsContainer.querySelectorAll('.cities-modal-button').forEach(btn =>
+        btn.addEventListener('click', () => handleCityClick(btn.dataset.city))
+      );
+    };
+
+    // City click handler
+    async function handleCityClick(city) {
+      const lowerCity = city.toLowerCase();
+      const [cityLat, cityLng] = cityCoords[lowerCity] || [lat, lng];
+      cityCoordinates[lowerCity] = [cityLat, cityLng];
+      if (map) {
+        map.setView([cityLat, cityLng], 13);
+        map.invalidateSize();
+      }
+      fetchShopsByCity(lowerCity, selectedRatingFilter);
+      citiesModal.classList.add('hidden');
+
+      if (userId) {
+        const { error } = await client
+          .from('city_activity')
+          .upsert(
+            {
+              user_id: userId,
+              city: lowerCity,
+              visit_count: 1,
+              last_visited_at: new Date().toISOString()
+            },
+            {
+              onConflict: ['user_id', 'city'],
+              update: { visit_count: { increment: 1 }, last_visited_at: new Date().toISOString() }
+            }
+          );
+        if (error) console.error('Tracking error:', error);
+      }
+    }
+
+    // Initialize
+    renderCitySections();
+
+    // Search handler
+    searchInput.addEventListener('input', () => renderCitySections(searchInput.value));
+
+    // Rating filter handler
+    let selectedRatingFilter = 'all'; // Default to 'all'
+    const ratingFilters = document.querySelectorAll('input[name="rating-filter"]');
+    ratingFilters.forEach(radio => {
+      radio.addEventListener('change', () => {
+        selectedRatingFilter = radio.value;
+        const selectedCity = cityButtonsContainer.querySelector('.cities-modal-button.active')?.dataset.city;
+        if (selectedCity) fetchShopsByCity(selectedCity, selectedRatingFilter);
+      });
     });
-  });
 
-  // Close modal
-  const closeButton = citiesModal.querySelector('.close-button');
-  if (closeButton) {
-    closeButton.addEventListener('click', () => citiesModal.classList.add('hidden'));
+    // Close modal
+    const closeButton = citiesModal.querySelector('.close-button');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => citiesModal.classList.add('hidden'));
+    }
+  } catch (error) {
+    console.error('Unexpected error in fetchNearbyCities:', error);
+    cityButtonsContainer.innerHTML = '<p>Error loading cities.</p>';
   }
 }
-
 
     // Renamed to avoid naming conflict
 async function fetchCities() {
