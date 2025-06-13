@@ -1579,7 +1579,7 @@ async function fetchCities() {
     modal.style.zIndex = '1008';
 
     modal.innerHTML = `
-      <div style="backdrop-filter: blur(50px); -webkit-backdrop-filter: blur(5px); background: rgba(255, 255, 255, 0.15); border: 0.5px solid black; box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.6), inset 3px 3px 6px rgba(209, 209, 209, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; width: 85%; max-width: 350px; text-align: center;">
+      <div style="background: white; border: 0.5px solid black; box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.6), inset 3px 3px 6px rgba(209, 209, 209, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; width: 85%; max-width: 350px; text-align: center;">
         <p style="margin-bottom: 20px; color: #333; font-size: 16px;">Choose a maps service for directions to ${shop.name}</p>
         <button id="google-maps-btn" style="background: rgba(255, 255, 255, 0.2); border: 0.5px solid #333; box-shadow: 2px 2px 4px rgba(209, 209, 209, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 8px 16px; margin-right: 10px; cursor: pointer; color: #333; font-size: 14px;">Google Maps</button>
         <button id="apple-maps-btn" style="background: rgba(255, 255, 255, 0.2); border: 0.5px solid #333; box-shadow: 2px 2px 4px rgba(209, 209, 209, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 8px 16px; cursor: pointer; color: #333; font-size: 14px;">Apple Maps</button>
