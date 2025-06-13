@@ -2432,72 +2432,102 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     });
   });
 
-  function fetchShopsByCity(city, ratingFilter) {
-    if (!placesService) {
-      console.error('PlacesService not initialized');
+  async function fetchShopsByCity(city, ratingFilter) {
+  if (!city) {
+    console.error('No city provided');
+    document.getElementById('filtered-shops-list').innerHTML = '<p>Please enter a city.</p>';
+    return;
+  }
+
+  console.log(`Fetching shops from Supabase for city: ${city}, rating filter: ${ratingFilter}`);
+
+  try {
+    // Clear existing markers before adding new ones for the city
+    currentMarkers.forEach(marker => map.removeLayer(marker));
+    currentMarkers = [];
+
+    // Query Supabase shops table
+    let query = client
+      .from('shops')
+      .select('id, name, address, city, lat, lng, phone, website, rating')
+      .ilike('city', `%${city}%`); // Case-insensitive city match
+
+    // Apply rating filter if not 'all'
+    if (ratingFilter !== 'all') {
+      const minRating = parseFloat(ratingFilter);
+      query = query.gte('rating', minRating);
+    }
+
+    const { data: shopsData, error } = await query;
+
+    if (error) {
+      console.error('Error fetching shops from Supabase:', error.message);
+      document.getElementById('filtered-shops-list').innerHTML = '<p>Error loading shops.</p>';
       return;
     }
 
-    const [lat, lng] = cityCoordinates[city] || [48.8566, 2.3522];
-    const latLng = new google.maps.LatLng(lat, lng);
+    if (!shopsData || shopsData.length === 0) {
+      console.log(`No shops found for ${city}`);
+      document.getElementById('filtered-shops-list').innerHTML = '<p>No shops found.</p>';
+      return;
+    }
 
-    const request = {
-      query: 'coffee shop',
-      location: latLng,
-      radius: 5000,
-      type: 'cafe'
-    };
+    // Fetch reviews to determine amenities
+    const { data: reviewsData, error: reviewsError } = await client
+      .from('reviews')
+      .select('shop_id, petFriendly, parking, outsideSeating');
 
-    console.log('Fetching shops for city:', city, 'with request:', request);
-    placesService.textSearch(request, (results, status) => {
-      console.log('Text search status for city:', status);
-      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-        let filteredResults = results;
-        if (ratingFilter !== 'all') {
-          const minRating = parseFloat(ratingFilter);
-          filteredResults = results.filter(shop => shop.rating >= minRating);
-        }
+    if (reviewsError) {
+      console.error('Error fetching reviews:', reviewsError.message);
+      // Continue without reviews, amenities will default to false
+    }
 
-        console.log(`Filtered shops for ${city} (rating ${ratingFilter}+):`, filteredResults);
-        shops = filteredResults.map(result => ({
-          placeId: result.place_id,
-          name: result.name || 'Unknown Shop',
-          city: extractCityFromAddressComponents(result.address_components),
-          petFriendly: reviews.some(r => r.petFriendly && r.shopName === result.name) || false,
-          parking: reviews.some(r => r.parking && r.shopName === result.name) || false,
-          outsideSeating: reviews.some(r => r.outsideSeating && r.shopName === result.name) || false,
-          lat: result.geometry.location.lat(),
-          lng: result.geometry.location.lng(),
-          address: result.formatted_address || 'No address available',
-          website: result.website || 'No website available',
-          phone: result.formatted_phone_number || 'No phone number available',
-          rating: result.rating || 0
-        }));
+    // Map shops data to standardized shop objects
+    shops = shopsData.map(shop => ({
+      id: shop.id,
+      placeId: shop.id, // Use Supabase ID as placeId for consistency
+      name: shop.name || 'Unknown Shop',
+      city: shop.city || city,
+      address: shop.address || 'No address available',
+      lat: shop.lat || 0,
+      lng: shop.lng || 0,
+      phone: shop.phone || 'No phone number available',
+      website: shop.website || 'No website available',
+      rating: shop.rating || 0,
+      petFriendly: reviewsData?.some(r => r.shop_id === shop.id && r.petFriendly) || false,
+      parking: reviewsData?.some(r => r.shop_id === shop.id && r.parking) || false,
+      outsideSeating: reviewsData?.some(r => r.shop_id === shop.id && r.outsideSeating) || false
+    }));
 
-        // Clear existing markers
-        currentMarkers.forEach(marker => map.removeLayer(marker));
-        currentMarkers = [];
+    console.log(`Fetched ${shops.length} shops for ${city}:`, shops);
 
-        // Add markers for each shop using coffeeIcon
-        shops.forEach(shop => {
-          const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
-            .addTo(map)
-            .bindPopup(shop.name);
-          marker.on('click', () => {
-            console.log('Marker clicked for:', shop.name);
-            currentShop = shop;
-            showFloatingCard(shop);
-          });
-          currentMarkers.push(marker);
-        });
-
-        displayFilteredShops(filteredResults);
-      } else {
-        console.error('Failed to fetch shops for city:', status);
-        document.getElementById('filtered-shops-list').innerHTML = '<p>No shops found.</p>';
-      }
+    // Add markers for all shops
+    shops.forEach(shop => {
+      const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
+        .addTo(map)
+        .bindPopup(shop.name);
+      marker.on('click', () => {
+        console.log('Marker clicked for:', shop.name);
+        currentShop = shop;
+        showFloatingCard(shop);
+      });
+      // Store shop ID in marker for easy lookup
+      marker._shopId = shop.id;
+      currentMarkers.push(marker);
     });
+
+    // Center map on the first shop or city coordinates
+    if (shops.length > 0) {
+      map.setView([shops[0].lat, shops[0].lng], 13); // Zoom level 13 for city view
+    }
+
+    // Update filtered shops list
+    displayFilteredShops(shops);
+  } catch (error) {
+    console.error('Unexpected error in fetchShopsByCity:', error);
+    document.getElementById('filtered-shops-list').innerHTML = '<p>Error loading shops.</p>';
   }
+}
 
    async function displayTop100Shops() {
   console.log('Displaying top 100 shops');
