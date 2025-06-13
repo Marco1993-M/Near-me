@@ -1567,6 +1567,50 @@ async function fetchCities() {
   floatingCard.classList.remove('hidden');
   console.log('Floating card displayed for:', shop.name);
 
+  // Function to create and show the custom maps prompt modal
+  function showMapsPrompt(shop, callback) {
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.id = 'maps-prompt-modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '1008';
+
+    // Create modal content with floating-card styling
+    modal.innerHTML = `
+      <div style="backdrop-filter: blur(50px); -webkit-backdrop-filter: blur(5px); background: rgba(255, 255, 255, 0.15); border: 0.5px solid black; box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5), -5px -5px 10px rgba(255, 255, 255, 0.6), inset 3px 3px 6px rgba(209, 209, 209, 0.4), inset -3px -3px 6px rgba(255, 255, 255, 0.6); border-radius: 15px; padding: 15px; width: 85%; max-width: 350px; text-align: center;">
+        <p style="margin-bottom: 20px; color: #333; font-size: 16px;">Choose a maps service for directions to ${shop.name}</p>
+        <button id="google-maps-btn" style="background: rgba(255, 255, 255, 0.2); border: 0.5px solid #333; box-shadow: 2px 2px 4px rgba(209, 209, 209, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 8px 16px; margin-right: 10px; cursor: pointer; color: #333; font-size: 14px;">Google Maps</button>
+        <button id="apple-maps-btn" style="background: rgba(255, 255, 255, 0.2); border: 0.5px solid #333; box-shadow: 2px 2px 4px rgba(209, 209, 209, 0.4), inset 1px 1px 2px rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 8px 16px; cursor: pointer; color: #333; font-size: 14px;">Apple Maps</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Add event listeners for the buttons
+    document.getElementById('google-maps-btn').addEventListener('click', () => {
+      callback(true); // true for Google Maps
+      modal.remove();
+    });
+    document.getElementById('apple-maps-btn').addEventListener('click', () => {
+      callback(false); // false for Apple Maps
+      modal.remove();
+    });
+
+    // Close modal if clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
+  }
+
   // Close button listener
   const closeButton = floatingCard.querySelector('.floating-card-close-button');
   if (closeButton) {
@@ -1583,106 +1627,90 @@ async function fetchCities() {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
 
-   // Add this function to create and show the custom modal
-function showMapsPrompt(shop, callback) {
-  // Create modal container
-  const modal = document.createElement('div');
-  modal.id = 'maps-prompt-modal';
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.height = '100%';
-  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
-  modal.style.zIndex = '1008'; // Above floating card (z-index 1007)
-
-  // Create modal content
-  modal.innerHTML = `
-    <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; max-width: 300px;">
-      <p style="margin-bottom: 20px;">Choose a maps service for directions to ${shop.name}</p>
-      <button id="google-maps-btn" style="background: #4285F4; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-right: 10px; cursor: pointer;">Google Maps</button>
-      <button id="apple-maps-btn" style="background: #000; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Apple Maps</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  // Add event listeners for the buttons
-  document.getElementById('google-maps-btn').addEventListener('click', () => {
-    callback(true); // true for Google Maps
-    modal.remove();
-  });
-  document.getElementById('apple-maps-btn').addEventListener('click', () => {
-    callback(false); // false for Apple Maps
-    modal.remove();
-  });
-
-  // Close modal if clicking outside
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.remove();
-    }
-  });
-}
-
-// Update the directions-button listener in your showFloatingCard function
-document.getElementById('directions-button')?.addEventListener('click', function(e) {
-  e.stopPropagation();
-  if (!shop.address && (!shop.lat || !shop.lng)) {
-    console.error('No valid address or coordinates provided for directions');
-    alert('Unable to get directions: No valid address or coordinates available.');
-    return;
-  }
-
-  // Show custom modal instead of confirm
-  showMapsPrompt(shop, (useGoogleMaps) => {
-    let directionsUrl;
-    try {
-      if (useGoogleMaps) {
-        // Google Maps directions
-        if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-          directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
-        } else {
-          directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-        }
-        console.log(`Opening Google Maps directions: ${directionsUrl}`);
-      } else {
-        // Apple Maps directions
-        if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
-          directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
-        } else {
-          directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-        }
-        console.log(`Opening Apple Maps directions: ${directionsUrl}`);
-      }
-
-      window.location.href = directionsUrl;
-    } catch (error) {
-      console.error(`Error opening ${useGoogleMaps ? 'Google' : 'Apple'} Maps directions:`, error);
-      if (!useGoogleMaps) {
-        // Fallback to Google Maps web for Apple Maps errors
-        const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
-        console.log(`Falling back to Google Maps: ${fallbackUrl}`);
-        window.location.href = fallbackUrl;
-      } else {
-        alert('Failed to open directions. Please try again.');
-      }
-    }
-  });
-});
-
-  document.getElementById('share-button')?.addEventListener('click', function(e) {
+  document.getElementById('directions-button')?.addEventListener('click', function(e) {
     e.stopPropagation();
-    if (currentShop) shareShop(currentShop);
+    if (!shop.address && (!shop.lat || !shop.lng)) {
+      console.error('No valid address or coordinates provided for directions');
+      alert('Unable to get directions: No valid address or coordinates available.');
+      return;
+    }
+
+    // Show custom modal
+    showMapsPrompt(shop, (useGoogleMaps) => {
+      let directionsUrl;
+      try {
+        if (useGoogleMaps) {
+          // Google Maps directions
+          if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+            directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${shop.lat},${shop.lng}&travelmode=driving`;
+          } else {
+            directionsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+          }
+          console.log(`Opening Google Maps directions: ${directionsUrl}`);
+        } else {
+          // Apple Maps directions
+          if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+            directionsUrl = `maps://?daddr=${shop.lat},${shop.lng}&dirflg=d`;
+          } else {
+            directionsUrl = `maps://?q=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+          }
+          console.log(`Opening Apple Maps directions: ${directionsUrl}`);
+        }
+
+        window.location.href = directionsUrl;
+      } catch (error) {
+        console.error(`Error opening ${useGoogleMaps ? 'Google' : 'Apple'} Maps directions:`, error);
+        if (!useGoogleMaps) {
+          // Fallback to Google Maps web for Apple Maps errors
+          const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+          console.log(`Falling back to Google Maps: ${fallbackUrl}`);
+          window.location.href = fallbackUrl;
+        } else {
+          alert('Failed to open directions. Please try again.');
+        }
+      }
+    });
+  });
+
+  document.getElementById('share-button')?.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    try {
+      // Create a shareable Google Maps URL
+      let shareUrl;
+      if (shop.lat && shop.lng && !isNaN(shop.lat) && !isNaN(shop.lng)) {
+        shareUrl = `https://www.google.com/maps/search/?api=1&query=${shop.lat},${shop.lng}`;
+      } else {
+        shareUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`;
+      }
+
+      // Share data
+      const shareData = {
+        title: `Check out ${shop.name}`,
+        text: `Visit ${shop.name} at ${shop.address}, ${shop.city}! ${averageRating > 0 ? `Rated ${averageRating}/10.` : ''}`,
+        url: shareUrl,
+      };
+
+      // Try Web Share API
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        console.log(`Shared ${shop.name} successfully`);
+      } else {
+        // Fallback to copying URL to clipboard
+        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+        alert('Shop details copied to clipboard!');
+        console.log(`Copied ${shop.name} details to clipboard`);
+      }
+    } catch (error) {
+      console.error(`Error sharing ${shop.name}:`, error);
+      alert('Failed to share. Please try again.');
+    }
   });
 
   document.getElementById('favorite-button')?.addEventListener('click', async function(e) {
     e.stopPropagation();
-    if (!currentShop) return;
-    currentShop.id = shopId; // Ensure currentShop has the correct shop_id
-    await addToFavorites(currentShop);
+    if (!shop) return;
+    shop.id = shopId; // Ensure shop has the correct shop_id
+    await addToFavorites(shop);
   });
 
   // Card click to show details
@@ -1695,14 +1723,12 @@ document.getElementById('directions-button')?.addEventListener('click', function
       e.target.closest('#favorite-button')
     ) return;
     if (shop) {
-      currentShop = shop;
       showShopDetails(shop);
       floatingCard.classList.add('hidden');
       console.log('Shop details displayed, floating card hidden');
     }
   });
 }
-
   async function showShopDetails(shop) {
   if (!shop || !shop.name || !shop.address || !shop.city) {
     console.warn('Invalid shop data:', shop);
