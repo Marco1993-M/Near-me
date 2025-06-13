@@ -2359,78 +2359,56 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
     }
 
     function displayFilteredShops(shops) {
-    const filteredShopsList = document.getElementById('filtered-shops-list');
-    if (!filteredShopsList) {
-      console.error('Filtered shops list element not found in DOM');
-      return;
-    }
-
-    currentMarkers.forEach(marker => map.removeLayer(marker));
-    currentMarkers = [];
-
-    filteredShopsList.innerHTML = '';
-
-    if (shops.length === 0) {
-      filteredShopsList.innerHTML = '<p>No shops match your filters.</p>';
-      return;
-    }
-
-    shops.forEach(shop => {
-      const listItem = document.createElement('div');
-      listItem.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-      listItem.innerHTML = `
-        <h3 class="font-bold">${shop.name || 'Unknown Shop'}</h3>
-        <p class="text-sm text-gray-500">${shop.formatted_address || 'No address'}</p>
-        <p class="text-sm text-gray-500">Rating: ${shop.rating || 'N/A'}</p>
-      `;
-      listItem.addEventListener('click', () => {
-        console.log('Filtered shop clicked:', shop.name);
-        const lat = shop.geometry.location.lat();
-        const lng = shop.geometry.location.lng();
-        map.setView([lat, lng], 15);
-        // Use coffeeIcon for filtered shop marker
-        const marker = L.marker([lat, lng], { icon: coffeeIcon })
-          .addTo(map)
-          .bindPopup(shop.name)
-          .openPopup();
-        currentMarkers.push(marker);
-
-        currentShop = {
-          name: shop.name || 'Unknown Shop',
-          rating: shop.rating ? shop.rating + ' / 5' : 'N/A',
-          address: shop.formatted_address || 'No address available',
-          website: shop.website || 'No website available',
-          phone: shop.formatted_phone_number || 'No phone number available',
-          features: {
-            parking: reviews.some(r => r.parking && r.shopName === shop.name) || false,
-            petFriendly: reviews.some(r => r.petFriendly && r.shopName === shop.name) || false,
-            specialtyCoffee: reviews.some(r => r.specialtyCoffee && r.shopName === shop.name) || false
-          },
-          lat: lat,
-          lng: lng,
-          city: extractCityFromAddressComponents(shop.address_components)
-        };
-        console.log('currentShop set from filtered shop:', currentShop);
-        showFloatingCard(currentShop);
-      });
-      filteredShopsList.appendChild(listItem);
-    });
+  const filteredShopsList = document.getElementById('filtered-shops-list');
+  if (!filteredShopsList) {
+    console.error('Filtered shops list element not found');
+    return;
   }
 
-  let selectedRatingFilter = 'all';
+  if (!shops || shops.length === 0) {
+    filteredShopsList.innerHTML = '<p>No shops found.</p>';
+    return;
+  }
 
-  const ratingButtons = document.querySelectorAll('#cities-modal button[id*="rating"]');
-  ratingButtons.forEach(button => {
-    button.addEventListener('click', function(e) {
-      e.stopPropagation();
-      selectedRatingFilter = button.textContent.toLowerCase().replace('+', '');
-      console.log('Rating filter selected:', selectedRatingFilter);
-      ratingButtons.forEach(btn => btn.classList.remove('bg-blue-500', 'text-white'));
-      button.classList.add('bg-blue-500', 'text-white');
-      const activeCity = document.querySelector('#cities-modal .city-button')?.textContent.toLowerCase().trim() || 'paris';
-      fetchShopsByCity(activeCity, selectedRatingFilter);
+  filteredShopsList.innerHTML = shops
+    .map(shop => `
+      <li class="shop-item" data-shop-id="${shop.id}">
+        <h3>${shop.name}</h3>
+        <p>${shop.address}, ${shop.city}</p>
+        <p>Rating: ${shop.rating || 'No rating'}</p>
+      </li>
+    `)
+    .join('');
+
+  // Add click handlers to shop items
+  filteredShopsList.querySelectorAll('.shop-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const shopId = item.getAttribute('data-shop-id');
+      const shop = shops.find(s => s.id === shopId);
+      if (!shop) {
+        console.error('Shop not found for ID:', shopId);
+        return;
+      }
+
+      console.log('Shop clicked:', shop.name);
+
+      // Find existing marker for the shop
+      const marker = currentMarkers.find(m => m._shopId === shopId);
+      if (!marker) {
+        console.error('Marker not found for shop ID:', shopId);
+        return;
+      }
+
+      // Zoom and center map on the shop's marker
+      map.setView([shop.lat, shop.lng], 15); // Zoom level 15 for close view
+      marker.openPopup(); // Open the marker's popup
+
+      // Show floating card
+      currentShop = shop;
+      showFloatingCard(shop);
     });
   });
+}
 
   async function fetchShopsByCity(city, ratingFilter) {
   if (!city) {
