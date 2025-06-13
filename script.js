@@ -1863,7 +1863,6 @@ async function removeFromFavorites(shop) {
             <div class="shop-details-review-card">
               <p><strong>Rating:</strong> ${review.rating}/10</p>
               <p>${review.text}</p>
-              <p>${review.parking ? 'Parking Available ' : ''}${review.pet_friendly ? 'Pet Friendly ' : ''}${review.outside_seating ? 'Outside Seating' : ''}</p>
             </div>
           `).join('')}
         </div>
@@ -1892,7 +1891,7 @@ async function removeFromFavorites(shop) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
-    <h3 class="shop-details-heading"> ${shop.name}</h3>
+    <h3 class="shop-details-heading">${shop.name}</h3>
     <div class="shop-details-actions" style="display: flex; gap: 10px;">
       ${shop.phone ? `
         <button id="call-button" class="floating-card-action-button" aria-label="Call ${shop.name}">
