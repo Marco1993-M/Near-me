@@ -544,21 +544,23 @@ async function fetchNearbyCities() {
   }
 
   // Fetch shops for a specific city
-  async function fetchShopsByCity(city) {
-    try {
-      const { data: shops, error } = await client
-        .from('shops')
-        .select('id, name, address, city, lat, lng')
-        .eq('city', city); // Exact match for city
-      if (error) throw error;
+ async function fetchShopsByCity(city) {
+  try {
+    const { data: shops, error } = await client
+      .from('shops')
+      .select('id, name, address, city, lat, lng')
+      .ilike('city', city); // More forgiving than .eq
+    if (error) throw error;
 
-      return shops;
-    } catch (error) {
-      console.error(`Error fetching shops for city ${city}:`, error.message);
-      showError(`Failed to load shops for ${city}.`);
-      return [];
-    }
+    console.log('Returned shops:', shops); // Debug
+    return shops;
+  } catch (error) {
+    console.error(`Error fetching shops for city ${city}:`, error.message);
+    showError(`Failed to load shops for ${city}.`);
+    return [];
   }
+}
+
 
   // Render city suggestions
   function renderCitySuggestions(cities) {
