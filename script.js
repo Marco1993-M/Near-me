@@ -405,6 +405,75 @@ async function updateFavoritesModal() {
   }
 }
 
+// Delegated event handler for favorites modal buttons
+async function handleFavoritesButtonClick(e) {
+  const target = e.target.closest('.favorite-modal-button');
+  if (!target) return;
+
+  e.stopPropagation();
+  const li = target.closest('li');
+  const shopId = li?.dataset?.shopId;
+  const fav = favorites.find(f => f.shop_id === shopId);
+
+  if (!fav || !fav.shop) {
+    console.error('Favorite or shop not found for shop_id:', shopId);
+    return;
+  }
+
+  const shop = fav.shop;
+
+  if (target.classList.contains('view-shop')) {
+    console.log('Viewing shop from favorites:', shop.name);
+    currentShop = {
+      id: shop.id,
+      name: shop.name,
+      address: shop.address,
+      city: shop.city,
+      lat: shop.lat,
+      lng: shop.lng,
+    };
+    try {
+      showShopDetails(currentShop);
+      document.getElementById('favorite-modal').classList.add('hidden');
+      console.log('Favorite modal hidden');
+    } catch (error) {
+      console.error('Error showing shop details:', error);
+    }
+  } else if (target.classList.contains('remove')) {
+    const { data: authData, error: authError } = await client.auth.getUser();
+    const userId = authData?.user?.id;
+    if (authError || !userId) {
+      console.error('No user authenticated:', authError?.message);
+      showAuthBanner(null, () => handleFavoritesButtonClick(e));
+      return;
+    }
+
+    const { error } = await client
+      .from('favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('shop_id', shopId);
+
+    if (error) {
+      console.error('Error removing favorite:', error.message);
+      alert('Failed to remove favorite: ' + error.message);
+    } else {
+      console.log('Removed from favorites:', shop.name);
+      favorites = favorites.filter(f => f.shop_id !== shopId);
+      await updateFavoritesModal();
+
+      const floatingCard = document.getElementById('floating-card');
+      if (floatingCard && currentShop && currentShop.id === shopId) {
+        const favoriteButton = floatingCard.querySelector('#favorite-button');
+        if (favoriteButton) {
+          favoriteButton.querySelector('svg')?.setAttribute('fill', 'none');
+          favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+        }
+      }
+    }
+  }
+}
+
 
 
 
