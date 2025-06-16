@@ -198,41 +198,69 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 }
 
 
-// Global favorites array for in-memory caching
-let favorites = [];
-
-// Helper to get favorites from localStorage
-function getLocalFavorites() {
-  try {
-    const stored = localStorage.getItem('coffeeShopFavorites');
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error parsing localStorage favorites:', error);
-    return [];
-  }
-}
-
-// Helper to save favorites to localStorage
-function saveLocalFavorites(favorites) {
-  try {
-    localStorage.setItem('coffeeShopFavorites', JSON.stringify(favorites));
-  } catch (error) {
-    console.error('Error saving to localStorage:', error);
-    alert('Failed to save favorites locally. Storage may be full.');
-  }
-}
-
-// Fetch favorites from localStorage
 async function fetchFavorites() {
   console.log('Fetching favorites');
-  favorites = getLocalFavorites();
-  console.log('Fetched favorites:', favorites);
-  return favorites;
+  const { data: authData, error: authError } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+
+  if (authError || !userId) {
+    console.error('No user authenticated:', authError?.message);
+    return [];
+  }
+
+  const { data, error } = await client
+    .from('favorites')
+    .select(`
+      id,
+      shop_id,
+      address,
+      created_at,
+      shops (
+        id,
+        name,
+        address,
+        city,
+        lat,
+        lng
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching favorites:', error.message);
+    return [];
+  }
+
+  // Map data to a consistent format
+  return (
+    data?.map(fav => ({
+      id: fav.id,
+      shop_id: fav.shop_id,
+      address: fav.address,
+      created_at: fav.created_at,
+      shop: {
+        id: fav.shops?.id,
+        name: fav.shops?.name,
+        address: fav.shops?.address,
+        city: fav.shops?.city,
+        lat: fav.shops?.lat,
+        lng: fav.shops?.lng,
+      },
+    })) || []
+  );
 }
 
-// Add a shop to favorites
 async function addToFavorites(shop) {
   console.log('Adding to favorites:', shop.name);
+  const { data: authData, error: authError } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+
+  if (authError || !userId) {
+    console.error('No user authenticated:', authError?.message);
+    showAuthBanner(shop, () => addToFavorites(shop)); // Prompt login and retry
+    return;
+  }
 
   if (!shop || !shop.name || !shop.address || !shop.city) {
     console.error('Invalid shop data:', shop);
@@ -240,7 +268,7 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Get or create shop in the shops table to ensure shop_id
+  // Get or create shop in the shops table
   let shopId;
   try {
     shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
@@ -252,19 +280,48 @@ async function addToFavorites(shop) {
   }
 
   // Check for existing favorite
-  const existingFavorite = favorites.find(fav => fav.shop_id === shopId);
-  if (existingFavorite) {
+  const { data: existingFavorites, error: fetchError } = await client
+    .from('favorites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('shop_id', shopId);
+
+  if (fetchError) {
+    console.error('Error checking existing favorites:', fetchError.message);
+    alert('Failed to check favorites: ' + fetchError.message);
+    return;
+  }
+
+  if (existingFavorites.length > 0) {
     console.log(`${shop.name} is already in favorites`);
     alert(`${shop.name} is already in your favorites.`);
     return;
   }
 
-  // Create favorite object
-  const favorite = {
-    id: crypto.randomUUID(), // Generate unique ID for localStorage
+  // Insert new favorite
+  const { data, error: insertError } = await client
+    .from('favorites')
+    .insert({
+      user_id: userId,
+      shop_id: shopId,
+      address: shop.address,
+    })
+    .select('id, shop_id, address, created_at')
+    .single();
+
+  if (insertError) {
+    console.error('Error adding to favorites:', insertError.message);
+    alert('Failed to add to favorites: ' + insertError.message);
+    return;
+  }
+
+  console.log(`Added ${shop.name} to favorites with shop_id: ${shopId}`);
+  // Update local favorites array
+  favorites.push({
+    id: data.id,
     shop_id: shopId,
     address: shop.address,
-    created_at: new Date().toISOString(),
+    created_at: data.created_at,
     shop: {
       id: shopId,
       name: shop.name,
@@ -273,13 +330,7 @@ async function addToFavorites(shop) {
       lat: shop.lat,
       lng: shop.lng,
     },
-  };
-
-  // Add to localStorage
-  favorites.push(favorite);
-  saveLocalFavorites(favorites);
-
-  console.log(`Added ${shop.name} to favorites with shop_id: ${shopId}`);
+  });
   await updateFavoritesModal();
 
   // Update favorite button UI
@@ -293,7 +344,6 @@ async function addToFavorites(shop) {
   }
 }
 
-// Update favorites modal
 async function updateFavoritesModal() {
   console.log('Updating favorites modal');
   const favoritesList = document.getElementById('favorites-list');
@@ -393,24 +443,40 @@ async function handleFavoritesButtonClick(e) {
       console.error('Error showing shop details:', error);
     }
   } else if (target.classList.contains('remove')) {
-    console.log('Removing from favorites:', shop.name);
-    favorites = favorites.filter(f => f.shop_id !== shopId);
-    saveLocalFavorites(favorites);
-    console.log(`Removed ${shop.name} from favorites`);
-    await updateFavoritesModal();
+    const { data: authData, error: authError } = await client.auth.getUser();
+    const userId = authData?.user?.id;
+    if (authError || !userId) {
+      console.error('No user authenticated:', authError?.message);
+      showAuthBanner(null, () => handleFavoritesButtonClick(e)); // Prompt login and retry
+      return;
+    }
 
-    // Update floating card if showing the removed shop
-    const floatingCard = document.getElementById('floating-card');
-    if (floatingCard && currentShop && currentShop.id === shopId) {
-      const favoriteButton = floatingCard.querySelector('#favorite-button');
-      if (favoriteButton) {
-        favoriteButton.querySelector('svg')?.setAttribute('fill', 'none');
-        favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+    const { error } = await client
+      .from('favorites')
+      .delete()
+      .eq('user_id', userId)
+      .eq('shop_id', shopId);
+
+    if (error) {
+      console.error('Error removing favorite:', error.message);
+      alert('Failed to remove favorite: ' + error.message);
+    } else {
+      console.log('Removed from favorites:', shop.name);
+      favorites = favorites.filter(f => f.shop_id !== shopId);
+      await updateFavoritesModal();
+
+      // Update floating card if showing the removed shop
+      const floatingCard = document.getElementById('floating-card');
+      if (floatingCard && currentShop && currentShop.id === shopId) {
+        const favoriteButton = floatingCard.querySelector('#favorite-button');
+        if (favoriteButton) {
+          favoriteButton.querySelector('svg')?.setAttribute('fill', 'none');
+          favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+        }
       }
     }
   }
 }
-
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await client.auth.getSession();
