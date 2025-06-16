@@ -1035,10 +1035,10 @@ body, html {
   overflow-y: auto; /* Allow scrolling */
 }
 
-/* Modal content container */
-.modal-content {
-  position: relative; /* Stacking context for children */
-  background: rgba(255, 255, 255, 0.2); /* Match glassmorphism */
+/* Modal content container, specific to #cities-modal */
+#cities-modal .modal-content {
+  position: relative;
+  background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
               -5px -5px 10px rgba(255, 255, 255, 0.6),
@@ -1052,8 +1052,8 @@ body, html {
   min-height: 300px;
   font-family: Helvetica, Arial, sans-serif;
   color: #333;
-  z-index: 1001; /* Above modal backdrop */
-  overflow: visible; /* Prevent clipping of dropdown */
+  z-index: 1001;
+  overflow: visible;
 }
 
 /* City search wrapper */
