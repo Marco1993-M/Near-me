@@ -199,7 +199,7 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 
 let favorites = [];
 
- async function getOrCreateShop(name, address, city, lat, lng) {
+async function getOrCreateShop(name, address, city, lat, lng) {
   try {
     const { data, error } = await client.rpc('get_or_create_shop', {
       p_name: name,
@@ -219,7 +219,6 @@ let favorites = [];
   }
 }
 
-// Add a shop to favorites with proper shop creation logic
 async function addToFavorites(shop) {
   console.log('Adding to favorites:', shop.name);
   const { data: authData, error: authError } = await client.auth.getUser();
@@ -239,7 +238,6 @@ async function addToFavorites(shop) {
 
   let shopId;
   try {
-    // Use Supabase RPC to get or create the shop
     shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     console.log('Shop ID retrieved or created:', shopId);
   } catch (error) {
@@ -248,7 +246,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Check if this shop is already favorited
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('id')
@@ -267,7 +264,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Insert into favorites table
   const { data, error: insertError } = await client
     .from('favorites')
     .insert({
@@ -284,7 +280,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Push to in-memory favorites list
   favorites.push({
     id: data.id,
     shop_id: shopId,
@@ -302,7 +297,6 @@ async function addToFavorites(shop) {
 
   await updateFavoritesModal();
 
-  // Update UI icon state
   const floatingCard = document.getElementById('floating-card');
   if (floatingCard) {
     const favoriteButton = floatingCard.querySelector('#favorite-button');
@@ -312,6 +306,81 @@ async function addToFavorites(shop) {
     }
   }
 }
+
+async function updateFavoritesModal() {
+  console.log('Updating favorites modal');
+
+  const favoritesList = document.getElementById('favorites-list');
+  if (!favoritesList) {
+    console.error('Favorites list element not found');
+    return;
+  }
+
+  favoritesList.innerHTML = '<p class="favorite-modal-loading">Loading favorites...</p>';
+
+  try {
+    const favoritesData = await fetchFavorites();
+
+    if (!favoritesData || favoritesData.length === 0) {
+      favoritesList.innerHTML = '<p class="favorite-modal-loading">No favorite shops yet.</p>';
+      console.log('No favorites to display');
+      favorites = [];
+      return;
+    }
+
+    favoritesList.className = 'favorite-modal-list';
+    favoritesList.innerHTML = '';
+    favorites = favoritesData;
+
+    favoritesData.forEach(fav => {
+      const shop = fav.shop;
+      if (!shop) {
+        console.warn('No shop data for favorite:', fav.shop_id);
+        return;
+      }
+
+      const li = document.createElement('li');
+      li.className = 'favorite-modal-list-item';
+      li.dataset.shopId = fav.shop_id;
+
+      li.innerHTML = `
+        <span class="favorite-modal-shop-info">
+          ${shop.name} (${shop.address}, ${shop.city})
+        </span>
+        <div class="favorite-modal-actions">
+          <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 
+                   4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+          <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 
+                   01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 
+                   00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      `;
+
+      favoritesList.appendChild(li);
+    });
+
+    favoritesList.removeEventListener('click', handleFavoritesButtonClick);
+    favoritesList.addEventListener('click', handleFavoritesButtonClick);
+    console.log('Attached delegated click listener to favoritesList');
+  } catch (error) {
+    console.error('Error updating favorites modal:', error.message);
+    favoritesList.innerHTML = '<p class="favorite-modal-loading">Error loading favorites.</p>';
+  }
+}
+
 
 
 
