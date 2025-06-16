@@ -491,6 +491,7 @@ async function handleFavoritesButtonClick(e) {
 
 async function fetchNearbyCities() {
   console.log('Fetching nearby cities');
+
   const citiesModal = document.getElementById('cities-modal');
   const citySearchInput = document.getElementById('city-search');
   const citySuggestions = document.getElementById('city-suggestions');
@@ -515,7 +516,6 @@ async function fetchNearbyCities() {
     return;
   }
 
-  // Helper function to show error messages
   function showError(message) {
     const errorDiv = document.createElement('div');
     errorDiv.className = 'text-red-500 p-2 mb-2';
@@ -524,16 +524,13 @@ async function fetchNearbyCities() {
     setTimeout(() => errorDiv.remove(), 3000);
   }
 
-  // Fetch cities from Supabase for suggestions
   async function fetchCities(searchQuery = '') {
     try {
       const { data: shops, error } = await client
         .from('shops')
         .select('city')
-        .ilike('city', `%${searchQuery}%`); // Case-insensitive city search
+        .ilike('city', `%${searchQuery}%`);
       if (error) throw error;
-
-      // Extract unique cities
       const cities = [...new Set(shops.map(shop => shop.city.toLowerCase()))].sort();
       return cities;
     } catch (error) {
@@ -543,26 +540,22 @@ async function fetchNearbyCities() {
     }
   }
 
-  // Fetch shops for a specific city
- async function fetchShopsByCity(city) {
-  try {
-    const { data: shops, error } = await client
-      .from('shops')
-      .select('id, name, address, city, lat, lng')
-      .ilike('city', city); // More forgiving than .eq
-    if (error) throw error;
+  async function fetchShopsByCity(city) {
+    try {
+      const { data: shops, error } = await client
+        .from('shops')
+        .select('id, name, address, city, lat, lng')
+        .ilike('city', city);
+      if (error) throw error;
 
-    console.log('Returned shops:', shops); // Debug
-    return shops;
-  } catch (error) {
-    console.error(`Error fetching shops for city ${city}:`, error.message);
-    showError(`Failed to load shops for ${city}.`);
-    return [];
+      return shops;
+    } catch (error) {
+      console.error(`Error fetching shops for city ${city}:`, error.message);
+      showError(`Failed to load shops for ${city}.`);
+      return [];
+    }
   }
-}
 
-
-  // Render city suggestions
   function renderCitySuggestions(cities) {
     citySuggestions.innerHTML = '';
     citySuggestions.classList.toggle('hidden', cities.length === 0);
@@ -584,95 +577,124 @@ async function fetchNearbyCities() {
   }
 
   function renderShopResults(shops) {
-  const hardcodedCities = cityButtonsContainer.querySelector('.hardcoded-cities');
-  const shopResultsContainer = document.createElement('div');
-  shopResultsContainer.className = 'shop-results mt-2';
+    const hardcodedCities = cityButtonsContainer.querySelector('.hardcoded-cities');
+    const shopResultsContainer = document.createElement('div');
+    shopResultsContainer.className = 'shop-results mt-2';
 
-  if (!shops || shops.length === 0) {
-    shopResultsContainer.innerHTML = '<p class="text-gray-500 p-2">No shops found for this city.</p>';
-  } else {
-    shopResultsContainer.innerHTML = `
-      <h4 class="section-title text-sm font-semibold mb-1">Shops</h4>
-      <ul class="cities-modal-shops-list flex flex-col gap-2"></ul>
-    `;
-
-    const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
-
-    shops.forEach(shop => {
-      const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
-      const li = document.createElement('li');
-      li.className = 'top100-modal-list-item'; // reuse styles from top100
-      li.innerHTML = `
-        <div class="top100-modal-shop-info">
-          <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
-          </svg>
-          ${shop.name} (${shop.city})
-        </div>
-        <div class="top100-modal-actions">
-          <button class="top100-modal-button view-shop" data-shop-id="${shop.id}" aria-label="View ${shop.name}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </button>
-          <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </button>
-        </div>
+    if (!shops || shops.length === 0) {
+      shopResultsContainer.innerHTML = '<p class="text-gray-500 p-2">No shops found for this city.</p>';
+    } else {
+      shopResultsContainer.innerHTML = `
+        <h4 class="section-title text-sm font-semibold mb-1">Shops</h4>
+        <ul class="cities-modal-shops-list flex flex-col gap-2"></ul>
       `;
-      list.appendChild(li);
-    });
+
+      const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
+
+      shops.forEach(shop => {
+        const isFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+        const li = document.createElement('li');
+        li.className = 'top100-modal-list-item';
+        li.innerHTML = `
+          <div class="top100-modal-shop-info">
+            <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
+            </svg>
+            ${shop.name} (${shop.city})
+          </div>
+          <div class="top100-modal-actions">
+            <button class="top100-modal-button view-shop" data-shop-id="${shop.id}" aria-label="View ${shop.name}">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+            <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    const existingResults = cityButtonsContainer.querySelector('.shop-results');
+    if (existingResults) existingResults.remove();
+    cityButtonsContainer.appendChild(shopResultsContainer);
+
+    shopResultsContainer.removeEventListener('click', handleCityShopClick);
+    shopResultsContainer.addEventListener('click', handleCityShopClick);
   }
 
-  const existingResults = cityButtonsContainer.querySelector('.shop-results');
-  if (existingResults) existingResults.remove();
-  cityButtonsContainer.appendChild(shopResultsContainer);
+  function handleCityShopClick(e) {
+    const target = e.target.closest('.top100-modal-button');
+    if (!target) return;
 
-  // Add delegated click handler
-  shopResultsContainer.removeEventListener('click', handleCityShopClick);
-  shopResultsContainer.addEventListener('click', handleCityShopClick);
-}
+    const li = target.closest('li');
+    const shopId = target.dataset.shopId;
 
+    const list = cityButtonsContainer.querySelectorAll('.cities-modal-shops-list .top100-modal-list-item');
+    let shop;
+    list.forEach(item => {
+      const id = item.querySelector('.view-shop')?.dataset.shopId;
+      if (id === shopId) {
+        const name = item.querySelector('.top100-modal-shop-info')?.textContent.split('(')[0].trim();
+        const city = item.querySelector('.top100-modal-shop-info')?.textContent.split('(')[1].replace(')', '').trim();
+        shop = { id: shopId, name, city };
+      }
+    });
 
-        console.log('Shop selected:', shop.name);
+    if (!shop) return;
 
-        // Clear existing markers
+    if (target.classList.contains('view-shop')) {
+      console.log('Viewing shop from city modal:', shop.name);
+
+      fetchShopsByCity(shop.city).then(shops => {
+        const fullShop = shops.find(s => s.id === shop.id);
+        if (!fullShop) return;
+
         currentMarkers.forEach(marker => map.removeLayer(marker));
         currentMarkers = [];
 
-        // Add new marker for the selected shop
-        const marker = L.marker([shop.lat, shop.lng], { icon: coffeeIcon })
+        const marker = L.marker([fullShop.lat, fullShop.lng], { icon: coffeeIcon })
           .addTo(map)
-          .bindPopup(shop.name)
+          .bindPopup(fullShop.name)
           .openPopup();
-        marker._shopId = shop.id; // Attach shop ID to marker
+        marker._shopId = fullShop.id;
         currentMarkers.push(marker);
 
-        // Center map on shop
-        map.setView([shop.lat, shop.lng], 15);
+        map.setView([fullShop.lat, fullShop.lng], 15);
         map.invalidateSize();
 
-        // Show floating card with shop details
-        currentShop = shop;
-        showFloatingCard(shop);
-
-        // Hide cities modal
+        currentShop = fullShop;
+        showFloatingCard(fullShop);
         citiesModal.classList.add('hidden');
       });
-    });
+    } else if (target.classList.contains('favorite-shop')) {
+      const isCurrentlyFavorited = favorites.some(fav => fav.name === shop.name && fav.address === shop.address);
+      if (isCurrentlyFavorited) {
+        favorites = favorites.filter(fav => fav.name !== shop.name || fav.address !== shop.address);
+        target.classList.remove('favorited');
+        target.querySelector('svg').setAttribute('fill', 'none');
+        target.setAttribute('aria-label', `Add ${shop.name} to favorites`);
+      } else {
+        addToFavorites(shop);
+        target.classList.add('favorited');
+        target.querySelector('svg').setAttribute('fill', 'currentColor');
+        target.setAttribute('aria-label', `Remove ${shop.name} from favorites`);
+      }
+      updateFavoritesModal();
+    }
   }
 
-  // Close modal handler
   closeCitiesModal.addEventListener('click', () => {
     citiesModal.classList.add('hidden');
     citySuggestions.classList.add('hidden');
     console.log('Cities modal closed');
   });
 
-  // Debounced search handler
   const debounce = (func, wait) => {
     let timeout;
     return (...args) => {
@@ -681,7 +703,6 @@ async function fetchNearbyCities() {
     };
   };
 
-  // City search input handler
   citySearchInput.addEventListener(
     'input',
     debounce(async () => {
@@ -690,7 +711,6 @@ async function fetchNearbyCities() {
       const cities = await fetchCities(searchQuery);
       renderCitySuggestions(cities);
 
-      // If search query is cleared, clear shop results
       if (!searchQuery) {
         const shopResults = cityButtonsContainer.querySelector('.shop-results');
         if (shopResults) shopResults.remove();
@@ -698,7 +718,6 @@ async function fetchNearbyCities() {
     }, 300)
   );
 
-  // Clear suggestions when input is cleared
   citySearchInput.addEventListener('change', () => {
     if (!citySearchInput.value.trim()) {
       citySuggestions.classList.add('hidden');
@@ -707,10 +726,10 @@ async function fetchNearbyCities() {
     }
   });
 
-  // Ensure modal is visible
   citiesModal.classList.remove('hidden');
   console.log('Cities modal opened');
 }
+
 
 
 document.addEventListener('DOMContentLoaded', async () => {
