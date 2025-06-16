@@ -198,82 +198,7 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 }
 
 
-// Global favorites array
-let favorites = [];
-
-// Get or create a shop using Supabase RPC
-async function getOrCreateShop(name, address, city, lat, lng) {
-  try {
-    const { data, error } = await client.rpc('get_or_create_shop', {
-      p_name: name,
-      p_address: address,
-      p_city: city,
-      p_lat: lat,
-      p_lng: lng,
-    });
-
-    if (error) throw new Error(`Supabase RPC error: ${error.message}`);
-    if (!data || data.length === 0) throw new Error('No shop ID returned');
-
-    return data[0].id;
-  } catch (err) {
-    console.error('Error in getOrCreateShop:', err.message || err);
-    throw err;
-  }
-}
-
-// Fetch favorites from Supabase
-async function fetchFavorites() {
-  console.log('Fetching favorites');
-  const { data: authData, error: authError } = await client.auth.getUser();
-  const userId = authData?.user?.id;
-
-  if (authError || !userId) {
-    console.error('No user authenticated:', authError?.message);
-    return [];
-  }
-
-  const { data, error } = await client
-    .from('favorites')
-    .select(`
-      id,
-      shop_id,
-      address,
-      created_at,
-      shops (
-        id,
-        name,
-        address,
-        city,
-        lat,
-        lng
-      )
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching favorites:', error.message);
-    return [];
-  }
-
-  return data.map(fav => ({
-    id: fav.id,
-    shop_id: fav.shop_id,
-    address: fav.address,
-    created_at: fav.created_at,
-    shop: {
-      id: fav.shops?.id,
-      name: fav.shops?.name,
-      address: fav.shops?.address,
-      city: fav.shops?.city,
-      lat: fav.shops?.lat,
-      lng: fav.shops?.lng,
-    },
-  }));
-}
-
-// Add a shop to favorites
+// Add a shop to favorites with proper shop creation logic
 async function addToFavorites(shop) {
   console.log('Adding to favorites:', shop.name);
   const { data: authData, error: authError } = await client.auth.getUser();
@@ -293,6 +218,7 @@ async function addToFavorites(shop) {
 
   let shopId;
   try {
+    // Use Supabase RPC to get or create the shop
     shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     console.log('Shop ID retrieved or created:', shopId);
   } catch (error) {
@@ -301,6 +227,7 @@ async function addToFavorites(shop) {
     return;
   }
 
+  // Check if this shop is already favorited
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('id')
@@ -319,6 +246,7 @@ async function addToFavorites(shop) {
     return;
   }
 
+  // Insert into favorites table
   const { data, error: insertError } = await client
     .from('favorites')
     .insert({
@@ -335,6 +263,7 @@ async function addToFavorites(shop) {
     return;
   }
 
+  // Push to in-memory favorites list
   favorites.push({
     id: data.id,
     shop_id: shopId,
@@ -352,6 +281,7 @@ async function addToFavorites(shop) {
 
   await updateFavoritesModal();
 
+  // Update UI icon state
   const floatingCard = document.getElementById('floating-card');
   if (floatingCard) {
     const favoriteButton = floatingCard.querySelector('#favorite-button');
@@ -362,127 +292,6 @@ async function addToFavorites(shop) {
   }
 }
 
-// Update favorites modal UI
-async function updateFavoritesModal() {
-  console.log('Updating favorites modal');
-  const favoritesList = document.getElementById('favorites-list');
-  if (!favoritesList) {
-    console.error('Favorites list element not found');
-    return;
-  }
-
-  favoritesList.innerHTML = '<p class="favorite-modal-loading">Loading favorites...</p>';
-
-  try {
-    const favoritesData = await fetchFavorites();
-    if (favoritesData.length === 0) {
-      favoritesList.innerHTML = '<p class="favorite-modal-loading">No favorite shops yet.</p>';
-      console.log('No favorites to display');
-      return;
-    }
-
-    favorites = favoritesData;
-    favoritesList.className = 'favorite-modal-list';
-    favoritesList.innerHTML = '';
-
-    favoritesData.forEach(fav => {
-      const shop = fav.shop;
-      if (!shop) {
-        console.warn('No shop data for favorite:', fav.shop_id);
-        return;
-      }
-
-      const li = document.createElement('li');
-      li.className = 'favorite-modal-list-item';
-      li.dataset.shopId = fav.shop_id;
-      li.innerHTML = `
-        <span class="favorite-modal-shop-info">${shop.name} (${shop.address}, ${shop.city})</span>
-        <div class="favorite-modal-actions">
-          <button class="favorite-modal-button view-shop" aria-label="View ${shop.name}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </button>
-          <button class="favorite-modal-button remove" aria-label="Remove ${shop.name} from favorites">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
-        </div>
-      `;
-      favoritesList.appendChild(li);
-    });
-
-    favoritesList.removeEventListener('click', handleFavoritesButtonClick);
-    favoritesList.addEventListener('click', handleFavoritesButtonClick);
-    console.log('Attached delegated click listener to favoritesList');
-  } catch (error) {
-    console.error('Error updating favorites modal:', error.message);
-    favoritesList.innerHTML = '<p class="favorite-modal-loading">Error loading favorites.</p>';
-  }
-}
-
-// Handle clicks inside the favorites modal
-async function handleFavoritesButtonClick(e) {
-  const target = e.target.closest('.favorite-modal-button');
-  if (!target) return;
-
-  e.stopPropagation();
-  const li = target.closest('li');
-  const shopId = li.dataset.shopId;
-  const fav = favorites.find(f => f.shop_id === shopId);
-
-  if (!fav || !fav.shop) {
-    console.error('Favorite or shop not found for shop_id:', shopId);
-    return;
-  }
-
-  const shop = fav.shop;
-
-  if (target.classList.contains('view-shop')) {
-    console.log('Viewing shop from favorites:', shop.name);
-    currentShop = { ...shop };
-    try {
-      showShopDetails(currentShop);
-      document.getElementById('favorite-modal').classList.add('hidden');
-    } catch (error) {
-      console.error('Error showing shop details:', error);
-    }
-  } else if (target.classList.contains('remove')) {
-    const { data: authData, error: authError } = await client.auth.getUser();
-    const userId = authData?.user?.id;
-    if (authError || !userId) {
-      console.error('No user authenticated:', authError?.message);
-      showAuthBanner(null, () => handleFavoritesButtonClick(e));
-      return;
-    }
-
-    const { error } = await client
-      .from('favorites')
-      .delete()
-      .eq('user_id', userId)
-      .eq('shop_id', shopId);
-
-    if (error) {
-      console.error('Error removing favorite:', error.message);
-      alert('Failed to remove favorite: ' + error.message);
-    } else {
-      console.log('Removed from favorites:', shop.name);
-      favorites = favorites.filter(f => f.shop_id !== shopId);
-      await updateFavoritesModal();
-
-      const floatingCard = document.getElementById('floating-card');
-      if (floatingCard && currentShop && currentShop.id === shopId) {
-        const favoriteButton = floatingCard.querySelector('#favorite-button');
-        if (favoriteButton) {
-          favoriteButton.querySelector('svg')?.setAttribute('fill', 'none');
-          favoriteButton.setAttribute('aria-label', `Add ${shop.name} to favorites`);
-        }
-      }
-    }
-  }
-}
 
 
 document.addEventListener('DOMContentLoaded', async () => {
