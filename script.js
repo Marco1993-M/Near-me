@@ -318,7 +318,7 @@ async function fetchFavorites() {
 
   const { data, error } = await client
     .from('favorites')
-    .select('*')
+    .select('id, shop_id, address, created_at, shop ( id, name, address, city, lat, lng )')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -329,6 +329,7 @@ async function fetchFavorites() {
 
   return data;
 }
+
 
 
 async function updateFavoritesModal() {
