@@ -1019,32 +1019,126 @@ body, html {
 
 /* Enhanced glassmorphism effect for the cities modal */
 #cities-modal {
-  display: block;
+  display: flex; /* Changed to flex for better centering */
+  align-items: center;
+  justify-content: center;
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  backdrop-filter: blur(50px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0; /* Full viewport coverage */
+  backdrop-filter: blur(5px); /* Unified blur for consistency */
   -webkit-backdrop-filter: blur(5px); /* Safari support */
   background: rgba(255, 255, 255, 0.15);
+  border: none; /* Remove border to avoid overlap */
+  z-index: 1000; /* Base z-index for modal */
+  overflow-y: auto; /* Allow scrolling */
+}
+
+/* Modal content container */
+.modal-content {
+  position: relative; /* Stacking context for children */
+  background: rgba(255, 255, 255, 0.2); /* Match glassmorphism */
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
               -5px -5px 10px rgba(255, 255, 255, 0.6),
               inset 3px 3px 6px rgba(209, 209, 209, 0.4),
               inset -3px -3px 6px rgba(255, 255, 255, 0.5);
   padding: 1.25rem;
+  padding-bottom: 0.25rem;
   border-radius: 12px;
-  border: 0.5px solid black;
-  z-index: 1006;
   max-width: 500px;
   width: 85%;
   min-height: 300px;
   font-family: Helvetica, Arial, sans-serif;
   color: #333;
+  z-index: 1001; /* Above modal backdrop */
+  overflow: visible; /* Prevent clipping of dropdown */
 }
 
-/* Close button styling */
-.cities-modal-close-button {
+/* City search wrapper */
+.city-search-wrapper {
+  position: relative; /* Reference for .city-suggestions */
+  width: 100%;
+  z-index: 1002; /* Above modal content */
+}
+
+/* City search input */
+.city-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 0.875rem; /* 14px */
+  color: #333;
+  box-shadow: inset 2px 2px 4px rgba(209, 209, 209, 0.2);
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.city-search-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* City suggestions dropdown */
+.city-suggestions {
+  position: absolute;
+  top: 100%; /* Directly below input */
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.2); /* Glassmorphism match */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 3px 3px 6px rgba(209, 209, 209, 0.3),
+              -3px -3px 6px rgba(255, 255, 255, 0.4);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1003; /* Above all modal content */
+  margin-top: 4px; /* Small gap */
+}
+
+/* Hide suggestions when not needed */
+.city-suggestions.hidden {
+  display: none !important;
+}
+
+/* Suggestion items (override .cities-modal-button for dropdown) */
+.city-suggestions .city-suggestion-item {
+  background: linear-gradient(145deg, #e0e0e0, #ffffff);
+  box-shadow: none;
+  color: #333;
+  width: 100%;
+  text-align: left;
+  border-radius: 0;
+  padding: 8px 12px;
+  font-size: 0.875rem; /* 14px */
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.city-suggestions .city-suggestion-item:hover {
+  background: linear-gradient(145deg, #d1d1d1, #f0f0f0);
+}
+
+.city-suggestions .city-suggestion-item:active {
+  box-shadow: inset 1px 1px 3px #d1d1d1, inset -1px -1px 3px #ffffff;
+}
+
+.city-suggestions .city-suggestion-item:focus {
+  outline: none;
+  box-shadow: inset 1px 1px 3px #d1d1d1, inset -1px -1px 3px #ffffff, 0 0 0 2px #b0b0b0;
+}
+
+/* City buttons container */
+#city-buttons {
+  padding: 0; /* Prevent offset */
+  overflow: visible; /* Allow dropdown to extend */
+}
+
+/* Close button (updated selector to match HTML) */
+#close-cities-modal {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -1057,35 +1151,27 @@ body, html {
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.cities-modal-close-button:hover {
+#close-cities-modal:hover {
   box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff;
   transform: scale(1.1);
 }
 
-.cities-modal-close-button:active {
+#close-cities-modal:active {
   box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff;
 }
 
-.cities-modal-close-button:focus {
+#close-cities-modal:focus {
   outline: none;
   box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0;
 }
 
-.cities-modal-close-button svg {
+#close-cities-modal svg {
   width: 20px;
   height: 20px;
   stroke: #333;
 }
 
-/* Loading message styling */
-.cities-modal-loading {
-  font-size: 1rem; /* 16px */
-  color: #333;
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-/* City buttons container */
+/* Existing styles for .cities-modal-buttons and .cities-modal-button */
 .cities-modal-buttons {
   display: flex;
   flex-wrap: wrap;
@@ -1093,7 +1179,6 @@ body, html {
   justify-content: center;
 }
 
-/* City button styling */
 .cities-modal-button {
   background: linear-gradient(145deg, #e0e0e0, #ffffff);
   box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff;
@@ -1101,7 +1186,7 @@ body, html {
   padding: 8px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 0.875rem; /* 14px */
+  font-size: 0.875rem;
   cursor: pointer;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -1118,54 +1203,6 @@ body, html {
 .cities-modal-button:focus {
   outline: none;
   box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0;
-}
-
-/* City suggestions dropdown */
-#city-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff);
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff;
-  border-radius: 8px;
-  z-index: 1005;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  max-height: 200px;
-  overflow-y: auto;
-  display: block;
-}
-
-#city-suggestions .cities-modal-button {
-  background: linear-gradient(145deg, #e0e0e0, #ffffff);
-  box-shadow: none; /* Remove shadow for dropdown items */
-  color: #333;
-  width: 100%;
-  text-align: left;
-  border-radius: 0;
-  margin: 0;
-  padding: 8px 12px;
-}
-
-#city-suggestions .cities-modal-button:hover {
-  background: linear-gradient(145deg, #d1d1d1, #f0f0f0);
-  transform: none; /* Disable scaling in dropdown */
-}
-
-#city-suggestions .cities-modal-button:active {
-  box-shadow: inset 1px 1px 3px #d1d1d1, inset -1px -1px 3px #ffffff;
-}
-
-#city-suggestions .cities-modal-button:focus {
-  outline: none;
-  box-shadow: inset 1px 1px 3px #d1d1d1, inset -1px -1px 3px #ffffff, 0 0 0 2px #b0b0b0;
-}
-
-/* Hidden class */
-.hidden {
-  display: none !important;
 }
 
 /* Enhanced glassmorphism effect for the Top 100 modal */
