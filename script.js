@@ -318,7 +318,20 @@ async function fetchFavorites() {
 
   const { data, error } = await client
     .from('favorites')
-    .select('id, shop_id, address, created_at, shop ( id, name, address, city, lat, lng )')
+    .select(`
+      id,
+      shop_id,
+      address,
+      created_at,
+      shops (
+        id,
+        name,
+        address,
+        city,
+        lat,
+        lng
+      )
+    `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -329,6 +342,7 @@ async function fetchFavorites() {
 
   return data;
 }
+
 
 
 
@@ -358,7 +372,7 @@ async function updateFavoritesModal() {
     favorites = favoritesData;
 
     favoritesData.forEach(fav => {
-      const shop = fav.shop;
+      const shop = fav.shops;
       if (!shop) {
         console.warn('No shop data for favorite:', fav.shop_id);
         return;
