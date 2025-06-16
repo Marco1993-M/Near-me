@@ -197,6 +197,27 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
   });
 }
 
+let favorites = [];
+
+ async function getOrCreateShop(name, address, city, lat, lng) {
+  try {
+    const { data, error } = await client.rpc('get_or_create_shop', {
+      p_name: name,
+      p_address: address,
+      p_city: city,
+      p_lat: lat,
+      p_lng: lng,
+    });
+
+    if (error) throw new Error(`Supabase RPC error: ${error.message}`);
+    if (!data || data.length === 0) throw new Error('No shop ID returned');
+
+    return data[0].id;
+  } catch (err) {
+    console.error('Error in getOrCreateShop:', err.message || err);
+    throw err;
+  }
+}
 
 // Add a shop to favorites with proper shop creation logic
 async function addToFavorites(shop) {
@@ -1218,27 +1239,6 @@ async function fetchCities() {
   } else {
     console.error('User location button not found in DOM');
   }
-    
-    async function getOrCreateShop(name, address, city, lat, lng) {
-  try {
-    const { data, error } = await client.rpc('get_or_create_shop', {
-      p_name: name,
-      p_address: address,
-      p_city: city,
-      p_lat: lat,
-      p_lng: lng,
-    });
-
-    if (error) throw new Error(`Supabase RPC error: ${error.message}`);
-    if (!data || data.length === 0) throw new Error('No shop ID returned');
-
-    return data[0].id;
-  } catch (err) {
-    console.error('Error in getOrCreateShop:', err.message || err);
-    throw err;
-  }
-}
-
 
 
     async function calculateAverageRating(shopName, shopId = null) {
