@@ -198,6 +198,31 @@ async function showAuthBanner(shop, onSuccessCallback = null) {
 }
 
 
+// Global favorites array
+let favorites = [];
+
+// Get or create a shop using Supabase RPC
+async function getOrCreateShop(name, address, city, lat, lng) {
+  try {
+    const { data, error } = await client.rpc('get_or_create_shop', {
+      p_name: name,
+      p_address: address,
+      p_city: city,
+      p_lat: lat,
+      p_lng: lng,
+    });
+
+    if (error) throw new Error(`Supabase RPC error: ${error.message}`);
+    if (!data || data.length === 0) throw new Error('No shop ID returned');
+
+    return data[0].id;
+  } catch (err) {
+    console.error('Error in getOrCreateShop:', err.message || err);
+    throw err;
+  }
+}
+
+// Fetch favorites from Supabase
 async function fetchFavorites() {
   console.log('Fetching favorites');
   const { data: authData, error: authError } = await client.auth.getUser();
@@ -232,25 +257,23 @@ async function fetchFavorites() {
     return [];
   }
 
-  // Map data to a consistent format
-  return (
-    data?.map(fav => ({
-      id: fav.id,
-      shop_id: fav.shop_id,
-      address: fav.address,
-      created_at: fav.created_at,
-      shop: {
-        id: fav.shops?.id,
-        name: fav.shops?.name,
-        address: fav.shops?.address,
-        city: fav.shops?.city,
-        lat: fav.shops?.lat,
-        lng: fav.shops?.lng,
-      },
-    })) || []
-  );
+  return data.map(fav => ({
+    id: fav.id,
+    shop_id: fav.shop_id,
+    address: fav.address,
+    created_at: fav.created_at,
+    shop: {
+      id: fav.shops?.id,
+      name: fav.shops?.name,
+      address: fav.shops?.address,
+      city: fav.shops?.city,
+      lat: fav.shops?.lat,
+      lng: fav.shops?.lng,
+    },
+  }));
 }
 
+// Add a shop to favorites
 async function addToFavorites(shop) {
   console.log('Adding to favorites:', shop.name);
   const { data: authData, error: authError } = await client.auth.getUser();
@@ -258,7 +281,7 @@ async function addToFavorites(shop) {
 
   if (authError || !userId) {
     console.error('No user authenticated:', authError?.message);
-    showAuthBanner(shop, () => addToFavorites(shop)); // Prompt login and retry
+    showAuthBanner(shop, () => addToFavorites(shop));
     return;
   }
 
@@ -268,7 +291,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Get or create shop in the shops table
   let shopId;
   try {
     shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
@@ -279,7 +301,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Check for existing favorite
   const { data: existingFavorites, error: fetchError } = await client
     .from('favorites')
     .select('id')
@@ -298,7 +319,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  // Insert new favorite
   const { data, error: insertError } = await client
     .from('favorites')
     .insert({
@@ -315,8 +335,6 @@ async function addToFavorites(shop) {
     return;
   }
 
-  console.log(`Added ${shop.name} to favorites with shop_id: ${shopId}`);
-  // Update local favorites array
   favorites.push({
     id: data.id,
     shop_id: shopId,
@@ -331,9 +349,9 @@ async function addToFavorites(shop) {
       lng: shop.lng,
     },
   });
+
   await updateFavoritesModal();
 
-  // Update favorite button UI
   const floatingCard = document.getElementById('floating-card');
   if (floatingCard) {
     const favoriteButton = floatingCard.querySelector('#favorite-button');
@@ -344,6 +362,7 @@ async function addToFavorites(shop) {
   }
 }
 
+// Update favorites modal UI
 async function updateFavoritesModal() {
   console.log('Updating favorites modal');
   const favoritesList = document.getElementById('favorites-list');
@@ -362,11 +381,9 @@ async function updateFavoritesModal() {
       return;
     }
 
+    favorites = favoritesData;
     favoritesList.className = 'favorite-modal-list';
     favoritesList.innerHTML = '';
-
-    // Update global favorites array
-    favorites = favoritesData;
 
     favoritesData.forEach(fav => {
       const shop = fav.shop;
@@ -374,9 +391,10 @@ async function updateFavoritesModal() {
         console.warn('No shop data for favorite:', fav.shop_id);
         return;
       }
+
       const li = document.createElement('li');
       li.className = 'favorite-modal-list-item';
-      li.dataset.shopId = fav.shop_id; // Store shop_id for event handling
+      li.dataset.shopId = fav.shop_id;
       li.innerHTML = `
         <span class="favorite-modal-shop-info">${shop.name} (${shop.address}, ${shop.city})</span>
         <div class="favorite-modal-actions">
@@ -396,10 +414,7 @@ async function updateFavoritesModal() {
       favoritesList.appendChild(li);
     });
 
-    // Remove existing listeners to prevent duplicates
     favoritesList.removeEventListener('click', handleFavoritesButtonClick);
-
-    // Add delegated event listener
     favoritesList.addEventListener('click', handleFavoritesButtonClick);
     console.log('Attached delegated click listener to favoritesList');
   } catch (error) {
@@ -408,7 +423,7 @@ async function updateFavoritesModal() {
   }
 }
 
-// Delegated event handler for favorites modal buttons
+// Handle clicks inside the favorites modal
 async function handleFavoritesButtonClick(e) {
   const target = e.target.closest('.favorite-modal-button');
   if (!target) return;
@@ -427,18 +442,10 @@ async function handleFavoritesButtonClick(e) {
 
   if (target.classList.contains('view-shop')) {
     console.log('Viewing shop from favorites:', shop.name);
-    currentShop = {
-      id: shop.id,
-      name: shop.name,
-      address: shop.address,
-      city: shop.city,
-      lat: shop.lat,
-      lng: shop.lng,
-    };
+    currentShop = { ...shop };
     try {
       showShopDetails(currentShop);
       document.getElementById('favorite-modal').classList.add('hidden');
-      console.log('Favorite modal hidden');
     } catch (error) {
       console.error('Error showing shop details:', error);
     }
@@ -447,7 +454,7 @@ async function handleFavoritesButtonClick(e) {
     const userId = authData?.user?.id;
     if (authError || !userId) {
       console.error('No user authenticated:', authError?.message);
-      showAuthBanner(null, () => handleFavoritesButtonClick(e)); // Prompt login and retry
+      showAuthBanner(null, () => handleFavoritesButtonClick(e));
       return;
     }
 
@@ -465,7 +472,6 @@ async function handleFavoritesButtonClick(e) {
       favorites = favorites.filter(f => f.shop_id !== shopId);
       await updateFavoritesModal();
 
-      // Update floating card if showing the removed shop
       const floatingCard = document.getElementById('floating-card');
       if (floatingCard && currentShop && currentShop.id === shopId) {
         const favoriteButton = floatingCard.querySelector('#favorite-button');
@@ -477,6 +483,7 @@ async function handleFavoritesButtonClick(e) {
     }
   }
 }
+
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await client.auth.getSession();
