@@ -1031,7 +1031,7 @@ body, html {
   -webkit-backdrop-filter: blur(5px); /* Safari support */
   background: rgba(255, 255, 255, 0.15);
   border: none; /* Remove border to avoid overlap */
-  z-index: 1000; /* Base z-index for modal */
+  z-index: 1009; /* Base z-index for modal */
   overflow-y: auto; /* Allow scrolling */
 }
 
