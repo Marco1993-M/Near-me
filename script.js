@@ -307,6 +307,42 @@ async function addToFavorites(shop) {
   }
 }
 
+async function fetchFavorites() {
+  const { data: authData, error: authError } = await client.auth.getUser();
+  const userId = authData?.user?.id;
+
+  if (authError || !userId) {
+    console.error('User not authenticated:', authError?.message);
+    return [];
+  }
+
+  const { data, error } = await client
+    .from('favorites')
+    .select(`
+      id,
+      shop_id,
+      address,
+      created_at,
+      shop (
+        id,
+        name,
+        address,
+        city,
+        lat,
+        lng
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching favorites:', error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
 async function updateFavoritesModal() {
   console.log('Updating favorites modal');
 
