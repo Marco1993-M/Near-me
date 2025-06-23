@@ -6,6 +6,7 @@ console.log('Leaflet (L):', L);
 console.log(L.Routing);
 
 let map;
+let customIcon;
 let userMarker;
 let userLocation;
 
@@ -16,7 +17,7 @@ export function initMap() {
   }
   map = L.map('map').setView([0, 0], 13);
   // Neumorphic coffee marker
-  const coffeeIcon = L.divIcon({
+  customIcon = L.divIcon({
     className: 'custom-neumorphic-icon',
     html: '<div class="neumorphic-marker"></div>',
     iconSize: [24, 24],
@@ -49,9 +50,6 @@ export function initMap() {
   });
 
   tileLayer.on('load', () => console.log('Carto tiles loaded successfully'));
-
-  // Store custom icon so shops.js can use it
-  map.customIcon = coffeeIcon;
 
   // Recalculate map dimensions
   setTimeout(() => {
@@ -100,7 +98,7 @@ function locateUser() {
         map.setView(userLocation, 14);
         if (userMarker) map.removeLayer(userMarker);
 
-        userMarker = L.marker(userLocation, { icon: map.customIcon })
+        userMarker = L.marker(userLocation, { icon: customIcon })
           .addTo(map)
           .bindPopup('You are here')
           .openPopup();
@@ -126,7 +124,7 @@ function locateUser() {
       map?.setView(userLocation, 14);
       if (userMarker) map.removeLayer(userMarker);
 
-      userMarker = L.marker(userLocation, { icon: map.customIcon })
+      userMarker = L.marker(userLocation, { icon: customIcon })
         .addTo(map)
         .bindPopup('Default location (Paris)')
         .openPopup();
@@ -152,7 +150,7 @@ function resetLocationButton() {
 }
 
 export function getMapInstance() {
-  return map;
+  return { map, customIcon };
 }
 
 export function getUserLocation() {
