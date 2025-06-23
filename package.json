@@ -1,0 +1,19 @@
+{
+  "name": "coffee-map",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12"
+  }
+}
