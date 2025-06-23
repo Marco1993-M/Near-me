@@ -19,11 +19,18 @@ export async function loadShops() {
     return;
   }
 
-  const map = getMapInstance();
+  const mapInstance = getMapInstance();
+  if (!mapInstance) {
+    console.error('Map instance is not available.');
+    return;
+  }
+  const map = mapInstance.map;
+  const customIcon = mapInstance.customIcon;
+
   shops.forEach((shop) => {
     if (!shop.lat || !shop.lng) return;
 
-    const marker = L.marker([shop.lat, shop.lng], { icon: map.customIcon }).addTo(map);
+    const marker = L.marker([shop.lat, shop.lng], { icon: customIcon }).addTo(map);
     marker.on('click', () => showFloatingCard(shop));
   });
 }
