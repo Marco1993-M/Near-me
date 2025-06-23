@@ -182,7 +182,10 @@ export function showRouteTo(shopLatLng, userLatLng) {
     createMarker: () => null,
     show: false,
     lineOptions: {
-      styles: [{ color: '#c8ebd1' }]
+      styles: [
+      { color: '#333', weight: 8 },     // Border (thicker, dark color)
+        { color: '#c7f5d3', weight: 7 }
+      ]
     }
   });
 
