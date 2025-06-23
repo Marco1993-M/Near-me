@@ -4,7 +4,7 @@ const supabase = window.supabase.createClient(
 );
 
 
-export async function getOrCreateShop(name, address, city, lat, lng) {
+export async function getOrCreateShop(name, address, city, lat, lng, supabase) {
   // Try to find the shop first
   const { data, error } = await supabase
     .from('shops')
