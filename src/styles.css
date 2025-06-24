@@ -573,6 +573,13 @@ body, html {
   display: none !important;
 }
 
+#floating-card.hidden {
+  display: none; /* or */
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
 /* Base styling for the shop details banner */
 #shop-details-banner {
   display: block;
