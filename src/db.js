@@ -1,35 +1,57 @@
-const supabase = window.supabase.createClient(
-  'https://mqfknhzpjzfhuxusnasl.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
-);
+import supabase from './supabase.js';
 
+export async function getOrCreateShop(name, address, city, lat, lng) {
+  // Normalize inputs to lowercase, trimmed values
+  const normalizedName = name?.trim().toLowerCase() || '';
+  const normalizedAddress = address?.trim().toLowerCase() || '';
+  const normalizedCity = city?.trim().toLowerCase() || '';
 
-export async function getOrCreateShop(name, address, city, lat, lng, supabase) {
-  // Try to find the shop first
-  const { data, error } = await supabase
-    .from('shops')
-    .select('id')
-    .eq('name', name)
-    .eq('address', address)
-    .eq('city', city)
-    .limit(1)
-    .single();
+  try {
+    // Search with case-insensitive match using ilike
+    const { data, error } = await supabase
+      .from('shops')
+      .select('id')
+      .ilike('name', normalizedName)
+      .ilike('address', normalizedAddress)
+      .ilike('city', normalizedCity)
+      .limit(1)
+      .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 = "No rows found" error
-    throw error; 
+    if (error && error.code !== 'PGRST116') {
+      console.error('Supabase select error:', error);
+      throw error;
+    }
+
+    if (data) {
+      console.log('Shop found, returning existing ID:', data.id);
+      return data.id;
+    }
+
+    // Insert new shop
+    const { data: inserted, error: insertErr } = await supabase
+      .from('shops')
+      .insert({
+        name: normalizedName,
+        address: normalizedAddress,
+        city: normalizedCity,
+        lat,
+        lng
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('Supabase insert error:', insertErr);
+      throw insertErr;
+    }
+
+    console.log('New shop inserted with ID:', inserted.id);
+    return inserted.id;
+
+  } catch (err) {
+    console.error('getOrCreateShop failed:', err);
+    throw err;
   }
-
-  if (data) return data.id;
-
-  // Insert new shop if not found
-  const { data: inserted, error: insertErr } = await supabase
-    .from('shops')
-    .insert({ name, address, city, lat, lng })
-    .select('id')
-    .single();
-
-  if (insertErr) throw insertErr;
-  return inserted.id;
 }
 
 
