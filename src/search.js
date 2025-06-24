@@ -103,7 +103,7 @@ export function initSearch(supabase) {
       };
 
       // Get or create shop ID
-      shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng, supabase);
+      shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
 
       // Use shops.js's showFloatingCard
       console.log('Showing floating card');
