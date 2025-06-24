@@ -3,11 +3,8 @@ import { addToFavorites, removeFromFavorites, isShopFavorited } from './favorite
 import { getOrCreateShop, calculateAverageRating } from './db.js';
 import { showMapsPrompt } from './utils.js';
 import { showShopDetails } from './shopdetails.js';
+import supabase from './supabase.js';
 
-const supabase = window.supabase.createClient(
-  'https://mqfknhzpjzfhuxusnasl.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
-);
 
 import L from 'leaflet';
 
@@ -31,7 +28,11 @@ export async function loadShops() {
     if (!shop.lat || !shop.lng) return;
 
     const marker = L.marker([shop.lat, shop.lng], { icon: customIcon }).addTo(map);
-    marker.on('click', () => showFloatingCard(shop));
+    marker.on('click', () => {
+  console.log('Marker clicked:', shop);
+  showFloatingCard(shop);
+});
+
   });
 }
 
