@@ -75,46 +75,46 @@ export function initSearch(supabase) {
 
   // Dropdown click handler
   searchDropdown.addEventListener('click', async (e) => {
-  const li = e.target.closest('li');
-  if (li) {
-    const placeId = li.dataset.placeId;
-    try {
-      const place = await getPlaceDetails(placeId);
-      currentMarkers.forEach(marker => map.removeLayer(marker));
-      currentMarkers = [];
+    const li = e.target.closest('li');
+    if (li) {
+      const placeId = li.dataset.placeId;
+      try {
+        const place = await getPlaceDetails(placeId);
+        currentMarkers.forEach(marker => map.removeLayer(marker));
+        currentMarkers = [];
 
-      const marker = L.marker([place.geometry.location.lat(), place.geometry.location.lng()], { icon: coffeeIcon })
-        .addTo(map)
-        .bindPopup(place.name)
-        .openPopup();
-      marker._shopId = null;
-      currentMarkers.push(marker);
+        const marker = L.marker([place.geometry.location.lat(), place.geometry.location.lng()], { icon: coffeeIcon })
+          .addTo(map)
+          .bindPopup(place.name)
+          .openPopup();
+        marker._shopId = null;
+        currentMarkers.push(marker);
 
-      map.setView([place.geometry.location.lat(), place.geometry.location.lng()], 15);
+        map.setView([place.geometry.location.lat(), place.geometry.location.lng()], 15);
 
-      // Prepare shop object for showFloatingCard
-      const shop = {
-        name: place.name,
-        address: place.formatted_address,
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-        city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
-        phone: place.formatted_phone_number || null
-      };
+        // Prepare shop object for showFloatingCard
+        const shop = {
+          name: place.name,
+          address: place.formatted_address,
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+          city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
+          phone: place.formatted_phone_number || null
+        };
 
-      // Get or create shop ID
-      shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+        // Get or create shop ID
+        shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
 
-      // Use shops.js's showFloatingCard
-      console.log('Showing floating card');
-      await showFloatingCard(shop);
+        // Use shops.js's showFloatingCard
+        console.log('Showing floating card');
+        await showFloatingCard(shop);
 
-      searchDropdown.classList.add('hidden');
-    } catch (error) {
-      console.error('Error getting place details:', error);
+        searchDropdown.classList.add('hidden');
+      } catch (error) {
+        console.error('Error getting place details:', error);
+      }
     }
-  }
-});
+  });
 }
 
 function debounce(func, wait) {
@@ -129,18 +129,30 @@ function debounce(func, wait) {
 async function getPlacePredictions(query) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
   console.log('Autocomplete service:', autocompleteService);
+
+  const mapInstance = getMapInstance();
+  const userLatLng = mapInstance?.map?.getCenter();
+
   return new Promise((resolve, reject) => {
-    autocompleteService.getPlacePredictions(
-      { input: query, types: ['establishment', 'geocode'], componentRestrictions: { country: 'za' } },
-      (predictions, status) => {
-        console.log('Autocomplete status:', status, 'Predictions:', predictions);
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-          resolve(predictions || []);
-        } else {
-          reject(status);
-        }
+    const request = {
+      input: query,
+      types: ['establishment', 'geocode'],
+    };
+
+    // Add location bias if available
+    if (userLatLng) {
+      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+      request.radius = 50000; // 50km radius
+    }
+
+    autocompleteService.getPlacePredictions(request, (predictions, status) => {
+      console.log('Autocomplete status:', status, 'Predictions:', predictions);
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        resolve(predictions || []);
+      } else {
+        reject(status);
       }
-    );
+    });
   });
 }
 
@@ -188,18 +200,30 @@ function extractCityFromAddressComponents(addressComponents) {
 
 async function performTextSearch(query) {
   placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
+
+  const mapInstance = getMapInstance();
+  const userLatLng = mapInstance?.map?.getCenter();
+
   return new Promise((resolve, reject) => {
-    placesService.textSearch(
-      { query: `coffee shop ${query}`, type: 'cafe', region: 'za' },
-      (results, status) => {
-        console.log('Text search status:', status, 'Results:', results);
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-          resolve(results || []);
-        } else {
-          reject(status);
-        }
+    const request = {
+      query: `coffee shop ${query}`,
+      type: 'cafe'
+    };
+
+    // Optional: Add location bias for text search
+    if (userLatLng) {
+      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+      request.radius = 50000; // 50km radius
+    }
+
+    placesService.textSearch(request, (results, status) => {
+      console.log('Text search status:', status, 'Results:', results);
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        resolve(results || []);
+      } else {
+        reject(status);
       }
-    );
+    });
   });
 }
 
