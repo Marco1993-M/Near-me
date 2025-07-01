@@ -3,6 +3,7 @@ const supabase = window.supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
 );
 
+
 export async function initFavorites() {
   await updateFavoritesModal();
 }
@@ -81,7 +82,7 @@ export async function updateFavoritesModal() {
       const shop = fav.shop;
       return `
         <li class="favorite-item" data-shop-id="${shop.id}">
-          <span>${shop.name} - ${shop.address}, ${shop.city}</span>
+          <span><strong>${shop.name}</strong> - ${shop.city}</span>
           <button class="remove-favorite-button" aria-label="Remove ${shop.name} from favorites">Remove</button>
         </li>
       `;
@@ -99,16 +100,3 @@ export async function updateFavoritesModal() {
     });
   });
 }
-
-// Remove favorite helper for window global and internal use
-export async function removeFavorite(shopId) {
-  const { error } = await supabase.from('favorites').delete().eq('shop_id', shopId);
-  if (error) {
-    alert('Failed to remove favorite');
-  } else {
-    alert('Favorite removed');
-  }
-}
-
-// Expose removeFavorite globally for inline usage (optional)
-window.removeFavorite = removeFavorite;
