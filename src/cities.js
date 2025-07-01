@@ -56,10 +56,10 @@ export async function fetchCities(searchQuery = '') {
     console.log('Cities fetched successfully:', cities);
     return cities;
   } catch (error) {
-    console.error('Error fetching cities:', error.message);
-    showError('Failed to load cities. Please try again.');
-    return [];
-  }
+  console.error('Error fetching cities:', error);
+  showError('Failed to load cities. Please try again.');
+  return [];
+}
 }
 
 // Fetch shops filtered by city (case-insensitive)
@@ -73,10 +73,10 @@ export async function fetchShopsByCity(city) {
     if (error) throw error;
     return shops || [];
   } catch (error) {
-    console.error(`Error fetching shops for city ${city}:`, error.message);
-    showError(`Failed to load shops for ${city}.`);
-    return [];
-  }
+  console.error(`Error fetching shops for city ${city}:`, error);
+  showError(`Failed to load shops for ${city}.`);
+  return [];
+}
 }
 
 export function renderCitySuggestions(cities) {
