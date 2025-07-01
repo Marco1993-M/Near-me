@@ -36,7 +36,7 @@ export async function removeFromFavorites(shop) {
     console.error('Remove from favorites failed:', error.message);
     alert('Could not remove from favorites');
   } else {
-    alert(`${shop.name} removed from favorites`);
+    alert(`Removed from favorites`);
   }
 }
 
@@ -91,12 +91,13 @@ export async function updateFavoritesModal() {
 
   // Attach event listeners to remove buttons
   favoritesList.querySelectorAll('.remove-favorite-button').forEach(button => {
-    button.addEventListener('click', async (e) => {
-      const li = e.target.closest('li');
-      if (!li) return;
-      const shopId = li.dataset.shopId;
-      await removeFavorite(shopId);
-      await updateFavoritesModal();
+  button.addEventListener('click', async (e) => {
+    const li = e.target.closest('li');
+    if (!li) return;
+    const shopId = li.dataset.shopId;
+    const shop = { id: shopId }; // Create a shop object with the id
+    await removeFromFavorites(shop);
+    await updateFavoritesModal();
     });
   });
 }
