@@ -1,6 +1,9 @@
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
-import supabase, { supabaseUrl, supabaseKey } from './supabase.js';
+import supabase from './supabase.js';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
 
 const map = getMapInstance();
