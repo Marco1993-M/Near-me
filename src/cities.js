@@ -1,6 +1,7 @@
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
-import supabase from './supabase.js';
+import supabase, { supabaseUrl, supabaseKey } from './supabase.js';
+
 
 const map = getMapInstance();
 let favorites = [];
@@ -12,6 +13,10 @@ async function initCities() {
     console.error('Error initializing cities:', error);
   }
 }
+
+
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key:', supabaseKey);
 
 initCities();
 
