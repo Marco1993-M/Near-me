@@ -1,6 +1,7 @@
 import supabase from './supabase.js';
 
 export async function getOrCreateShop(name, address, city, lat, lng) {
+   console.log('Supabase client instance:', supabase);
   // Normalize inputs to lowercase, trimmed values
   const normalizedName = name?.trim().toLowerCase() || '';
   const normalizedAddress = address?.trim().toLowerCase() || '';
