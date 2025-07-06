@@ -1098,7 +1098,7 @@ body, html {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%); /* Center horizontally */
-  width: 95%;
+  width: 88%;
   max-width: 98%;
   height: 65vh; /* Covers 65% of viewport height */
   padding: 2rem;
