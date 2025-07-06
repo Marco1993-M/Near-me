@@ -1755,7 +1755,7 @@ dialog#top100[open] {
     padding: 0 0.5rem;
   }
   .top100-modal-list {
-    max-height: clamp(250px, 50vh, 250px);
+    max-height: clamp(300px, 50vh, 300px);
   }
   .top100-modal-list-item {
     padding: 0.4rem;
