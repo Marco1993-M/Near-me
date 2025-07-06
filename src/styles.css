@@ -1218,7 +1218,6 @@ body, html {
   font-weight: 100;
   color: #000000; /* White for contrast */
    -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.7); /* Stroke */
-  font-weight: 600; /* Semi-bold */
   margin: 0.12rem 0 0.5rem; /* Extra top margin to avoid close button */
   padding: 0 clamp(0.5rem, 2vw, 0.75rem); /* Align with #cities */
   padding-bottom: 12px;
