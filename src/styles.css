@@ -1095,12 +1095,14 @@ body, html {
 /* The entire modal container */
 #cities {
   position: fixed;
-  top: 50%;
+  bottom: 0;
   left: 50%;
-  width: 85%;
-  max-width: 90%;
-  padding: 1.25rem;
-  border-radius: 12px;
+  transform: translateX(-50%); /* Center horizontally */
+  width: 96%;
+  max-width: 100%;
+  height: 65vh; /* Covers 65% of viewport height */
+  padding: 2rem;
+  border-radius: 12px 12px 0 0; /* Rounded top corners only */
   border: 0.5px solid black;
   background: rgba(255, 255, 255, 0.15);
   box-shadow:
@@ -1110,7 +1112,6 @@ body, html {
     inset -3px -3px 6px rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   gap: 1rem;
