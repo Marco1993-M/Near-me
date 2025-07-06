@@ -1466,27 +1466,27 @@ body, html {
 }
 
 #top100 {
-  position: fixed !important; /* Ensure fixed positioning */
-  bottom: env(safe-area-inset-bottom, 0); /* Respect iOS safe area */
+  position: fixed;
+  bottom: env(safe-area-inset-bottom, 0); /* Respect iOS bottom safe area */
   left: 50%;
-  transform: translateX(-50%);
-  width: min(100%, 1200px);
-  height: clamp(60vh, 60vh, 60vh);
-  padding: clamp(0.75rem, 2vw, 1rem);
-  border-radius: 12px 12px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 
-    0 8px 32px rgba(31, 38, 135, 0.2),
-    inset 0 4px 20px rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(2px) saturate(180%);
-  -webkit-backdrop-filter: blur(2px) saturate(180%);
+  transform: translateX(-50%); /* Center horizontally */
+  width: min(89%, 1200px); /* Max width for larger screens */
+  height: clamp(60vh, 60vh, 60vh); /* Flexible height */
+  padding: clamp(3rem, 2vw, 3rem); /* Smaller padding */
+ border-radius: 2rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.8); /* Glassy border */
+  background: rgba(255, 255, 255, 0.1); /* Glassy background */
+  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
+              inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
+  opacity: 0.9;
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(2px) saturate(180%); /* Safari support */
   display: flex;
   flex-direction: column;
-  gap: clamp(0.5rem, 2vw, 0.75rem);
+  gap: clamp(0.5rem, 2vw, 0.75rem); /* Responsive gap */
   z-index: 1009;
-  box-sizing: border-box;
-  overflow-y: auto;
+  box-sizing: border-box; /* Prevent padding overflow */
+  overflow-y: auto; /* Allow scrolling */
 }
 
 #top100::after {
@@ -1602,7 +1602,7 @@ dialog#top100[open] {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: clamp(200px, 40vh, 300px); /* Responsive height */
+  max-height: clamp(300px, 55vh, 350px); /* Responsive height */
   overflow-y: auto;
 }
 
@@ -1716,7 +1716,7 @@ dialog#top100[open] {
 @media (max-width: 480px) {
   #top100 {
     width: calc(100% - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0));
-    height: clamp(60vh, 60vh, 60vh);
+    height: clamp(35vh, 45vh, 50vh);
     padding: clamp(0.5rem, 2vw, 0.75rem);
     border-radius: 8px 8px 0 0;
     backdrop-filter: blur(1px) saturate(150%);
@@ -1786,7 +1786,7 @@ dialog#top100[open] {
 /* Medium screens (e.g., tablets) */
 @media (min-width: 481px) and (max-width: 768px) {
   #top100 {
-    width: 95%;
+    width: 100%;
     height: clamp(60vh, 60vh, 60vh);
     padding: clamp(0.75rem, 2vw, 1rem);
     border-radius: 8px 8px 0 0;
@@ -1810,7 +1810,6 @@ dialog#top100[open] {
     margin: 2.5rem 0 1rem;
   }
 }
-
 
 /* Base styling for the favorites modal */
 #favorites {
