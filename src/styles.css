@@ -1177,7 +1177,7 @@ body, html {
   }
 }
 
-.cities-heading {
+.cities-modal-heading {
   font-size: clamp(1.5rem, 5vw, 2rem); /* 24px-32px */
   color: #c7f5d3; /* White for contrast */
    -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.7); /* Stroke */
