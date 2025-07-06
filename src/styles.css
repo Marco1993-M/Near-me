@@ -1820,7 +1820,7 @@ dialog#top100[open] {
   left: 50%;
   transform: translateX(-50%);
   width: min(96%, 1200px); /* Match #cities, #top100 */
-  height: clamp(40vh, 50vh, 60vh); /* Consistent height */
+  height: clamp(60vh, 60vh, 60vh); /* Consistent height */
   padding: clamp(0.75rem, 2vw, 1rem); /* Match #cities */
   border-radius: 12px 12px 0 0; /* Match #cities, #top100 */
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -2073,7 +2073,7 @@ dialog#favorites[open] {
 @media (max-width: 480px) {
   #favorites {
     width: calc(100% - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0));
-    height: clamp(35vh, 45vh, 50vh);
+    height: clamp(60vh, 60vh, 60vh);
     padding: clamp(0.5rem, 2vw, 0.75rem);
     border-radius: 8px 8px 0 0;
     backdrop-filter: blur(1px) saturate(150%);
@@ -2144,7 +2144,7 @@ dialog#favorites[open] {
 @media (min-width: 481px) and (max-width: 768px) {
   #favorites {
     width: 95%;
-    height: clamp(40vh, 50vh, 55vh);
+    height: clamp(60vh, 60vh, 60vh);
     padding: clamp(0.75rem, 2vw, 1rem);
     border-radius: 8px 8px 0 0;
   }
@@ -2158,7 +2158,7 @@ dialog#favorites[open] {
   #favorites {
     width: 80%;
     max-width: 1400px;
-    height: clamp(50vh, 60vh, 65vh);
+    height: clamp(60vh, 60vh, 60vh);
     padding: 1.5rem;
   }
   .favorite-modal-heading {
@@ -2166,7 +2166,6 @@ dialog#favorites[open] {
     -webkit-text-stroke: 0.6px rgba(31, 38, 135, 0.7);
   }
 }
-
 
   /* Reviews section in Shop Details */
   .shop-details-reviews-container {
