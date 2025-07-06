@@ -1099,7 +1099,7 @@ body, html {
   left: 50%;
   transform: translateX(-50%); /* Center horizontally */
   width: min(89%, 1200px); /* Max width for larger screens */
-  height: clamp(40vh, 50vh, 60vh); /* Flexible height */
+  height: clamp(60vh, 60vh, 60vh); /* Flexible height */
   padding: clamp(2rem, 2vw, 2rem); /* Smaller padding */
   border-radius: 12px 12px 0 0; /* Rounded top corners */
   border: 1.5px solid rgba(255, 255, 255, 0.8); /* Glassy border */
@@ -1140,7 +1140,7 @@ body, html {
 @media (max-width: 480px) {
   #cities {
     width: calc(100% - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0)); /* Full width minus safe areas */
-    height: clamp(35vh, 45vh, 50vh); /* Shorter height */
+    height: clamp(60vh, 60vh, 60vh); /* Shorter height */
     padding: clamp(0.5rem, 2vw, 0.75rem); /* Minimal padding */
     border-radius: 8px 8px 0 0; /* Smaller radius */
     gap: 0.5rem;
@@ -1159,7 +1159,7 @@ body, html {
 @media (min-width: 481px) and (max-width: 768px) {
   #cities {
     width: 95%; /* Slightly narrower */
-    height: clamp(40vh, 50vh, 55vh); /* Balanced height */
+    height: clamp(60vh, 60vh, 60vh); /* Balanced height */
     padding: clamp(0.75rem, 2vw, 1rem);
     border-radius: 8px 8px 0 0;
   }
@@ -1173,7 +1173,7 @@ body, html {
   #cities {
     width: 80%; /* Narrower for large screens */
     max-width: 1400px;
-    height: clamp(50vh, 60vh, 65vh);
+    height: clamp(60vh, 60vh, 60vh);
     padding: 1.5rem;
   }
 }
