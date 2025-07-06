@@ -1716,7 +1716,7 @@ dialog#top100[open] {
 @media (max-width: 480px) {
   #top100 {
     width: calc(100% - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0));
-    height: clamp(35vh, 45vh, 50vh);
+    height: clamp(60vh, 60vh, 60vh);
     padding: clamp(0.5rem, 2vw, 0.75rem);
     border-radius: 8px 8px 0 0;
     backdrop-filter: blur(1px) saturate(150%);
