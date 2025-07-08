@@ -33,6 +33,17 @@ body, html {
   border: none !important;
 }
 
+.custom-png-icon img {
+  filter: drop-shadow(5px 5px 3px rgba(0,0,0,0.4));
+  /* Or add box-shadow if you prefer: */
+  /* box-shadow: 2px 4px 6px rgba(0,0,0,0.4); */
+  display: block;
+  width: 32px;  /* match iconSize */
+  height: 32px;
+  user-select: none;
+  pointer-events: none; /* optional, so clicks pass through */
+}
+
 .neumorphic-marker {
   width: 24px;
   height: 24px;
