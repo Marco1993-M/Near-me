@@ -4,11 +4,35 @@ import { getOrCreateShop, calculateAverageRating } from './db.js';
 import { showMapsPrompt } from './utils.js';
 import { showShopDetails } from './shopdetails.js';
 import supabase from './supabase.js';
-
-
 import L from 'leaflet';
 
+export async function loadShops() {
+  const { data: shops, error } = await supabase.from('shops').select('*');
+  if (error) {
+    console.error('Error loading shops:', error.message);
+    return;
+  }
+
+  const mapInstance = getMapInstance();
+  if (!mapInstance) {
+    console.error('Map instance is not available.');
+    return;
+  }
+  const map = mapInstance.map;
+  const customIcon = mapInstance.customIcon;
+
+  shops.forEach((shop) => {
+    if (!shop.lat || !shop.lng) return;
+    const marker = L.marker([shop.lat, shop.lng], { icon: customIcon }).addTo(map);
+    marker.on('click', () => {
+      console.log('Marker clicked:', shop);
+      showFloatingCard(shop);
+    });
+  });
+}
+
 export async function showFloatingCard(shop) {
+  console.log('showFloatingCard called with:', shop); // Debug log
   if (!shop || !shop.name || !shop.address || !shop.city) {
     console.warn('Invalid shop data:', shop);
     return;
@@ -31,7 +55,10 @@ export async function showFloatingCard(shop) {
 
   const favorited = await isShopFavorited(shop.id);
   const card = document.getElementById('floating-card');
-  if (!card) return;
+  if (!card) {
+    console.error('Floating card element not found');
+    return;
+  }
 
   // Populate card content
   card.innerHTML = `
@@ -85,13 +112,15 @@ export async function showFloatingCard(shop) {
   `;
 
   card.dataset.shopId = shop.id;
-  card.classList.remove('hidden');
 
-  // Remove existing listeners to prevent duplicates
+  // Clone card to clear previous event listeners
   const newCard = card.cloneNode(true);
   card.parentNode.replaceChild(newCard, card);
 
-  // Reattach event listeners to the new card
+  // Ensure card is visible
+  newCard.classList.remove('hidden');
+
+  // Attach event listeners to the new card
   newCard.addEventListener('click', function cardClickListener(event) {
     if (!event.target.closest('button')) {
       showShopDetails(shop);
@@ -138,7 +167,28 @@ export async function showFloatingCard(shop) {
     } else {
       await addToFavorites(shop);
     }
-    showFloatingCard(shop); // Refresh UI
+    // Avoid recursive call to showFloatingCard to prevent listener buildup
+    // Instead, update the favorite button directly
+    const favorited = await isShopFavorited(shop.id);
+    const favoriteButton = newCard.querySelector('#favorite-button');
+    if (favoriteButton) {
+      favoriteButton.innerHTML = favorited
+        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+             4.42 3 7.5 3c1.74 0 3.41 0.81 
+             4.5 2.09C13.09 3.81 14.76 3 
+             16.5 3 19.58 3 22 5.42 
+             22 8.5c0 3.78-3.4 6.86-8.55 
+             11.54L12 21.35z" />
+           </svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 
+             7.636l1.318-1.318a4.5 4.5 0 116.364 
+             6.364L12 21.364l-7.682-7.682a4.5 
+             4.5 0 010-6.364z" />
+           </svg>`;
+      favoriteButton.setAttribute('aria-label', favorited ? 'Remove from favorites' : 'Add to favorites');
+    }
   });
 
   // Show route
