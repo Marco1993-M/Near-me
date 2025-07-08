@@ -82,7 +82,6 @@ export async function displayTop100Shops() {
 
     if (processedShops.length === 0) {
       top100List.innerHTML = '<p class="top100-modal-loading">No rated shops available.</p>';
-      console.log('No top shops to display');
       return;
     }
 
@@ -104,27 +103,19 @@ export async function displayTop100Shops() {
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${isFavorited ? 'text-black' : 'text-gray-400'}" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
           </button>
         </div>
       `;
 
-      // Make the entire list item clickable except the favorite button
+      // Make list item clickable (except favorite button)
       li.addEventListener('click', (event) => {
-        if (event.target.closest('.favorite-shop')) return; // Ignore clicks on favorite button
-
+        if (event.target.closest('.favorite-shop')) return;
         currentShop = { ...shop };
-        if (typeof showShopDetails === 'function') {
-          showShopDetails(currentShop);
-          const top100Modal = document.getElementById('top100');
-          if (top100Modal?.close) {
-            top100Modal.close();
-            top100Modal.removeAttribute('open'); // Ensure modal visually closes
-          }
-          console.log(`Top 100 modal closed after viewing shop ${shop.name}`);
-        }
+        showShopDetails(currentShop);
+        document.getElementById('top100')?.close();
       });
 
       top100List.appendChild(li);
@@ -139,32 +130,22 @@ export async function displayTop100Shops() {
   }
 }
 
-async function handleTop100ButtonClick(e) {
-  const target = e.target.closest('.top100-modal-button');
+function handleTop100ButtonClick(e) {
+  const target = e.target.closest('.favorite-shop');
   if (!target) return;
-
   e.stopPropagation();
 
   const shopId = target.dataset.shopId;
   if (!shopId) return;
 
-  const shopItem = target.closest('.top100-modal-list-item');
-  if (!shopItem) return;
+  const shopInfo = processedShops.find(shop => shop.id === shopId);
+  if (!shopInfo) return;
 
-  const shopName = shopItem.querySelector('.top100-modal-shop-info')?.textContent?.trim().split(' (')[0];
-  if (!shopName) return;
+  const svg = target.querySelector('svg');
 
-  function isFavorited(shopId) {
-    return favorites.some(fav => String(fav.shop_id) === String(shopId));
-  }
+  const isAlreadyFavorited = favorites.some(fav => fav.shop_id === shopInfo.id);
 
-  if (target.classList.contains('favorite-shop')) {
-    const shopInfo = processedShops.find(shop => String(shop.id) === String(shopId));
-    if (!shopInfo) {
-      console.warn(`Shop info not found for ID ${shopId}`);
-      return;
-    }
-
+  (async () => {
     try {
       const resolvedShopId = await getOrCreateShop(
         shopInfo.name,
@@ -174,36 +155,31 @@ async function handleTop100ButtonClick(e) {
         shopInfo.lng
       );
 
-      if (isFavorited(resolvedShopId)) {
-        await removeFromFavorites({ id: resolvedShopId }); // pass object with id for removeFromFavorites
-        favorites = favorites.filter(fav => String(fav.shop_id) !== String(resolvedShopId));
+      if (isAlreadyFavorited) {
+        await removeFromFavorites(shopInfo);
+        favorites = favorites.filter(fav => fav.shop_id !== resolvedShopId);
         target.classList.remove('favorited');
-        target.querySelector('svg').setAttribute('fill', 'none');
+        svg.setAttribute('fill', 'none');
+        svg.classList.remove('text-black');
+        svg.classList.add('text-gray-400');
         target.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
         console.log(`Removed ${shopInfo.name} from favorites`);
       } else {
-        // Pass full shop object with expected properties to addToFavorites
-        const shopData = {
-          id: resolvedShopId,
-          name: shopInfo.name,
-          address: shopInfo.address,
-          city: shopInfo.city,
-          lat: shopInfo.lat,
-          lng: shopInfo.lng
-        };
-        await addToFavorites(shopData);
+        await addToFavorites(shopInfo);
         favorites.push({ shop_id: resolvedShopId, name: shopInfo.name });
         target.classList.add('favorited');
-        target.querySelector('svg').setAttribute('fill', 'currentColor');
+        svg.setAttribute('fill', '#000');
+        svg.classList.remove('text-gray-400');
+        svg.classList.add('text-black');
         target.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
         console.log(`Added ${shopInfo.name} to favorites`);
       }
 
-      await updateFavoritesModal();
+      updateFavoritesModal();
     } catch (err) {
-      console.error('Error handling favorite toggle:', err);
+      console.error('Error toggling favorite:', err);
     }
-  }
+  })();
 }
 
 const top100Modal = document.getElementById('top100');
@@ -211,9 +187,7 @@ const openTop100Btn = document.getElementById('top-100-button');
 const closeTop100Btn = document.querySelector('.top100-modal-close-button');
 
 openTop100Btn?.addEventListener('click', () => {
-  if (!top100Modal.open) {
-    top100Modal.showModal();
-  }
+  if (!top100Modal.open) top100Modal.showModal();
   displayTop100Shops();
 });
 
