@@ -1502,12 +1502,13 @@ body, html {
 
 
 /* Enhanced glassmorphism effect for the Top 100 modal */
+/* Core styling for the modal */
 #top100 {
   position: fixed;
   bottom: env(safe-area-inset-bottom, 0);
   left: 0;
-  width: 100vw; /* Ensures full width on all devices */
-  height: clamp(60vh, 60vh, 60vh);
+  width: 100vw;
+  height: clamp(60vh, 70vh, 90vh);
   padding: 0;
   margin: 0;
   border-radius: 12px 12px 0 0;
@@ -1520,195 +1521,131 @@ body, html {
   -webkit-backdrop-filter: blur(2px) saturate(180%);
   z-index: 1009;
   box-sizing: border-box;
-  overflow: hidden;
-  transform: none; /* Avoid center alignment offset */
+  overflow: hidden; /* Only allow list to scroll */
 }
 
-
-
-.modal-content {
+/* Internal layout container */
+#top100 .modal-content {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.5rem, 2vw, 0.75rem);
   height: 100%;
-  padding: clamp(0.75rem, 2vw, 1rem);
+  padding: 1rem clamp(1rem, 4vw, 2rem);
   box-sizing: border-box;
-  position: relative;
 }
 
-/* Allow scroll only inside the list */
-.top100-modal-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  overflow-y: auto;
-  flex-grow: 1;
-  height: 100%;
-  max-height: 100%;
-}
-
-/* Keep heading and subheading fixed at top of modal-content */
+/* Heading and subheading fixed at top */
 .top100-modal-heading,
 .top100-modal-sub-heading {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  padding-right: 2rem; /* So it doesn't clash with close button */
 }
 
-/* Rest of your styles (unchanged or minor edits below) */
-#top100::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px 12px 0 0;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(1px);
-  box-shadow:
-    inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
-    inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
-  opacity: 0.6;
-  z-index: -1;
-  filter: blur(4px) drop-shadow(10px 4px 6px black) brightness(115%);
-}
-
-dialog#top100[open] {
-  position: fixed;
-  bottom: env(safe-area-inset-bottom, 0);
-  top: auto;
-}
-
-dialog#top100:not([open]) {
-  display: none;
-}
-
-.top100-modal-close-button {
-  position: absolute;
-  top: clamp(0.5rem, 2vw, 0.75rem);
-  right: clamp(0.5rem, 2vw, 0.75rem);
-  border: 0.5px solid rgb(125, 125, 125);
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: transform 0.2s;
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow:
-    0 4px 16px rgba(31, 38, 135, 0.2),
-    inset 0 2px 10px rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(2px) saturate(180%);
-  -webkit-backdrop-filter: blur(2px) saturate(180%);
-  border-radius: 50%;
-  font-size: 1.2rem;
-  line-height: 1;
-  color: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  z-index: 1010;
-}
-
-/* Heading + subheading styles */
 .top100-modal-heading {
   font-size: clamp(1.5rem, 5vw, 2rem);
   color: #c7f5d3;
   -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.7);
-  text-shadow:
-    0 1px 2px rgba(31, 38, 135, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   font-weight: 600;
-  margin: 2rem 0 0.5rem;
-  text-align: left;
+  margin-bottom: 0.25rem;
 }
 
 .top100-modal-sub-heading {
-  font-size: clamp(1rem, 5vw, 1rem);
-  font-weight: 100;
-  color: #000000;
-  -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.7);
-  margin: 0.12rem 0 0.5rem;
-  padding-bottom: 12px;
-  text-align: left;
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  font-weight: 300;
+  color: #000;
+  margin-bottom: 1rem;
 }
 
-/* List item styling */
+/* Scrollable list container */
+#top100-list.top100-modal-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* List items */
 .top100-modal-list-item {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 95%;
-  padding: 0.5rem;
-  margin-bottom: 0.5rem;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 1px 2px rgba(31, 38, 135, 0.2),
-    inset 0 2px 10px rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(2px) saturate(180%);
   -webkit-backdrop-filter: blur(2px) saturate(180%);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.top100-modal-list-item:hover {
-  box-shadow:
-    0 6px 20px rgba(31, 38, 135, 0.25),
-    inset 0 3px 12px rgba(255, 255, 255, 0.35);
-  transform: scale(1.01);
-}
-
-/* Shop info + actions */
-.top100-modal-shop-info {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #000000;
-}
-
-.top100-modal-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* Buttons */
-.top100-modal-button {
+/* Close button stays in top corner */
+.top100-modal-close-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow:
-    0 4px 16px rgba(31, 38, 135, 0.2),
-    inset 0 2px 10px rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(2px) saturate(180%);
-  -webkit-backdrop-filter: blur(2px) saturate(180%);
   border-radius: 50%;
-  padding: 0.4rem;
-  cursor: pointer;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1px solid rgba(125, 125, 125, 0.5);
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1010;
 }
 
-.top100-modal-button:hover {
-  box-shadow:
-    0 6px 20px rgba(31, 38, 135, 0.25),
-    inset 0 3px 12px rgba(255, 255, 255, 0.35);
-  transform: scale(1.1);
+/* RESPONSIVE BREAKPOINTS */
+
+@media (max-width: 480px) {
+  #top100 {
+    border-radius: 8px 8px 0 0;
+    height: clamp(45vh, 65vh, 85vh);
+  }
+
+  #top100 .modal-content {
+    padding: 1rem;
+  }
+
+  .top100-modal-heading {
+    font-size: 1.5rem;
+  }
+
+  .top100-modal-sub-heading {
+    font-size: 1rem;
+  }
+
+  .top100-modal-close-button {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 1rem;
+  }
 }
 
-.top100-modal-button svg {
-  width: 1rem;
-  height: 1rem;
-  stroke: #000000;
+@media (min-width: 1024px) {
+  #top100 {
+    max-width: 1200px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .top100-modal-heading {
+    font-size: 2rem;
+  }
+
+  .top100-modal-sub-heading {
+    font-size: 1.25rem;
+  }
 }
 
-.top100-modal-button.favorited svg {
-  fill: #fff;
-}
 
 .hidden {
   display: none !important;
