@@ -34,7 +34,7 @@ body, html {
 }
 
 .custom-png-icon img {
-  filter: drop-shadow(5px 5px 3px rgba(0,0,0,0.4));
+  filter: drop-shadow(3px 0px 2px rgba(0, 0, 0, 0.4));
   /* Or add box-shadow if you prefer: */
   /* box-shadow: 2px 4px 6px rgba(0,0,0,0.4); */
   display: block;
