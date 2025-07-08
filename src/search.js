@@ -1,19 +1,17 @@
 import { getMapInstance } from './map.js';
-import { showFloatingCard } from './shops.js'; // Import from shops.js
-import { getOrCreateShop } from './db.js'; // For shop ID
+import { showFloatingCard } from './shops.js';
+import { getOrCreateShop } from './db.js';
 
 let searchInput;
 let searchDropdown;
 let autocompleteService;
 let placesService;
 let currentMarkers = [];
-let currentShop = null;
 
 export function initSearch(supabase) {
   console.log('Initializing search...');
   if (!google?.maps?.places) {
     console.error('Google Maps API is not loaded');
-    console.error('Google Maps Places API is not loaded');
     searchInput = document.getElementById('search-bar');
     if (searchInput) {
       searchInput.disabled = true;
@@ -23,7 +21,6 @@ export function initSearch(supabase) {
   }
 
   searchInput = document.getElementById('search-bar');
-  console.log('Search input element:', searchInput);
   searchDropdown = document.getElementById('search-dropdown');
   if (!searchInput || !searchDropdown) {
     console.error('Search elements not found');
@@ -40,7 +37,6 @@ export function initSearch(supabase) {
 
   // Debounced input handler
   searchInput.addEventListener('input', debounce(async (e) => {
-    console.log('Input event triggered');
     const searchQuery = e.target.value.trim();
     if (!searchQuery) {
       searchDropdown.classList.add('hidden');
@@ -73,46 +69,51 @@ export function initSearch(supabase) {
     }
   });
 
-  // Dropdown click handler
+  // Delegated click listener
   searchDropdown.addEventListener('click', async (e) => {
-    const li = e.target.closest('li');
-    if (li) {
-      const placeId = li.dataset.placeId;
-      try {
-        const place = await getPlaceDetails(placeId);
-        currentMarkers.forEach(marker => map.removeLayer(marker));
-        currentMarkers = [];
+    const li = e.target.closest('li[data-place-id]');
+    if (!li) {
+      console.log('Click ignored: not on a valid search result');
+      return;
+    }
 
-        const marker = L.marker([place.geometry.location.lat(), place.geometry.location.lng()], { icon: coffeeIcon })
-          .addTo(map)
-          .bindPopup(place.name)
-          .openPopup();
-        marker._shopId = null;
-        currentMarkers.push(marker);
+    const placeId = li.dataset.placeId;
+    try {
+      const place = await getPlaceDetails(placeId);
 
-        map.setView([place.geometry.location.lat(), place.geometry.location.lng()], 15);
+      // Clear existing markers
+      currentMarkers.forEach(marker => map.removeLayer(marker));
+      currentMarkers = [];
 
-        // Prepare shop object for showFloatingCard
-        const shop = {
-          name: place.name,
-          address: place.formatted_address,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
-          phone: place.formatted_phone_number || null
-        };
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
 
-        // Get or create shop ID
-        shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+      const marker = L.marker([lat, lng], { icon: coffeeIcon })
+        .addTo(map)
+        .bindPopup(place.name)
+        .openPopup();
 
-        // Use shops.js's showFloatingCard
-        console.log('Showing floating card');
-        await showFloatingCard(shop);
+      currentMarkers.push(marker);
+      map.setView([lat, lng], 15);
 
-        searchDropdown.classList.add('hidden');
-      } catch (error) {
-        console.error('Error getting place details:', error);
-      }
+      // Prepare shop object
+      const shop = {
+        name: place.name,
+        address: place.formatted_address,
+        lat,
+        lng,
+        city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
+        phone: place.formatted_phone_number || null
+      };
+
+      // Ensure shop ID
+      shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+
+      // Show floating card
+      await showFloatingCard(shop);
+      searchDropdown.classList.add('hidden');
+    } catch (error) {
+      console.error('Error getting place details:', error);
     }
   });
 }
@@ -120,7 +121,6 @@ export function initSearch(supabase) {
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
-    console.log('Debounce function called');
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
@@ -128,8 +128,6 @@ function debounce(func, wait) {
 
 async function getPlacePredictions(query) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
-  console.log('Autocomplete service:', autocompleteService);
-
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
 
@@ -139,14 +137,12 @@ async function getPlacePredictions(query) {
       types: ['establishment', 'geocode'],
     };
 
-    // Add location bias if available
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      request.radius = 50000; // 50km radius
+      request.radius = 50000;
     }
 
     autocompleteService.getPlacePredictions(request, (predictions, status) => {
-      console.log('Autocomplete status:', status, 'Predictions:', predictions);
       if (status === google.maps.places.PlacesServiceStatus.OK) {
         resolve(predictions || []);
       } else {
@@ -169,38 +165,36 @@ async function getPlaceDetails(placeId) {
   });
 }
 
-function renderSearchResults(predictions, searchDropdown) {
-  console.log('Rendering search results...');
-  searchDropdown.innerHTML = '';
+function renderSearchResults(predictions, dropdown) {
+  dropdown.innerHTML = '';
   if (!predictions || predictions.length === 0) {
     const li = document.createElement('li');
     li.textContent = 'No results found';
-    searchDropdown.appendChild(li);
-    searchDropdown.classList.remove('hidden');
+    dropdown.appendChild(li);
+    dropdown.classList.remove('hidden');
     return;
   }
 
-  predictions.forEach((prediction) => {
+  predictions.forEach(prediction => {
     const li = document.createElement('li');
     li.textContent = prediction.description;
     li.dataset.placeId = prediction.place_id;
-    searchDropdown.appendChild(li);
+    dropdown.appendChild(li);
   });
 
-  searchDropdown.classList.remove('hidden');
+  dropdown.classList.remove('hidden');
 }
 
-function extractCityFromAddressComponents(addressComponents) {
-  if (!addressComponents) return 'Unknown City';
-  const cityComponent = addressComponents.find(component =>
-    component.types.includes('locality') || component.types.includes('administrative_area_level_2')
+function extractCityFromAddressComponents(components) {
+  if (!components) return 'Unknown City';
+  const cityComponent = components.find(c =>
+    c.types.includes('locality') || c.types.includes('administrative_area_level_2')
   );
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
 }
 
 async function performTextSearch(query) {
   placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
-
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
 
@@ -210,14 +204,12 @@ async function performTextSearch(query) {
       type: 'cafe'
     };
 
-    // Optional: Add location bias for text search
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      request.radius = 50000; // 50km radius
+      request.radius = 50000;
     }
 
     placesService.textSearch(request, (results, status) => {
-      console.log('Text search status:', status, 'Results:', results);
       if (status === google.maps.places.PlacesServiceStatus.OK) {
         resolve(results || []);
       } else {
@@ -232,27 +224,34 @@ async function displaySearchResults(results, mapInstance) {
   const coffeeIcon = mapInstance.customIcon;
   currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
+
   for (const place of results) {
-    const marker = L.marker([place.geometry.location.lat(), place.geometry.location.lng()], { icon: coffeeIcon })
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+
+    const marker = L.marker([lat, lng], { icon: coffeeIcon })
       .addTo(map)
       .bindPopup(place.name);
-    marker._shopId = null;
     currentMarkers.push(marker);
 
-    // Prepare shop object
     const shop = {
       name: place.name,
       address: place.formatted_address,
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
+      lat,
+      lng,
       city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
       phone: place.formatted_phone_number || null
     };
-    shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng, supabase);
+
+    shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
     marker._shopId = shop.id;
     marker.on('click', () => showFloatingCard(shop));
   }
+
   if (results.length > 0) {
-    map.setView([results[0].geometry.location.lat(), results[0].geometry.location.lng()], 13);
+    map.setView([
+      results[0].geometry.location.lat(),
+      results[0].geometry.location.lng()
+    ], 13);
   }
 }
