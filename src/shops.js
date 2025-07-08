@@ -60,7 +60,7 @@ export async function showFloatingCard(shop) {
     return;
   }
 
-  // Populate card content
+  // Clear previous content and event listeners by replacing innerHTML only
   card.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none">
@@ -113,31 +113,27 @@ export async function showFloatingCard(shop) {
 
   card.dataset.shopId = shop.id;
 
-  // Clone card to clear previous event listeners
-  const newCard = card.cloneNode(true);
-  card.parentNode.replaceChild(newCard, card);
-
   // Ensure card is visible
-  newCard.classList.remove('hidden');
+  card.classList.remove('hidden');
 
-  // Attach event listeners to the new card
-  newCard.addEventListener('click', function cardClickListener(event) {
+  // Attach event listeners
+  card.addEventListener('click', function cardClickListener(event) {
     if (!event.target.closest('button')) {
       showShopDetails(shop);
     }
   });
 
-  newCard.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
+  card.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
     console.log('Close button clicked');
     clearRoute();
-    newCard.classList.add('hidden');
+    card.classList.add('hidden');
   });
 
-  newCard.querySelector('#call-button')?.addEventListener('click', () => {
+  card.querySelector('#call-button')?.addEventListener('click', () => {
     if (shop.phone) window.open(`tel:${shop.phone}`);
   });
 
-  newCard.querySelector('#directions-button')?.addEventListener('click', () => {
+  card.querySelector('#directions-button')?.addEventListener('click', () => {
     if (!shop.lat || !shop.lng) return alert('No location available');
     showMapsPrompt(shop, (useGoogle) => {
       const coords = `${shop.lat},${shop.lng}`;
@@ -147,7 +143,7 @@ export async function showFloatingCard(shop) {
     });
   });
 
-  newCard.querySelector('#share-button')?.addEventListener('click', async () => {
+  card.querySelector('#share-button')?.addEventListener('click', async () => {
     const shareData = {
       title: shop.name,
       text: `Visit ${shop.name} at ${shop.address}`,
@@ -161,16 +157,15 @@ export async function showFloatingCard(shop) {
     }
   });
 
-  newCard.querySelector('#favorite-button')?.addEventListener('click', async () => {
+  card.querySelector('#favorite-button')?.addEventListener('click', async () => {
     if (await isShopFavorited(shop.id)) {
       await removeFromFavorites(shop);
     } else {
       await addToFavorites(shop);
     }
-    // Avoid recursive call to showFloatingCard to prevent listener buildup
-    // Instead, update the favorite button directly
+    // Update the favorite button UI without calling showFloatingCard again
     const favorited = await isShopFavorited(shop.id);
-    const favoriteButton = newCard.querySelector('#favorite-button');
+    const favoriteButton = card.querySelector('#favorite-button');
     if (favoriteButton) {
       favoriteButton.innerHTML = favorited
         ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
@@ -200,3 +195,4 @@ export async function showFloatingCard(shop) {
     }
   });
 }
+
