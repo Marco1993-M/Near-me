@@ -1542,6 +1542,11 @@ dialog#top100[open] {
   top: auto; /* Prevent stretching */
 }
 
+dialog#top100:not([open]) {
+  display: none;
+}
+
+
 /* Close button styling */
 .top100-modal-close-button {
   position: absolute;
