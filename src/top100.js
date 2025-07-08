@@ -3,8 +3,6 @@ import { loadFavorites, addToFavorites, removeFromFavorites, updateFavoritesModa
 import { showShopDetails } from './shopdetails.js';
 import { getOrCreateShop } from './db.js';
 
-
-
 let favorites = [];
 let currentShop = null;
 let processedShops = [];
@@ -18,6 +16,13 @@ async function init() {
 }
 
 init();
+
+function countryCodeToFlagEmoji(code) {
+  if (!code || typeof code !== 'string' || code.length !== 2) return '🌍';
+  return code
+    .toUpperCase()
+    .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt()));
+}
 
 export async function displayTop100Shops() {
   console.log('displayTop100Shops function called');
@@ -37,6 +42,7 @@ export async function displayTop100Shops() {
         name,
         address,
         city,
+        country_code,
         lat,
         lng,
         reviews (
@@ -63,6 +69,7 @@ export async function displayTop100Shops() {
           name: shop.name,
           address: shop.address,
           city: shop.city,
+          country_code: shop.country_code || '',
           lat: shop.lat,
           lng: shop.lng,
           averageRating,
@@ -84,6 +91,8 @@ export async function displayTop100Shops() {
 
     processedShops.forEach(shop => {
       const isFavorited = Array.isArray(favorites) && favorites.some(fav => fav.shop_id === shop.id);
+      const flag = countryCodeToFlagEmoji(shop.country_code);
+
       const li = document.createElement('li');
       li.className = 'top100-modal-list-item';
       li.innerHTML = `
@@ -91,7 +100,7 @@ export async function displayTop100Shops() {
           <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
           </svg>
-          ${shop.name} (${shop.averageRating.toFixed(1)}/10)
+          ${flag} ${shop.name} (${shop.averageRating.toFixed(1)}/10)
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button view-shop" data-shop-id="${shop.id}" aria-label="View ${shop.name}">
@@ -145,7 +154,6 @@ function handleTop100ButtonClick(e) {
     if (typeof showShopDetails === 'function') {
       showShopDetails(currentShop);
 
-      // ✅ Close the modal after showing the details
       const top100Modal = document.getElementById('top100');
       if (top100Modal?.close) {
         top100Modal.close();
@@ -190,10 +198,9 @@ function handleTop100ButtonClick(e) {
       } catch (err) {
         console.error('Error handling favorite toggle:', err);
       }
-    })(); // <--- Make sure you close the async IIFE here!
+    })();
   }
 }
-
 
 const top100Modal = document.getElementById('top100');
 const openTop100Btn = document.getElementById('top-100-button');
