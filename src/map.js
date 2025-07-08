@@ -209,12 +209,16 @@ export function showRouteTo(shopLatLng, userLatLng) {
 }
 
 export function clearRoute() {
-  if (routingControl) {
-    map.removeControl(routingControl);
-    routingControl = null;
-  }
-  if (routeLabel) {
-    map.removeLayer(routeLabel);
-    routeLabel = null;
+  const mapInstance = getMapInstance();
+  if (mapInstance && mapInstance.map) {
+    const map = mapInstance.map;
+    if (routingControl) {
+      map.removeControl(routingControl);
+      routingControl = null;
+    }
+    if (routeLabel) {
+      map.removeLayer(routeLabel);
+      routeLabel = null;
+    }
   }
 }
