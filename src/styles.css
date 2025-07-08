@@ -1898,7 +1898,7 @@ dialog#favorites[open] {
   margin: 0;
   border: 0.5px solid rgb(185, 185, 185) ; /* Glassy border */
   border-radius: 12px;
-  max-height: clamp(200px, 40vh, 300px); /* Responsive height */
+  max-height: clamp(340px, 50vh, 340px); /* Responsive height */
   overflow-y: auto;
 }
 
