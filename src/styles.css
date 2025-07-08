@@ -1507,7 +1507,7 @@ body, html {
   bottom: env(safe-area-inset-bottom, 0);
   left: 50%;
   transform: translateX(-50%);
-  width: min(96%, 1200px);
+  width: 100vw;
   height: clamp(60vh, 60vh, 60vh);
   padding: 0; /* moved internal padding to .modal-content */
   border-radius: 12px 12px 0 0;
