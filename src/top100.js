@@ -95,6 +95,22 @@ export async function displayTop100Shops() {
 
       const li = document.createElement('li');
       li.className = 'top100-modal-list-item';
+      li.dataset.shopId = shop.id;
+      li.style.cursor = 'pointer';
+
+      // Make whole list item clickable except favorite button
+      li.addEventListener('click', (event) => {
+        if (event.target.closest('.favorite-shop')) return; // ignore clicks on favorite button
+
+        currentShop = { ...shop };
+        if (typeof showShopDetails === 'function') {
+          showShopDetails(currentShop);
+          const top100Modal = document.getElementById('top100');
+          if (top100Modal?.close) top100Modal.close();
+          console.log(`Top 100 modal closed after viewing shop ${shop.name}`);
+        }
+      });
+
       li.innerHTML = `
         <div class="top100-modal-shop-info">
           <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
@@ -103,12 +119,6 @@ export async function displayTop100Shops() {
           ${flag} ${shop.name} (${shop.averageRating.toFixed(1)}/10)
         </div>
         <div class="top100-modal-actions">
-          <button class="top100-modal-button view-shop" data-shop-id="${shop.id}" aria-label="View ${shop.name}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </button>
           <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
             <svg xmlns="http://www.w3.org/2000/svg" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -137,30 +147,8 @@ function handleTop100ButtonClick(e) {
   const shopId = target.dataset.shopId;
   if (!shopId) return;
 
-  const shopItem = target.closest('.top100-modal-list-item');
-  if (!shopItem) return;
-
-  const shopName = shopItem.querySelector('.top100-modal-shop-info')?.textContent?.trim().split(' (')[0];
-  if (!shopName) return;
-
-  function isFavorited(shopId) {
-    return favorites.some(fav => fav.shop_id === shopId);
-  }
-
-  if (target.classList.contains('view-shop')) {
-    console.log(`Viewing shop ${shopName} with ID ${shopId}`);
-    const shopInfo = processedShops.find(shop => shop.id === shopId);
-    currentShop = { ...shopInfo };
-    if (typeof showShopDetails === 'function') {
-      showShopDetails(currentShop);
-
-      const top100Modal = document.getElementById('top100');
-      if (top100Modal?.close) {
-        top100Modal.close();
-        console.log('Top 100 modal closed after viewing shop');
-      }
-    }
-  } else if (target.classList.contains('favorite-shop')) {
+  // Only handle favorite toggle here since view is handled on the li click
+  if (target.classList.contains('favorite-shop')) {
     (async () => {
       let shopInfo = processedShops.find(shop => shop.id === shopId);
       if (!shopInfo) {
@@ -176,6 +164,10 @@ function handleTop100ButtonClick(e) {
           shopInfo.lat,
           shopInfo.lng
         );
+
+        function isFavorited(id) {
+          return favorites.some(fav => fav.shop_id === id);
+        }
 
         if (isFavorited(resolvedShopId)) {
           removeFromFavorites(resolvedShopId);
