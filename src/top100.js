@@ -116,7 +116,7 @@ export async function displayTop100Shops() {
           <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
           </svg>
-          ${flag} ${shop.name} (${shop.averageRating.toFixed(1)}/10)
+          ${flag} ${shop.name} (${shop.averageRating.toFixed(1)})
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
