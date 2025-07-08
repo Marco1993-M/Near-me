@@ -30,12 +30,10 @@ export async function showFloatingCard(shop) {
   }
 
   const favorited = await isShopFavorited(shop.id);
-
   const card = document.getElementById('floating-card');
   if (!card) return;
 
-  const address = shop.address?.split('\n')[0].split(',')[0].trim() || 'Unknown location';
-
+  // Populate card content
   card.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none">
@@ -43,10 +41,10 @@ export async function showFloatingCard(shop) {
       </svg>
     </button>
     <h3 class="floating-card-heading">${shop.name}</h3>
-    <p class="floating-card-info">${address} ⭐ ${ratingText}</p>
+    <p class="floating-card-info">${shop.address?.split('\n')[0].split(',')[0].trim() || 'Unknown location'} ⭐ ${ratingText}</p>
     <div class="floating-card-actions">
       ${shop.phone ? `
-        <button id="call-button" class="floating-card-action-button" aria-label="Call ${shop.name}">
+        <button id="call-button" class="floating-card-action-button" aria-label="Call">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
           </svg>
@@ -89,13 +87,61 @@ export async function showFloatingCard(shop) {
   card.dataset.shopId = shop.id;
   card.classList.remove('hidden');
 
-  card.addEventListener('click', function cardClickListener(event) {
+  // Remove existing listeners to prevent duplicates
+  const newCard = card.cloneNode(true);
+  card.parentNode.replaceChild(newCard, card);
+
+  // Reattach event listeners to the new card
+  newCard.addEventListener('click', function cardClickListener(event) {
     if (!event.target.closest('button')) {
       showShopDetails(shop);
     }
   });
 
-  // Call showRouteTo after the card has been displayed
+  newCard.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
+    console.log('Close button clicked');
+    clearRoute();
+    newCard.classList.add('hidden');
+  });
+
+  newCard.querySelector('#call-button')?.addEventListener('click', () => {
+    if (shop.phone) window.open(`tel:${shop.phone}`);
+  });
+
+  newCard.querySelector('#directions-button')?.addEventListener('click', () => {
+    if (!shop.lat || !shop.lng) return alert('No location available');
+    showMapsPrompt(shop, (useGoogle) => {
+      const coords = `${shop.lat},${shop.lng}`;
+      window.location.href = useGoogle
+        ? `https://www.google.com/maps/dir/?api=1&destination=${coords}`
+        : `maps://?daddr=${coords}&dirflg=d`;
+    });
+  });
+
+  newCard.querySelector('#share-button')?.addEventListener('click', async () => {
+    const shareData = {
+      title: shop.name,
+      text: `Visit ${shop.name} at ${shop.address}`,
+      url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`
+    };
+    if (navigator.share && navigator.canShare(shareData)) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
+      alert('Link copied to clipboard');
+    }
+  });
+
+  newCard.querySelector('#favorite-button')?.addEventListener('click', async () => {
+    if (await isShopFavorited(shop.id)) {
+      await removeFromFavorites(shop);
+    } else {
+      await addToFavorites(shop);
+    }
+    showFloatingCard(shop); // Refresh UI
+  });
+
+  // Show route
   requestAnimationFrame(() => {
     const userLatLng = getUserLocation();
     const shopLatLng = [shop.lat, shop.lng];
@@ -103,68 +149,4 @@ export async function showFloatingCard(shop) {
       showRouteTo(shopLatLng, userLatLng);
     }
   });
-
-  // Close button clears route and hides card
-  const closeButton = card.querySelector('.floating-card-close-button');
-  if (closeButton) {
-    closeButton.replaceWith(closeButton.cloneNode(true));
-    card.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
-      clearRoute();
-      card.classList.add('hidden');
-    });
-  }
-
-  const callButton = document.getElementById('call-button');
-  if (callButton) {
-    callButton.replaceWith(callButton.cloneNode(true));
-    document.getElementById('call-button')?.addEventListener('click', () => {
-      if (shop.phone) window.open(`tel:${shop.phone}`);
-    });
-  }
-
-  const directionsButton = document.getElementById('directions-button');
-  if (directionsButton) {
-    directionsButton.replaceWith(directionsButton.cloneNode(true));
-    document.getElementById('directions-button')?.addEventListener('click', () => {
-      if (!shop.lat || !shop.lng) return alert('No location available');
-      showMapsPrompt(shop, (useGoogle) => {
-        const coords = `${shop.lat},${shop.lng}`;
-        window.location.href = useGoogle
-          ? `https://www.google.com/maps/dir/?api=1&destination=${coords}`
-          : `maps://?daddr=${coords}&dirflg=d`;
-      });
-    });
-  }
-
-  const shareButton = document.getElementById('share-button');
-  if (shareButton) {
-    shareButton.replaceWith(shareButton.cloneNode(true));
-    document.getElementById('share-button')?.addEventListener('click', async () => {
-      const shareData = {
-        title: shop.name,
-        text: `Visit ${shop.name} at ${shop.address}`,
-        url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address + ', ' + shop.city)}`
-      };
-
-      if (navigator.share && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(`${shareData.title}\n${shareData.text}\n${shareData.url}`);
-        alert('Link copied to clipboard');
-      }
-    });
-  }
-
-  const favoriteButton = document.getElementById('favorite-button');
-  if (favoriteButton) {
-    favoriteButton.replaceWith(favoriteButton.cloneNode(true));
-    document.getElementById('favorite-button')?.addEventListener('click', async () => {
-      if (await isShopFavorited(shop.id)) {
-        await removeFromFavorites(shop);
-      } else {
-        await addToFavorites(shop);
-      }
-      showFloatingCard(shop); // refresh UI
-    });
-  }
 }
