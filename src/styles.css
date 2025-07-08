@@ -1496,7 +1496,7 @@ body, html {
   bottom: env(safe-area-inset-bottom, 0); /* Respect iOS safe area */
   left: 50%;
   transform: translateX(-50%);
-  width: min(96%, 1200px); /* Match #cities, #top100 */
+  width: min(100%, 1200px); /* Match #cities, #top100 */
   height: clamp(60vh, 60vh, 60vh); /* Consistent height */
   padding: clamp(0.75rem, 2vw, 1rem); /* Match #cities */
   border-radius: 12px 12px 0 0; /* Match #cities, #top100 */
