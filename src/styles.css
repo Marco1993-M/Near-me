@@ -1571,6 +1571,14 @@ body, html {
   filter: blur(4px) drop-shadow(10px 4px 6px black) brightness(115%);
 }
 
+dialog#top100 {
+  max-width: none;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
 dialog#top100[open] {
   position: fixed;
   bottom: env(safe-area-inset-bottom, 0);
