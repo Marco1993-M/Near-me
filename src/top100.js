@@ -103,8 +103,17 @@ export async function displayTop100Shops() {
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${isFavorited ? 'text-black' : 'text-gray-400'}" fill="${isFavorited ? 'currentColor' : 'none'}" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${isFavorited ? 'text-red-500' : 'text-gray-400'}" fill="currentColor" viewBox="0 0 24 24">
+              ${isFavorited ? `
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+                4.42 3 7.5 3c1.74 0 3.41 0.81 
+                4.5 2.09C13.09 3.81 14.76 3 
+                16.5 3 19.58 3 22 5.42 
+                22 8.5c0 3.78-3.4 6.86-8.55 
+                11.54L12 21.35z" />
+              ` : `
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              `}
             </svg>
           </button>
         </div>
@@ -159,8 +168,10 @@ function handleTop100ButtonClick(e) {
         await removeFromFavorites(shopInfo);
         favorites = favorites.filter(fav => fav.shop_id !== resolvedShopId);
         target.classList.remove('favorited');
-        svg.setAttribute('fill', 'none');
-        svg.classList.remove('text-black');
+        svg.innerHTML = `
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        `;
+        svg.classList.remove('text-red-500');
         svg.classList.add('text-gray-400');
         target.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
         console.log(`Removed ${shopInfo.name} from favorites`);
@@ -168,9 +179,16 @@ function handleTop100ButtonClick(e) {
         await addToFavorites(shopInfo);
         favorites.push({ shop_id: resolvedShopId, name: shopInfo.name });
         target.classList.add('favorited');
-        svg.setAttribute('fill', '#000');
+        svg.innerHTML = `
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
+          4.42 3 7.5 3c1.74 0 3.41 0.81 
+          4.5 2.09C13.09 3.81 14.76 3 
+          16.5 3 19.58 3 22 5.42 
+          22 8.5c0 3.78-3.4 6.86-8.55 
+          11.54L12 21.35z" />
+        `;
         svg.classList.remove('text-gray-400');
-        svg.classList.add('text-black');
+        svg.classList.add('text-red-500');
         target.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
         console.log(`Added ${shopInfo.name} to favorites`);
       }
