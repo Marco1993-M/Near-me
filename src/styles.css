@@ -1506,9 +1506,10 @@ body, html {
   position: fixed;
   bottom: env(safe-area-inset-bottom, 0);
   left: 0;
-  width: 100%;
+  width: 100vw; /* Ensures full width on all devices */
   height: clamp(60vh, 60vh, 60vh);
   padding: 0;
+  margin: 0;
   border-radius: 12px 12px 0 0;
   border: 0.5px solid rgb(0, 0, 0);
   background: white;
@@ -1520,8 +1521,9 @@ body, html {
   z-index: 1009;
   box-sizing: border-box;
   overflow: hidden;
-  transform: none; /* Remove translateX for full width */
+  transform: none; /* Avoid center alignment offset */
 }
+
 
 
 .modal-content {
