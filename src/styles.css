@@ -1640,6 +1640,26 @@ dialog#top100[open] {
   transition: text-shadow 0.2s ease, transform 0.2s ease; /* Smooth effects */
 }
 
+/* Smaller screens (e.g., iPhone 12, ~390px) */
+@media (max-width: 480px) {
+  .top100-sub-heading {
+    font-size: clamp(1.25rem, 4vw, 1.5rem); /* 20px-24px */
+    text-shadow: 
+      0 1px 2px rgba(31, 38, 135, 0.3),
+      0 1px 1px rgba(0, 0, 0, 0.3); /* Lighter shadow */
+    margin: 1.5rem 0 0.5rem; /* Smaller top margin */
+    padding: 0 0.5rem;
+  }
+}
+
+/* Larger screens (e.g., desktop) */
+@media (min-width: 1200px) {
+  .top100-sub-heading {
+    font-size: clamp(1.75rem, 4vw, 2.25rem); /* 28px-36px */
+    margin: 2.5rem 0 1rem;
+  }
+}
+
 
 /* List container */
 .top100-modal-list {
