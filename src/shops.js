@@ -138,6 +138,7 @@ card.innerHTML = `
 
   // Close button clears route and hides card
   card.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
+    console.log('Close button clicked');
     clearRoute();
     card.classList.add('hidden');
   });
