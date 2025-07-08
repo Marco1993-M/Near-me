@@ -1627,6 +1627,20 @@ dialog#top100[open] {
   transform: scale(1.02);
 }
 
+/* Sub-Heading styling */
+.top100-modal-sub-heading {
+  font-size: clamp(1rem, 5vw, 1rem); /* 24px-32px */
+  font-weight: 100;
+  color: #000000; /* White for contrast */
+   -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.7); /* Stroke */
+  margin: 0.12rem 0 0.5rem; /* Extra top margin to avoid close button */
+  padding: 0 clamp(0.5rem, 2vw, 0.75rem); /* Align with #cities */
+  padding-bottom: 12px;
+  text-align: left;
+  transition: text-shadow 0.2s ease, transform 0.2s ease; /* Smooth effects */
+}
+
+
 /* List container */
 .top100-modal-list {
   list-style: none;
