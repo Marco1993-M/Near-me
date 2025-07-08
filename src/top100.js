@@ -95,28 +95,12 @@ export async function displayTop100Shops() {
 
       const li = document.createElement('li');
       li.className = 'top100-modal-list-item';
-      li.dataset.shopId = shop.id;
-      li.style.cursor = 'pointer';
-
-      // Make whole list item clickable except favorite button
-      li.addEventListener('click', (event) => {
-        if (event.target.closest('.favorite-shop')) return; // ignore clicks on favorite button
-
-        currentShop = { ...shop };
-        if (typeof showShopDetails === 'function') {
-          showShopDetails(currentShop);
-          const top100Modal = document.getElementById('top100');
-          if (top100Modal?.close) top100Modal.close();
-          console.log(`Top 100 modal closed after viewing shop ${shop.name}`);
-        }
-      });
-
       li.innerHTML = `
         <div class="top100-modal-shop-info">
           <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
           </svg>
-          ${flag} ${shop.name} (${shop.averageRating.toFixed(1)})
+          ${flag} ${shop.name} (${shop.averageRating.toFixed(1)}/10)
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
@@ -126,6 +110,23 @@ export async function displayTop100Shops() {
           </button>
         </div>
       `;
+
+      // Make the entire list item clickable except the favorite button
+      li.addEventListener('click', (event) => {
+        if (event.target.closest('.favorite-shop')) return; // Ignore clicks on favorite button
+
+        currentShop = { ...shop };
+        if (typeof showShopDetails === 'function') {
+          showShopDetails(currentShop);
+          const top100Modal = document.getElementById('top100');
+          if (top100Modal?.close) {
+            top100Modal.close();
+            top100Modal.removeAttribute('open'); // Ensure modal visually closes
+          }
+          console.log(`Top 100 modal closed after viewing shop ${shop.name}`);
+        }
+      });
+
       top100List.appendChild(li);
     });
 
@@ -138,7 +139,7 @@ export async function displayTop100Shops() {
   }
 }
 
-function handleTop100ButtonClick(e) {
+async function handleTop100ButtonClick(e) {
   const target = e.target.closest('.top100-modal-button');
   if (!target) return;
 
@@ -147,50 +148,61 @@ function handleTop100ButtonClick(e) {
   const shopId = target.dataset.shopId;
   if (!shopId) return;
 
-  // Only handle favorite toggle here since view is handled on the li click
+  const shopItem = target.closest('.top100-modal-list-item');
+  if (!shopItem) return;
+
+  const shopName = shopItem.querySelector('.top100-modal-shop-info')?.textContent?.trim().split(' (')[0];
+  if (!shopName) return;
+
+  function isFavorited(shopId) {
+    return favorites.some(fav => String(fav.shop_id) === String(shopId));
+  }
+
   if (target.classList.contains('favorite-shop')) {
-    (async () => {
-      let shopInfo = processedShops.find(shop => shop.id === shopId);
-      if (!shopInfo) {
-        console.warn(`Shop info not found for ID ${shopId}`);
-        return;
+    const shopInfo = processedShops.find(shop => String(shop.id) === String(shopId));
+    if (!shopInfo) {
+      console.warn(`Shop info not found for ID ${shopId}`);
+      return;
+    }
+
+    try {
+      const resolvedShopId = await getOrCreateShop(
+        shopInfo.name,
+        shopInfo.address,
+        shopInfo.city,
+        shopInfo.lat,
+        shopInfo.lng
+      );
+
+      if (isFavorited(resolvedShopId)) {
+        await removeFromFavorites({ id: resolvedShopId }); // pass object with id for removeFromFavorites
+        favorites = favorites.filter(fav => String(fav.shop_id) !== String(resolvedShopId));
+        target.classList.remove('favorited');
+        target.querySelector('svg').setAttribute('fill', 'none');
+        target.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
+        console.log(`Removed ${shopInfo.name} from favorites`);
+      } else {
+        // Pass full shop object with expected properties to addToFavorites
+        const shopData = {
+          id: resolvedShopId,
+          name: shopInfo.name,
+          address: shopInfo.address,
+          city: shopInfo.city,
+          lat: shopInfo.lat,
+          lng: shopInfo.lng
+        };
+        await addToFavorites(shopData);
+        favorites.push({ shop_id: resolvedShopId, name: shopInfo.name });
+        target.classList.add('favorited');
+        target.querySelector('svg').setAttribute('fill', 'currentColor');
+        target.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
+        console.log(`Added ${shopInfo.name} to favorites`);
       }
 
-      try {
-        const resolvedShopId = await getOrCreateShop(
-          shopInfo.name,
-          shopInfo.address,
-          shopInfo.city,
-          shopInfo.lat,
-          shopInfo.lng
-        );
-
-        function isFavorited(id) {
-          return favorites.some(fav => fav.shop_id === id);
-        }
-
-        if (isFavorited(resolvedShopId)) {
-          removeFromFavorites(resolvedShopId);
-          favorites = favorites.filter(fav => fav.shop_id !== resolvedShopId);
-          target.classList.remove('favorited');
-          target.querySelector('svg').setAttribute('fill', 'none');
-          target.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
-          console.log(`Removed ${shopInfo.name} from favorites`);
-        } else {
-          const shopData = { shop_id: resolvedShopId, name: shopInfo.name };
-          await addToFavorites(shopData);
-          favorites.push(shopData);
-          target.classList.add('favorited');
-          target.querySelector('svg').setAttribute('fill', 'currentColor');
-          target.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
-          console.log(`Added ${shopInfo.name} to favorites`);
-        }
-
-        updateFavoritesModal();
-      } catch (err) {
-        console.error('Error handling favorite toggle:', err);
-      }
-    })();
+      await updateFavoritesModal();
+    } catch (err) {
+      console.error('Error handling favorite toggle:', err);
+    }
   }
 }
 
