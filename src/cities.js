@@ -1,5 +1,7 @@
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
+import supabase from './supabase.js';
+
 
 const googleMapsApiKey = 'AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps';
 
