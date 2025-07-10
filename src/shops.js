@@ -9,8 +9,7 @@ import L from 'leaflet';
 export async function loadShops() {
   const { data: shops, error } = await supabase.from('shops').select('*');
   if (error) {
-   console.error('Error loading shops:', error);
-      console.error('Error details:', error.message, error.hint);
+   console.error('Error loading shops:', console.error(error));
     return;
   }
 
