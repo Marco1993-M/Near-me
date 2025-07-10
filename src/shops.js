@@ -6,6 +6,11 @@ import { showShopDetails } from './shopdetails.js';
 import supabase from './supabase.js';
 import L from 'leaflet';
 
+
+console.log('[loadShops.js] supabase:', supabase);
+console.log('[loadShops.js] typeof supabase.from:', typeof supabase.from);
+
+
 export async function loadShops() {
   const { data: shops, error } = await supabase.from('shops').select('*');
   if (error) {
