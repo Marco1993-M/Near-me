@@ -1,10 +1,8 @@
 import { displayTop100Shops } from './top100.js';
 import { initFavorites, updateFavoritesModal } from './favorites.js';
 import { showShopDetails } from './shopdetails.js';
-
-// You need to import or define fetchTrendingShops() from your cities.js or wherever you have it.
-// Example import (adjust path as needed):
-// import { fetchTrendingShops } from './cities.js';
+// Import fetchTrendingShops from your cities.js
+import { fetchTrendingShops } from './cities.js';
 
 export function initModals(supabase) {
   const modals = [
@@ -52,7 +50,6 @@ export function initModals(supabase) {
     });
   }
 
-  // --- Render shop results inside cities modal ---
   function renderShopResults(shops) {
     const cityButtonsContainer = document.getElementById('city-buttons');
     if (!cityButtonsContainer) return;
@@ -92,69 +89,44 @@ export function initModals(supabase) {
     cityButtonsContainer.appendChild(shopResultsContainer);
   }
 
-  // --- CITY SEARCH using Google Places Autocomplete ---
+  // --- CITY SEARCH using Google Maps JS Places Autocomplete widget ---
   const citySearchInput = document.getElementById('city-search');
   const citySuggestions = document.getElementById('city-suggestions');
-  const googleMapsApiKey = 'AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps'; // Replace with your actual Google API key
 
-  if (citySearchInput && citySuggestions) {
-    citySearchInput.addEventListener('input', async (e) => {
-      const query = e.target.value.trim();
-      if (!query) {
+  if (citySearchInput) {
+    // Initialize Google Places Autocomplete on the input
+    const autocomplete = new google.maps.places.Autocomplete(citySearchInput, {
+      types: ['(cities)']
+    });
+
+    autocomplete.addListener('place_changed', async () => {
+      const place = autocomplete.getPlace();
+      if (!place || !place.name) {
+        console.error('No place selected or place has no name');
+        return;
+      }
+      const selectedCity = place.name;
+      citySearchInput.value = selectedCity;
+
+      // Clear any previous suggestions UI if you have it
+      if (citySuggestions) {
         citySuggestions.classList.add('hidden');
         citySuggestions.innerHTML = '';
-        return;
       }
 
       try {
-        const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&key=${googleMapsApiKey}`);
-        const data = await response.json();
+        const shops = await fetchTrendingShops(selectedCity);
+        renderShopResults(shops);
 
-        if (data.status !== 'OK') {
-          console.error('Google Places Autocomplete error:', data.status, data.error_message);
-          citySuggestions.classList.add('hidden');
-          return;
+        const citiesModal = document.getElementById('cities');
+        if (citiesModal && citiesModal.classList.contains('hidden')) {
+          citiesModal.classList.remove('hidden');
         }
-
-        const uniqueCities = [...new Set(data.predictions.map(p => p.structured_formatting.main_text))];
-
-        citySuggestions.innerHTML = uniqueCities
-          .map(city => `<div class="city-suggestion-item cursor-pointer px-3 py-1 hover:bg-gray-200">${city}</div>`)
-          .join('');
-        citySuggestions.classList.remove('hidden');
-
-        citySuggestions.querySelectorAll('.city-suggestion-item').forEach(item => {
-          item.addEventListener('click', async () => {
-            const selectedCity = item.textContent;
-            citySearchInput.value = selectedCity;
-            citySuggestions.classList.add('hidden');
-
-            try {
-              // IMPORTANT: Make sure fetchTrendingShops is imported or defined!
-              const shops = await fetchTrendingShops(selectedCity);
-              renderShopResults(shops);
-
-              const citiesModal = document.getElementById('cities');
-              if (citiesModal && citiesModal.classList.contains('hidden')) {
-                citiesModal.classList.remove('hidden');
-              }
-            } catch (err) {
-              console.error('Error fetching shops:', err);
-            }
-          });
-        });
       } catch (err) {
-        console.error('Error fetching cities from Google Places:', err);
-        citySuggestions.classList.add('hidden');
-      }
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!citySuggestions.contains(event.target) && event.target !== citySearchInput) {
-        citySuggestions.classList.add('hidden');
+        console.error('Error fetching shops:', err);
       }
     });
   } else {
-    console.warn('City search input or suggestions container not found');
+    console.warn('City search input not found');
   }
 }
