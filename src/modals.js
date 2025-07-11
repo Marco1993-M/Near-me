@@ -1,10 +1,9 @@
 import { displayTop100Shops } from './top100.js';
 import { initFavorites, updateFavoritesModal } from './favorites.js';
 import { showShopDetails } from './shopdetails.js';
-// Make sure fetchTrendingShops is imported from your cities.js or wherever you have it
 import { fetchTrendingShops } from './cities.js';
 
-export function initModals(supabase) {
+export function initModals(supabase, google) {
   const modals = [
     { triggerId: 'cities-button', modalId: 'cities', closeClass: 'close-cities-modal' },
     { triggerId: 'top-100-button', modalId: 'top100', closeClass: 'top100-modal-close-button' },
@@ -93,7 +92,7 @@ export function initModals(supabase) {
   // --- CITY SEARCH using Google Maps JS Places Autocomplete widget ---
   const citySearchInput = document.getElementById('city-search');
 
-  if (citySearchInput) {
+  if (citySearchInput && google && google.maps && google.maps.places) {
     const autocomplete = new google.maps.places.Autocomplete(citySearchInput, {
       types: ['(cities)']
     });
@@ -107,7 +106,7 @@ export function initModals(supabase) {
       const selectedCity = place.name;
       citySearchInput.value = selectedCity;
 
-      // Hide city suggestions container if you have one
+      // Hide city suggestions container if exists
       const citySuggestions = document.getElementById('city-suggestions');
       if (citySuggestions) {
         citySuggestions.classList.add('hidden');
@@ -127,6 +126,6 @@ export function initModals(supabase) {
       }
     });
   } else {
-    console.warn('City search input not found');
+    console.warn('Google Maps API not loaded yet or city search input missing');
   }
 }
