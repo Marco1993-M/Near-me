@@ -1,7 +1,7 @@
 import { displayTop100Shops } from './top100.js';
 import { initFavorites, updateFavoritesModal } from './favorites.js';
 import { showShopDetails } from './shopdetails.js';
-// Import fetchTrendingShops from your cities.js
+// Make sure fetchTrendingShops is imported from your cities.js or wherever you have it
 import { fetchTrendingShops } from './cities.js';
 
 export function initModals(supabase) {
@@ -50,6 +50,7 @@ export function initModals(supabase) {
     });
   }
 
+  // --- Render shop results inside cities modal ---
   function renderShopResults(shops) {
     const cityButtonsContainer = document.getElementById('city-buttons');
     if (!cityButtonsContainer) return;
@@ -91,10 +92,8 @@ export function initModals(supabase) {
 
   // --- CITY SEARCH using Google Maps JS Places Autocomplete widget ---
   const citySearchInput = document.getElementById('city-search');
-  const citySuggestions = document.getElementById('city-suggestions');
 
   if (citySearchInput) {
-    // Initialize Google Places Autocomplete on the input
     const autocomplete = new google.maps.places.Autocomplete(citySearchInput, {
       types: ['(cities)']
     });
@@ -108,7 +107,8 @@ export function initModals(supabase) {
       const selectedCity = place.name;
       citySearchInput.value = selectedCity;
 
-      // Clear any previous suggestions UI if you have it
+      // Hide city suggestions container if you have one
+      const citySuggestions = document.getElementById('city-suggestions');
       if (citySuggestions) {
         citySuggestions.classList.add('hidden');
         citySuggestions.innerHTML = '';
