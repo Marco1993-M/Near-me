@@ -95,7 +95,7 @@ export function initModals(supabase) {
   // --- CITY SEARCH using Google Places Autocomplete ---
   const citySearchInput = document.getElementById('city-search');
   const citySuggestions = document.getElementById('city-suggestions');
-  const googleMapsApiKey = 'YOUR_GOOGLE_API_KEY'; // Replace with your actual Google API key
+  const googleMapsApiKey = 'AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps'; // Replace with your actual Google API key
 
   if (citySearchInput && citySuggestions) {
     citySearchInput.addEventListener('input', async (e) => {
