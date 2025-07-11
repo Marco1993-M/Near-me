@@ -2,7 +2,9 @@ import { displayTop100Shops } from './top100.js';
 import { initFavorites, updateFavoritesModal } from './favorites.js';
 import { showShopDetails } from './shopdetails.js';
 
-
+// You need to import or define fetchTrendingShops() from your cities.js or wherever you have it.
+// Example import (adjust path as needed):
+// import { fetchTrendingShops } from './cities.js';
 
 export function initModals(supabase) {
   const modals = [
@@ -76,7 +78,7 @@ export function initModals(supabase) {
       shops.forEach(shop => {
         const li = document.createElement('li');
         li.className = 'top100-modal-list-item cursor-pointer';
-        li.textContent = `${shop.name} (${shop.city}) — ${shop.address}`;
+        li.textContent = `${shop.name} (${shop.city || 'N/A'}) — ${shop.address || 'No address'}`;
 
         li.addEventListener('click', () => {
           showShopDetails(shop);
@@ -90,9 +92,10 @@ export function initModals(supabase) {
     cityButtonsContainer.appendChild(shopResultsContainer);
   }
 
-  // --- CITY SEARCH ---
+  // --- CITY SEARCH using Google Places Autocomplete ---
   const citySearchInput = document.getElementById('city-search');
   const citySuggestions = document.getElementById('city-suggestions');
+  const googleMapsApiKey = 'YOUR_GOOGLE_API_KEY'; // Replace with your actual Google API key
 
   if (citySearchInput && citySuggestions) {
     citySearchInput.addEventListener('input', async (e) => {
@@ -104,21 +107,19 @@ export function initModals(supabase) {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('shops')
-          .select('city')
-          .ilike('city', `%${query}%`)
-          .limit(10);
+        const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&key=${googleMapsApiKey}`);
+        const data = await response.json();
 
-        if (error) {
-          console.error('Supabase city search error:', error);
+        if (data.status !== 'OK') {
+          console.error('Google Places Autocomplete error:', data.status, data.error_message);
           citySuggestions.classList.add('hidden');
           return;
         }
 
-        const uniqueCities = [...new Set(data.map(d => d.city.toLowerCase()))];
+        const uniqueCities = [...new Set(data.predictions.map(p => p.structured_formatting.main_text))];
+
         citySuggestions.innerHTML = uniqueCities
-          .map(city => `<div class="city-suggestion-item cursor-pointer px-3 py-1 hover:bg-gray-200">${city.charAt(0).toUpperCase() + city.slice(1)}</div>`)
+          .map(city => `<div class="city-suggestion-item cursor-pointer px-3 py-1 hover:bg-gray-200">${city}</div>`)
           .join('');
         citySuggestions.classList.remove('hidden');
 
@@ -129,16 +130,8 @@ export function initModals(supabase) {
             citySuggestions.classList.add('hidden');
 
             try {
-              const { data: shops, error: shopsError } = await supabase
-                .from('shops')
-                .select('id, name, address, city, lat, lng')
-                .ilike('city', selectedCity);
-
-              if (shopsError) {
-                console.error(`Error fetching shops for city ${selectedCity}:`, shopsError);
-                return;
-              }
-
+              // IMPORTANT: Make sure fetchTrendingShops is imported or defined!
+              const shops = await fetchTrendingShops(selectedCity);
               renderShopResults(shops);
 
               const citiesModal = document.getElementById('cities');
@@ -151,7 +144,7 @@ export function initModals(supabase) {
           });
         });
       } catch (err) {
-        console.error('Error fetching cities:', err);
+        console.error('Error fetching cities from Google Places:', err);
         citySuggestions.classList.add('hidden');
       }
     });
