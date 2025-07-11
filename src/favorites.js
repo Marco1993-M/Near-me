@@ -1,8 +1,4 @@
-const supabase = window.supabase.createClient(
-  'https://mqfknhzpjzfhuxusnasl.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xZmtuaHpwanpmaHV4dXNuYXNsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MjU5NTYsImV4cCI6MjA2MzQwMTk1Nn0.mtg3moHttl9baVg3VWFTtMMjQc_toN5iwuYbZfisgKs'
-);
-
+import supabase from './supabase.js';
 
 export async function initFavorites() {
   await updateFavoritesModal();
@@ -10,8 +6,13 @@ export async function initFavorites() {
 
 export async function addToFavorites(shop) {
   const { data, error } = await supabase.auth.getUser();
-  const userId = data.user.id;
-  console.log('User ID:', userId);
+  const userId = data?.user?.id;
+  
+  if (!userId) {
+    console.error('User not authenticated');
+    alert('You must be signed in to add favorites');
+    return;
+  }
 
   const { error: insertError } = await supabase.from('favorites').insert([
     { 
@@ -29,7 +30,6 @@ export async function addToFavorites(shop) {
   }
 }
 
-// Remove shop from favorites table
 export async function removeFromFavorites(shop) {
   const { error } = await supabase.from('favorites').delete().eq('shop_id', shop.id);
   if (error) {
@@ -40,7 +40,6 @@ export async function removeFromFavorites(shop) {
   }
 }
 
-// Check if a shop is favorited
 export async function isShopFavorited(shopId) {
   const { data, error } = await supabase
     .from('favorites')
@@ -51,7 +50,6 @@ export async function isShopFavorited(shopId) {
   return !!data && !error;
 }
 
-// Load all favorites with shop details
 export async function loadFavorites() {
   const { data: favorites, error } = await supabase
     .from('favorites')
@@ -66,7 +64,6 @@ export async function loadFavorites() {
   return favorites;
 }
 
-// Update favorites modal UI with current favorites
 export async function updateFavoritesModal() {
   const favorites = await loadFavorites();
   const favoritesList = document.getElementById('favorites-list');
@@ -89,15 +86,14 @@ export async function updateFavoritesModal() {
     })
     .join('');
 
-  // Attach event listeners to remove buttons
   favoritesList.querySelectorAll('.remove-favorite-button').forEach(button => {
-  button.addEventListener('click', async (e) => {
-    const li = e.target.closest('li');
-    if (!li) return;
-    const shopId = li.dataset.shopId;
-    const shop = { id: shopId }; // Create a shop object with the id
-    await removeFromFavorites(shop);
-    await updateFavoritesModal();
+    button.addEventListener('click', async (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      const shopId = li.dataset.shopId;
+      const shop = { id: shopId };
+      await removeFromFavorites(shop);
+      await updateFavoritesModal();
     });
   });
 }
