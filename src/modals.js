@@ -1,6 +1,8 @@
 import { displayTop100Shops } from './top100.js';
 import { initFavorites, updateFavoritesModal } from './favorites.js';
-import { showShopDetails } from './shopdetails.js'; // <-- Make sure path is correct
+import { showShopDetails } from './shopdetails.js';
+
+
 
 export function initModals(supabase) {
   const modals = [
