@@ -1,20 +1,23 @@
+
 import { getMapInstance, showRouteTo, clearRoute, getUserLocation } from './map.js';
 import { addToFavorites, removeFromFavorites, isShopFavorited } from './favorites.js';
 import { getOrCreateShop, calculateAverageRating } from './db.js';
 import { showMapsPrompt } from './utils.js';
 import { showShopDetails } from './shopdetails.js';
 import supabase from './supabase.js';
+
+
 import L from 'leaflet';
 
 
-console.log('[loadShops.js] supabase:', supabase);
-console.log('[loadShops.js] typeof supabase.from:', typeof supabase.from);
-
-
 export async function loadShops() {
+  console.log('🚀 loadShops() is being called');
+  console.log('supabase object:', supabase); // now this will log a proper client object
+
   const { data: shops, error } = await supabase.from('shops').select('*');
+
   if (error) {
-   console.error('Error loading shops:', console.error(error));
+    console.error('Error loading shops:', error.message);
     return;
   }
 
@@ -23,11 +26,13 @@ export async function loadShops() {
     console.error('Map instance is not available.');
     return;
   }
+
   const map = mapInstance.map;
   const customIcon = mapInstance.customIcon;
 
   shops.forEach((shop) => {
     if (!shop.lat || !shop.lng) return;
+
     const marker = L.marker([shop.lat, shop.lng], { icon: customIcon }).addTo(map);
     marker.on('click', () => {
       console.log('Marker clicked:', shop);
@@ -37,7 +42,6 @@ export async function loadShops() {
 }
 
 export async function showFloatingCard(shop) {
-  console.log('showFloatingCard called with:', shop); // Debug log
   if (!shop || !shop.name || !shop.address || !shop.city) {
     console.warn('Invalid shop data:', shop);
     return;
@@ -60,12 +64,9 @@ export async function showFloatingCard(shop) {
 
   const favorited = await isShopFavorited(shop.id);
   const card = document.getElementById('floating-card');
-  if (!card) {
-    console.error('Floating card element not found');
-    return;
-  }
+  if (!card) return;
 
-  // Clear previous content and event listeners by replacing innerHTML only
+  // Populate card content
   card.innerHTML = `
     <button class="floating-card-close-button" aria-label="Close ${shop.name} details">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none">
@@ -117,28 +118,30 @@ export async function showFloatingCard(shop) {
   `;
 
   card.dataset.shopId = shop.id;
-
-  // Ensure card is visible
   card.classList.remove('hidden');
 
-  // Attach event listeners
-  card.addEventListener('click', function cardClickListener(event) {
+  // Remove existing listeners to prevent duplicates
+  const newCard = card.cloneNode(true);
+  card.parentNode.replaceChild(newCard, card);
+
+  // Reattach event listeners to the new card
+  newCard.addEventListener('click', function cardClickListener(event) {
     if (!event.target.closest('button')) {
       showShopDetails(shop);
     }
   });
 
-  card.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
+  newCard.querySelector('.floating-card-close-button')?.addEventListener('click', () => {
     console.log('Close button clicked');
     clearRoute();
-    card.classList.add('hidden');
+    newCard.classList.add('hidden');
   });
 
-  card.querySelector('#call-button')?.addEventListener('click', () => {
+  newCard.querySelector('#call-button')?.addEventListener('click', () => {
     if (shop.phone) window.open(`tel:${shop.phone}`);
   });
 
-  card.querySelector('#directions-button')?.addEventListener('click', () => {
+  newCard.querySelector('#directions-button')?.addEventListener('click', () => {
     if (!shop.lat || !shop.lng) return alert('No location available');
     showMapsPrompt(shop, (useGoogle) => {
       const coords = `${shop.lat},${shop.lng}`;
@@ -148,7 +151,7 @@ export async function showFloatingCard(shop) {
     });
   });
 
-  card.querySelector('#share-button')?.addEventListener('click', async () => {
+  newCard.querySelector('#share-button')?.addEventListener('click', async () => {
     const shareData = {
       title: shop.name,
       text: `Visit ${shop.name} at ${shop.address}`,
@@ -162,33 +165,13 @@ export async function showFloatingCard(shop) {
     }
   });
 
-  card.querySelector('#favorite-button')?.addEventListener('click', async () => {
+  newCard.querySelector('#favorite-button')?.addEventListener('click', async () => {
     if (await isShopFavorited(shop.id)) {
       await removeFromFavorites(shop);
     } else {
       await addToFavorites(shop);
     }
-    // Update the favorite button UI without calling showFloatingCard again
-    const favorited = await isShopFavorited(shop.id);
-    const favoriteButton = card.querySelector('#favorite-button');
-    if (favoriteButton) {
-      favoriteButton.innerHTML = favorited
-        ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
-             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 
-             4.42 3 7.5 3c1.74 0 3.41 0.81 
-             4.5 2.09C13.09 3.81 14.76 3 
-             16.5 3 19.58 3 22 5.42 
-             22 8.5c0 3.78-3.4 6.86-8.55 
-             11.54L12 21.35z" />
-           </svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 
-             7.636l1.318-1.318a4.5 4.5 0 116.364 
-             6.364L12 21.364l-7.682-7.682a4.5 
-             4.5 0 010-6.364z" />
-           </svg>`;
-      favoriteButton.setAttribute('aria-label', favorited ? 'Remove from favorites' : 'Add to favorites');
-    }
+    showFloatingCard(shop); // Refresh UI
   });
 
   // Show route
@@ -200,4 +183,3 @@ export async function showFloatingCard(shop) {
     }
   });
 }
-
