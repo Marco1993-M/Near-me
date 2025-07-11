@@ -125,6 +125,20 @@ export function initModals(supabase, google) {
         console.error('Error fetching shops:', err);
       }
     });
+
+    // Safe document click listener to hide city suggestions without blocking nav buttons
+    const citySuggestions = document.getElementById('city-suggestions');
+    const citiesModal = document.getElementById('cities');
+
+    document.addEventListener('click', (event) => {
+      const clickedInsideSuggestions = citySuggestions?.contains(event.target);
+      const clickedInsideInput = citySearchInput === event.target;
+      const clickedInsideModal = citiesModal?.contains(event.target);
+
+      if (!clickedInsideSuggestions && !clickedInsideInput && !clickedInsideModal) {
+        citySuggestions?.classList.add('hidden');
+      }
+    });
   } else {
     console.warn('Google Maps API not loaded yet or city search input missing');
   }
