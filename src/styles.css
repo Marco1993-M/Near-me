@@ -1174,6 +1174,7 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  padding-bottom: 2rem;
 }
 
 /* Responsive modal adjustments */
