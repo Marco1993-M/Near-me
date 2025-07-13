@@ -71,25 +71,30 @@ export async function fetchTrendingShops(city) {
       type: 'cafe'
     };
 
-    // Optional: add location/radius if your app has user/map context
     const mapInstance = getMapInstance();
     const userLatLng = mapInstance?.map?.getCenter();
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      request.radius = 50000;
+      request.radius = 10000;
     }
 
     service.textSearch(request, (results, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK) {
-        resolve(results || []);
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        const sorted = results
+          .filter(shop => shop.rating)              // Exclude unrated shops
+          .sort((a, b) => b.rating - a.rating);     // Sort descending by rating
+
+        const top5 = sorted.slice(0, 5);             // Take top 5
+        resolve(top5);
       } else {
         console.error(`PlacesService textSearch failed for ${city}:`, status);
         showError(`Failed to load trending shops for ${city}.`);
-        resolve([]); // Fallback to empty array instead of rejecting
+        resolve([]);
       }
     });
   });
 }
+
 
 export function renderCitySuggestions(cities) {
   const citySuggestions = document.getElementById('city-suggestions');
