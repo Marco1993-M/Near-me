@@ -1,7 +1,9 @@
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
+import supabase from './supabase.js';
 
-
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 const googleMapsApiKey = 'AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps';
 
 const map = getMapInstance();
@@ -15,6 +17,9 @@ async function initCities() {
   }
 }
 
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key:', supabaseKey);
+
 initCities();
 
 function showError(message) {
@@ -27,34 +32,63 @@ function showError(message) {
   setTimeout(() => errorDiv.remove(), 3000);
 }
 
-// Fetch city suggestions using Google Maps Places API
-export async function fetchCitySuggestions(searchQuery = '') {
-  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${searchQuery}&key=${googleMapsApiKey}`;
-
+// Fetch distinct city names matching the search query (case-insensitive)
+export async function fetchCities(searchQuery = '') {
+  console.log('Fetching cities with query:', searchQuery);
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.predictions.map(prediction => prediction.description);
+    const { data: shops, error } = await supabase
+      .from('shops')
+      .select('city')
+      .ilike('city', `%${searchQuery}%`);
+
+    if (error) throw error;
+    if (!shops) return [];
+
+    // Use a Set to remove duplicates (case-insensitive)
+    const citySet = new Set();
+    shops.forEach(shop => {
+      if (shop.city) citySet.add(shop.city.toLowerCase());
+    });
+
+    const cities = Array.from(citySet).sort();
+
+    console.log('Cities fetched successfully:', cities);
+    return cities;
   } catch (error) {
-    console.error('Error fetching city suggestions:', error);
-    showError('Failed to load city suggestions. Please try again.');
+    console.error('Error fetching cities:', error);
+    showError('Failed to load cities. Please try again.');
     return [];
   }
 }
 
 // Fetch trending shops in a city using Google Maps Places API
 export async function fetchTrendingShops(city) {
-  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${city}+coffee&key=${googleMapsApiKey}`;
+  return new Promise((resolve, reject) => {
+    const service = new google.maps.places.PlacesService(document.createElement('div'));
 
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.results;
-  } catch (error) {
-    console.error(`Error fetching trending shops for ${city}:`, error);
-    showError(`Failed to load trending shops for ${city}.`);
-    return [];
-  }
+    const request = {
+      query: `${city} coffee`,
+      type: 'cafe'
+    };
+
+    // Optional: add location/radius if your app has user/map context
+    const mapInstance = getMapInstance();
+    const userLatLng = mapInstance?.map?.getCenter();
+    if (userLatLng) {
+      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+      request.radius = 50000;
+    }
+
+    service.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        resolve(results || []);
+      } else {
+        console.error(`PlacesService textSearch failed for ${city}:`, status);
+        showError(`Failed to load trending shops for ${city}.`);
+        resolve([]); // Fallback to empty array instead of rejecting
+      }
+    });
+  });
 }
 
 export function renderCitySuggestions(cities) {
@@ -67,7 +101,7 @@ export function renderCitySuggestions(cities) {
   cities.forEach(city => {
     const suggestionItem = document.createElement('div');
     suggestionItem.className = 'city-suggestion-item px-3 py-1 hover:bg-gray-200 cursor-pointer';
-    suggestionItem.textContent = city;
+    suggestionItem.textContent = city.charAt(0).toUpperCase() + city.slice(1);
     suggestionItem.dataset.city = city;
 
     suggestionItem.addEventListener('click', async () => {
@@ -145,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     citySearchInput.addEventListener(
       'input',
       debounce(async () => {
-        const searchQuery = citySearchInput.value.trim();
+        const searchQuery = citySearchInput.value.trim().toLowerCase();
 
         if (searchQuery.length === 0) {
           citySuggestions.classList.add('hidden');
@@ -154,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const cities = await fetchCitySuggestions(searchQuery);
+        const cities = await fetchCities(searchQuery);
         renderCitySuggestions(cities);
       }, 300)
     );
