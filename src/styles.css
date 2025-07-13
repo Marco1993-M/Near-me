@@ -1534,6 +1534,13 @@ body, html {
   gap: 0.5rem;
 }
 
+@media (max-width: 480px) {
+  .shop-results {
+    max-height: calc(100% - 4rem); /* Adjust if needed */
+    padding-bottom: 2rem; /* Extra scroll room */
+  }
+}
+
 
 /* Enhanced glassmorphism effect for the Top 100 modal */
 #top100 {
