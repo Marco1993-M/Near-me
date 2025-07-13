@@ -210,22 +210,31 @@
   </dialog>
 
   <!-- Cities modal -->
-  <dialog id="cities" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close close-cities-modal" aria-label="Close cities">×</button>
-      <h2 class="cities-modal-heading">Discover coffee by city.</h2>
-      <h4 class="cities-modal-sub-heading">Choose a city. Find great coffee.</h4>
-      <div id="city-buttons">
-        <div class="city-search-wrapper">
-          <input type="text" id="city-search" placeholder="Search for a city..." class="city-search-input" />
-          <div id="city-suggestions" class="city-suggestions hidden"></div>
-        </div>
-        <div class="hardcoded-cities">
-          <button class="cities-search-button">Search</button>
-        </div>
+   <dialog id="cities" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close close-cities-modal" aria-label="Close cities">×</button>
+    <h2 class="cities-modal-heading">Discover coffee by city.</h2>
+    <h4 class="cities-modal-sub-heading">Choose a city. Find great coffee.</h4>
+
+    <div id="city-buttons">
+      <div class="city-search-wrapper">
+        <input type="text" id="city-search" placeholder="Search for a city..." class="city-search-input" />
+        <div id="city-suggestions" class="city-suggestions hidden"></div>
+      </div>
+      <div class="hardcoded-cities">
+        <button class="cities-search-button">Search</button>
       </div>
     </div>
-  </dialog>
+
+    <!--  Scrollable results container -->
+    <div class="shop-results">
+      <ul class="cities-modal-shops-list">
+        <!-- dynamically injected shop results -->
+      </ul>
+    </div>
+  </div>
+</dialog>
+
 
 
   <!-- Top 100 modal -->
