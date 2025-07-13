@@ -19,9 +19,6 @@ async function initCities() {
   }
 }
 
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase Key:', supabaseKey);
-
 initCities();
 
 function showError(message) {
@@ -35,7 +32,6 @@ function showError(message) {
 }
 
 export async function fetchCities(searchQuery = '') {
-  console.log('Fetching cities with query:', searchQuery);
   try {
     const { data: shops, error } = await supabase
       .from('shops')
@@ -50,9 +46,7 @@ export async function fetchCities(searchQuery = '') {
       if (shop.city) citySet.add(shop.city.toLowerCase());
     });
 
-    const cities = Array.from(citySet).sort();
-    console.log('Cities fetched successfully:', cities);
-    return cities;
+    return Array.from(citySet).sort();
   } catch (error) {
     console.error('Error fetching cities:', error);
     showError('Failed to load cities. Please try again.');
@@ -61,8 +55,7 @@ export async function fetchCities(searchQuery = '') {
 }
 
 export async function fetchTrendingShops(city) {
-  // Fetch Google Places shops (top 5 by rating)
-  const googlePlacesPromise = new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const service = new google.maps.places.PlacesService(document.createElement('div'));
 
     const request = {
@@ -90,81 +83,6 @@ export async function fetchTrendingShops(city) {
       }
     });
   });
-
-  // Fetch Reddit coffee posts for the city
-  const redditPromise = fetchRedditCoffeePosts(city);
-
-  // Wait for both
-  const [googleShops, redditShops] = await Promise.all([googlePlacesPromise, redditPromise]);
-
-  // Merge results: prevent duplicates by name, mark reddit shops for styling & keywords
-  const merged = [];
-  const seenNames = new Set();
-
-  // Add Google shops first
-  for (const shop of googleShops) {
-    seenNames.add(shop.name.toLowerCase());
-    merged.push({ ...shop, source: 'google' });
-  }
-
-  // Add Reddit shops if not duplicates
-  for (const shop of redditShops) {
-    if (!seenNames.has(shop.name.toLowerCase())) {
-      merged.push({ ...shop, source: 'reddit' });
-    }
-  }
-
-  return merged;
-}
-
-// --- NEW: Fetch Reddit posts for specialty coffee in a city ---
-async function fetchRedditCoffeePosts(city) {
-  try {
-    // Reddit public search API endpoint - search 'specialty coffee CITY' in r/Coffee
-    const query = encodeURIComponent(`${city} specialty coffee`);
-    const url = `https://www.reddit.com/r/Coffee/search.json?q=${query}&restrict_sr=1&sort=relevance&t=all&limit=10`;
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Reddit API error: ${response.status}`);
-
-    const json = await response.json();
-    if (!json.data || !json.data.children) return [];
-
-    // Map Reddit posts to shop-like objects for your UI
-    const redditShops = json.data.children.map(child => {
-      const post = child.data;
-
-      // Extract a keyword or flair if available, else fallback keyword
-      const keywords = [];
-      if (post.link_flair_text) keywords.push(post.link_flair_text.toLowerCase());
-      else keywords.push('community');
-
-      // Use post title as name (truncate if needed)
-      const name = post.title.length > 60 ? post.title.slice(0, 57) + '...' : post.title;
-
-      // Reddit posts don't have geo coords, so fallback to city center coords (approximate)
-      const mapInstance = getMapInstance();
-      const center = mapInstance?.map?.getCenter();
-      const lat = center ? center.lat : 0;
-      const lng = center ? center.lng : 0;
-
-      return {
-        place_id: `reddit_${post.id}`, // unique id prefix to avoid conflicts
-        name,
-        formatted_address: `Reddit post in r/Coffee`,
-        lat,
-        lng,
-        address_components: [{ long_name: city, types: ['locality'] }],
-        phone: null,
-        keywords,
-      };
-    });
-
-    return redditShops;
-  } catch (error) {
-    console.error('Error fetching Reddit posts:', error);
-    return [];
-  }
 }
 
 function extractCityFromAddressComponents(components) {
@@ -190,27 +108,13 @@ async function handleCityShopClick(shop) {
   cityMarkers.forEach(marker => map.removeLayer(marker));
   cityMarkers = [];
 
-  const lat = shop.lat || (shop.geometry?.location?.lat && shop.geometry.location.lat()) || 0;
-  const lng = shop.lng || (shop.geometry?.location?.lng && shop.geometry.location.lng()) || 0;
+  const lat = shop.geometry.location.lat();
+  const lng = shop.geometry.location.lng();
 
-  // Different marker style for reddit shops
-  const markerOptions = shop.source === 'reddit'
-    ? { icon: coffeeIcon }
-    : { icon: coffeeIcon };
-
-  const marker = L.marker([lat, lng], markerOptions)
+  const marker = L.marker([lat, lng], { icon: coffeeIcon })
     .addTo(map)
     .bindPopup(shop.name)
     .openPopup();
-
-  // Add orange outline class for reddit shops
-  if (shop.source === 'reddit') {
-    const markerElement = marker._icon;
-    if (markerElement) {
-      markerElement.style.border = '2px solid #FF4500'; // Reddit orange border
-      markerElement.style.borderRadius = '12px';
-    }
-  }
 
   cityMarkers.push(marker);
   map.setView([lat, lng], 15);
@@ -221,7 +125,7 @@ async function handleCityShopClick(shop) {
     lat,
     lng,
     city: extractCityFromAddressComponents(shop.address_components),
-    phone: shop.phone || null
+    phone: shop.formatted_phone_number || null
   };
 
   shopData.id = await getOrCreateShop(
@@ -231,9 +135,6 @@ async function handleCityShopClick(shop) {
     shopData.lat,
     shopData.lng
   );
-
-  // Add reddit keywords label to shopData for floating card
-  if (shop.keywords) shopData.keywords = shop.keywords;
 
   await showFloatingCard(shopData);
 }
@@ -284,16 +185,11 @@ export function renderShopResults(shops) {
     const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
 
     shops.forEach(shop => {
-      const keywordLabel = (shop.keywords && shop.keywords.length)
-        ? `<small class="reddit-keywords-label text-orange-600 ml-1 italic">Community: ${shop.keywords.join(', ')}</small>`
-        : '';
-
       const li = document.createElement('li');
       li.className = 'top100-modal-list-item';
-      if (shop.source === 'reddit') li.style.border = '1px solid #FF4500'; // reddit orange outline
       li.innerHTML = `
         <div class="top100-modal-shop-info">
-          ${shop.name} ${keywordLabel}
+          ${shop.name}
         </div>
         <div class="top100-modal-actions">
           <button class="top100-modal-button view-shop" data-shop-id="${shop.place_id}" aria-label="View ${shop.name}">
