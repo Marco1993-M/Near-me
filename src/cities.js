@@ -1,13 +1,15 @@
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
+import { showFloatingCard } from './shops.js';
+import { getOrCreateShop } from './db.js';
 import supabase from './supabase.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-const googleMapsApiKey = 'AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps';
 
 const map = getMapInstance();
 let favorites = [];
+let cityMarkers = [];
 
 async function initCities() {
   try {
@@ -32,7 +34,6 @@ function showError(message) {
   setTimeout(() => errorDiv.remove(), 3000);
 }
 
-// Fetch distinct city names matching the search query (case-insensitive)
 export async function fetchCities(searchQuery = '') {
   console.log('Fetching cities with query:', searchQuery);
   try {
@@ -44,14 +45,12 @@ export async function fetchCities(searchQuery = '') {
     if (error) throw error;
     if (!shops) return [];
 
-    // Use a Set to remove duplicates (case-insensitive)
     const citySet = new Set();
     shops.forEach(shop => {
       if (shop.city) citySet.add(shop.city.toLowerCase());
     });
 
     const cities = Array.from(citySet).sort();
-
     console.log('Cities fetched successfully:', cities);
     return cities;
   } catch (error) {
@@ -61,7 +60,6 @@ export async function fetchCities(searchQuery = '') {
   }
 }
 
-// Fetch trending shops in a city using Google Maps Places API
 export async function fetchTrendingShops(city) {
   return new Promise((resolve, reject) => {
     const service = new google.maps.places.PlacesService(document.createElement('div'));
@@ -75,17 +73,15 @@ export async function fetchTrendingShops(city) {
     const userLatLng = mapInstance?.map?.getCenter();
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      request.radius = 10000;
+      request.radius = 5000;
     }
 
     service.textSearch(request, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         const sorted = results
-          .filter(shop => shop.rating)              // Exclude unrated shops
-          .sort((a, b) => b.rating - a.rating);     // Sort descending by rating
-
-        const top5 = sorted.slice(0, 5);             // Take top 5
-        resolve(top5);
+          .filter(shop => shop.rating)
+          .sort((a, b) => b.rating - a.rating);
+        resolve(sorted.slice(0, 5));
       } else {
         console.error(`PlacesService textSearch failed for ${city}:`, status);
         showError(`Failed to load trending shops for ${city}.`);
@@ -95,6 +91,59 @@ export async function fetchTrendingShops(city) {
   });
 }
 
+function extractCityFromAddressComponents(components) {
+  if (!components) return 'Unknown City';
+  const cityComponent = components.find(c =>
+    c.types.includes('locality') || c.types.includes('administrative_area_level_2')
+  );
+  return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
+}
+
+async function handleCityShopClick(shop) {
+  const mapInstance = getMapInstance();
+  const map = mapInstance?.map;
+  const coffeeIcon = mapInstance?.customIcon;
+
+  if (!map) return;
+
+  // Close modal
+  const citiesModal = document.getElementById('cities');
+  if (citiesModal) citiesModal.classList.add('hidden');
+
+  // Clear previous markers
+  cityMarkers.forEach(marker => map.removeLayer(marker));
+  cityMarkers = [];
+
+  const lat = shop.geometry.location.lat();
+  const lng = shop.geometry.location.lng();
+
+  const marker = L.marker([lat, lng], { icon: coffeeIcon })
+    .addTo(map)
+    .bindPopup(shop.name)
+    .openPopup();
+
+  cityMarkers.push(marker);
+  map.setView([lat, lng], 15);
+
+  const shopData = {
+    name: shop.name,
+    address: shop.formatted_address,
+    lat,
+    lng,
+    city: extractCityFromAddressComponents(shop.address_components),
+    phone: shop.formatted_phone_number || null
+  };
+
+  shopData.id = await getOrCreateShop(
+    shopData.name,
+    shopData.address,
+    shopData.city,
+    shopData.lat,
+    shopData.lng
+  );
+
+  await showFloatingCard(shopData);
+}
 
 export function renderCitySuggestions(cities) {
   const citySuggestions = document.getElementById('city-suggestions');
@@ -125,7 +174,6 @@ export function renderShopResults(shops) {
   const cityButtonsContainer = document.getElementById('city-buttons');
   if (!cityButtonsContainer) return;
 
-  // Remove old results container if present
   const existingResults = cityButtonsContainer.querySelector('.shop-results');
   if (existingResults) existingResults.remove();
 
@@ -158,6 +206,7 @@ export function renderShopResults(shops) {
           </button>
         </div>
       `;
+      li.addEventListener('click', () => handleCityShopClick(shop));
       list.appendChild(li);
     });
   }
