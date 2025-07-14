@@ -4,9 +4,6 @@ import { showFloatingCard } from './shops.js';
 import { getOrCreateShop } from './db.js';
 import supabase from './supabase.js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-
 const map = getMapInstance();
 let favorites = [];
 let cityMarkers = [];
@@ -85,6 +82,28 @@ export async function fetchTrendingShops(city) {
   });
 }
 
+async function fetchSupabaseShops(city) {
+  try {
+    const { data, error } = await supabase
+      .from('shops')
+      .select('*')
+      .ilike('city', `%${city}%`);
+
+    if (error) {
+      console.error('Supabase fetch error:', error);
+      return [];
+    }
+
+    return data.map(shop => ({
+      ...shop,
+      source: 'supabase'
+    }));
+  } catch (err) {
+    console.error('Failed to fetch Supabase shops:', err);
+    return [];
+  }
+}
+
 function extractCityFromAddressComponents(components) {
   if (!components) return 'Unknown City';
   const cityComponent = components.find(c =>
@@ -100,16 +119,21 @@ async function handleCityShopClick(shop) {
 
   if (!map) return;
 
-  // Close modal
   const citiesModal = document.getElementById('cities');
   if (citiesModal) citiesModal.classList.add('hidden');
 
-  // Clear previous markers
   cityMarkers.forEach(marker => map.removeLayer(marker));
   cityMarkers = [];
 
-  const lat = shop.geometry.location.lat();
-  const lng = shop.geometry.location.lng();
+  let lat, lng;
+
+  if (shop.source === 'supabase') {
+    lat = shop.lat;
+    lng = shop.lng;
+  } else {
+    lat = shop.geometry.location.lat();
+    lng = shop.geometry.location.lng();
+  }
 
   const marker = L.marker([lat, lng], { icon: coffeeIcon })
     .addTo(map)
@@ -119,22 +143,23 @@ async function handleCityShopClick(shop) {
   cityMarkers.push(marker);
   map.setView([lat, lng], 15);
 
-  const shopData = {
-    name: shop.name,
-    address: shop.formatted_address,
-    lat,
-    lng,
-    city: extractCityFromAddressComponents(shop.address_components),
-    phone: shop.formatted_phone_number || null
-  };
-
-  shopData.id = await getOrCreateShop(
-    shopData.name,
-    shopData.address,
-    shopData.city,
-    shopData.lat,
-    shopData.lng
-  );
+  const shopData = shop.source === 'supabase'
+    ? shop
+    : {
+        name: shop.name,
+        address: shop.formatted_address,
+        lat,
+        lng,
+        city: extractCityFromAddressComponents(shop.address_components),
+        phone: shop.formatted_phone_number || null,
+        id: await getOrCreateShop(
+          shop.name,
+          shop.formatted_address,
+          extractCityFromAddressComponents(shop.address_components),
+          lat,
+          lng
+        )
+      };
 
   await showFloatingCard(shopData);
 }
@@ -156,8 +181,18 @@ export function renderCitySuggestions(cities) {
       const citySearchInput = document.getElementById('city-search');
       if (citySearchInput) citySearchInput.value = suggestionItem.textContent;
       citySuggestions.classList.add('hidden');
-      const shops = await fetchTrendingShops(city);
-      renderShopResults(shops);
+
+      const [googleShops, supabaseShops] = await Promise.all([
+        fetchTrendingShops(city),
+        fetchSupabaseShops(city)
+      ]);
+
+      const mergedShops = [
+        ...googleShops.map(shop => ({ ...shop, source: 'google' })),
+        ...supabaseShops
+      ];
+
+      renderShopResults(mergedShops);
     });
 
     citySuggestions.appendChild(suggestionItem);
@@ -186,13 +221,16 @@ export function renderShopResults(shops) {
 
     shops.forEach(shop => {
       const li = document.createElement('li');
-      li.className = 'top100-modal-list-item';
+      li.className = `top100-modal-list-item border-2 rounded-md p-2 ${
+        shop.source === 'google' ? 'border-blue-500' : 'border-green-500'
+      }`;
+
       li.innerHTML = `
-        <div class="top100-modal-shop-info">
+        <div class="top100-modal-shop-info font-medium">
           ${shop.name}
         </div>
         <div class="top100-modal-actions">
-          <button class="top100-modal-button view-shop" data-shop-id="${shop.place_id}" aria-label="View ${shop.name}">
+          <button class="top100-modal-button view-shop" data-shop-id="${shop.place_id || shop.id}" aria-label="View ${shop.name}">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -200,6 +238,7 @@ export function renderShopResults(shops) {
           </button>
         </div>
       `;
+
       li.addEventListener('click', () => handleCityShopClick(shop));
       list.appendChild(li);
     });
