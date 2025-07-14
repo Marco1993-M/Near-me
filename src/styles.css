@@ -1540,13 +1540,13 @@ body, html {
 }
 
 .shop-google {
-  border: 2px solid #3B82F6 !important;
+  border: 0.5px solid #3B82F6 !important;
   border-radius: 8px;
   padding: 0.5rem;
 }
 
 .shop-supabase {
-  border: 2px solid #10B981 !important;
+  border: 0.5px solid #c7f5d3 !important;
   border-radius: 8px;
   padding: 0.5rem;
 }
