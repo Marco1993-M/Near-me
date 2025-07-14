@@ -221,9 +221,8 @@ export function renderShopResults(shops) {
 
     shops.forEach(shop => {
       const li = document.createElement('li');
-      li.className = `top100-modal-list-item border-2 rounded-md p-2 ${
-        shop.source === 'google' ? 'border-blue-500' : 'border-green-500'
-      }`;
+      li.className = `top100-modal-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
+
 
       li.innerHTML = `
         <div class="top100-modal-shop-info font-medium">
