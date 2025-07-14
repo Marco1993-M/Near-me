@@ -1539,6 +1539,19 @@ body, html {
   gap: 0.5rem;
 }
 
+.shop-google {
+  border: 2px solid #3B82F6; /* Blue */
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.shop-supabase {
+  border: 2px solid #10B981; /* Green */
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+
 /* Enhanced glassmorphism effect for the Top 100 modal */
 #top100 {
   position: fixed;
