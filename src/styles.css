@@ -1551,6 +1551,27 @@ body, html {
   padding: 0.5rem;
 }
 
+.shop-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+.shop-tag.google {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.shop-tag.supabase {
+  background-color: #10B981;
+  color: white;
+}
+
+
 
 /* Enhanced glassmorphism effect for the Top 100 modal */
 #top100 {
