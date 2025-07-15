@@ -36,9 +36,9 @@ export async function showReviewBanner(shop) {
     </button>
     <h3 id="shop-name" class="review-banner-heading">Leave a Review for ${shop.name}</h3>
     <p class="review-banner-instruction">Select a rating</p>
-    <div id="rating-container" class="review-banner-rating-container">
+    <div id="rating-container" class="rating-carousel">
       ${Array.from({ length: 10 }, (_, i) => `
-        <button type="button" class="review-banner-rating-button">${i + 1}</button>
+        <button type="button" class="rating-pill">${i + 1}</button>
       `).join('')}
     </div>
     <textarea id="review-text" class="review-banner-textarea" placeholder="Write your review..." required></textarea>
@@ -53,26 +53,98 @@ export async function showReviewBanner(shop) {
         <input id="review-outside-seating" type="checkbox" class="review-banner-checkbox"> Outside Seating
       </label>
     </div>
+
+    <button id="toggle-specialty-details" class="review-banner-toggle-details">
+      + Add Specialty Coffee Info
+    </button>
+    <div id="specialty-details-section" class="hidden">
+      <label>
+        Brew Method:
+        <select id="brew-method">
+          <option value="">Select</option>
+          <option>Espresso</option>
+          <option>Pour Over</option>
+          <option>French Press</option>
+          <option>Aeropress</option>
+          <option>Cold Brew</option>
+        </select>
+      </label>
+      <label>
+        Roast Level:
+        <select id="roast-level">
+          <option value="">Select</option>
+          <option>Light</option>
+          <option>Medium</option>
+          <option>Dark</option>
+        </select>
+      </label>
+      <label>
+        Origin:
+        <select id="origin">
+          <option value="">Select</option>
+          <option>Ethiopia</option>
+          <option>Colombia</option>
+          <option>Kenya</option>
+          <option>Brazil</option>
+          <option>Guatemala</option>
+          <option>Rwanda</option>
+          <option>Costa Rica</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>
+        Tasting Notes:
+        <select id="tasting-notes">
+          <option value="">Select</option>
+          <option>Fruity</option>
+          <option>Chocolate</option>
+          <option>Nutty</option>
+          <option>Floral</option>
+          <option>Citrus</option>
+          <option>Spicy</option>
+          <option>Earthy</option>
+          <option>Other</option>
+        </select>
+      </label>
+    </div>
+
     <div class="review-banner-actions">
       <button id="review-cancel-button" class="review-banner-cancel-button">Cancel</button>
       <button id="submit-review-button" class="review-banner-submit-button">Submit</button>
     </div>
   `;
-  reviewBanner.classList.remove('hidden');
 
+  reviewBanner.classList.remove('hidden');
   reviewBanner.addEventListener('click', (e) => e.stopPropagation());
 
-  const ratingButtons = reviewBanner.querySelectorAll('#rating-container button');
+  const ratingContainer = reviewBanner.querySelector('#rating-container');
+  const ratingButtons = reviewBanner.querySelectorAll('.rating-pill');
   let selectedRating = null;
+
   ratingButtons.forEach(button => {
     button.addEventListener('click', (e) => {
       e.stopPropagation();
-      ratingButtons.forEach(btn => btn.classList.remove('selected'));
-      button.classList.add('selected');
+      ratingButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
       selectedRating = parseInt(button.textContent);
       console.log('Rating selected:', selectedRating);
     });
   });
+
+  // Center the "5" rating pill on load
+  const buttonsArray = Array.from(ratingButtons);
+  const middleButton = buttonsArray.find(btn => btn.textContent === '5');
+
+  if (middleButton) {
+    const containerWidth = ratingContainer.offsetWidth;
+    const buttonCenter = middleButton.offsetLeft + middleButton.offsetWidth / 2;
+    const scrollLeft = buttonCenter - containerWidth / 2;
+
+    ratingContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+
+    middleButton.classList.add('active');
+    selectedRating = 5;
+  }
 
   reviewBanner.querySelector('.review-banner-close-button')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -86,8 +158,19 @@ export async function showReviewBanner(shop) {
     console.log('Review banner cancelled');
   });
 
+  const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
+  const specialtySection = reviewBanner.querySelector('#specialty-details-section');
+  toggleBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    specialtySection.classList.toggle('hidden');
+    toggleBtn.textContent = specialtySection.classList.contains('hidden')
+      ? '+ Add Specialty Coffee Info'
+      : '− Hide Specialty Coffee Info';
+  });
+
   reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async (e) => {
     e.stopPropagation();
+
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
     const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
@@ -123,22 +206,22 @@ export async function showReviewBanner(shop) {
       parking,
       pet_friendly: petFriendly,
       outside_seating: outsideSeating,
+      brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
+      roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
+      origin: reviewBanner.querySelector('#origin')?.value || null,
+      tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
       created_at: new Date().toISOString()
     };
 
     console.log('Submitting review:', review);
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert([review]);
+    const { data, error } = await supabase.from('reviews').insert([review]);
 
     if (error) {
-      console.error('Error saving review:', error.message);
       alert(`Failed to submit review: ${error.message}`);
       return;
     }
 
-    console.log('Review submitted:', data);
     reviewBanner.classList.add('hidden');
-    showShopDetails(shop);
+    showShopDetails?.(shop);
   });
 }
