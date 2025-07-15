@@ -881,17 +881,16 @@ body, html {
   left: 50%;
   transform: translateX(-50%);
   backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
+  -webkit-backdrop-filter: blur(5px);
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
-              -5px -5px 10px rgba(255, 255, 255, 0.6),
-              inset 3px 3px 6px rgba(209, 209, 209, 0.4),
-              inset -3px -3px 6px rgba(255, 255, 255, 0.5);
-  padding: 1.25rem;
-  border-radius: 8px;
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Outer and inner shadows for 3D effect */
-  z-index: 1005; /* Matches shop-details-banner */
+  box-shadow: 5px 5px 10px #d1d1d1,
+              -5px -5px 10px #ffffff,
+              inset 3px 3px 6px #d1d1d1,
+              inset -3px -3px 6px #ffffff;
+  padding: 2rem 1.25rem;
+  border-radius: 16px;
+  z-index: 1005;
   max-width: 85%;
   width: 90%;
   max-height: 80vh;
@@ -903,203 +902,248 @@ body, html {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
+  background: linear-gradient(145deg, #e0e0e0, #ffffff);
   border: none;
   cursor: pointer;
   padding: 4px;
   border-radius: 50%;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
+  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-
 .review-banner-close-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff;
   transform: scale(1.1);
 }
-
 .review-banner-close-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff;
 }
-
 .review-banner-close-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: inset 2px 2px 5px #d1d1d1,
+              inset -2px -2px 5px #ffffff,
+              0 0 0 2px #b0b0b0;
 }
-
 .review-banner-close-button svg {
   width: 20px;
   height: 20px;
-  stroke: #333; /* Darker for contrast */
+  stroke: #333;
 }
 
-/* Heading styling */
+/* Headings */
+.review-banner-shop-name {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #666;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
 .review-banner-heading {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.5rem;
   font-weight: 600;
-  color: #333; /* Matches other elements */
-  margin-bottom: 8px;
+  color: #222;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
-/* Instruction text styling */
-.review-banner-instruction {
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
-  margin-bottom: 12px;
-}
-
-/* Rating container styling */
+/* Rating carousel */
 .review-banner-rating-container {
-  margin: 12px 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0 0.5rem;
+}
+.rating-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 1rem 0.5rem;   /* Increased top & bottom padding */
+  gap: 1rem;
+  justify-content: flex-start;
+  max-width: 100%;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  margin-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Rating button styling */
-.review-banner-rating-button {
-  width: 1.75rem;
-  height: 1.75rem;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  border: none; /* Remove solid border */
-  border-radius: 50%; /* Circular for neumorphic look */
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+
+.rating-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.rating-pill {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  width: 40px;  /* bigger buttons */
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.5rem;  /* larger font */
+  font-weight: 200;
+  color: #333;
+  background: #fff;
+  border: 2px solid #e5e5e5;
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.05),
+              inset -1px -1px 2px rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
   cursor: pointer;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, color 0.2s ease;
+  user-select: none;
 }
 
-.review-banner-rating-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
-  color: #4b5563; /* Darker for hover */
-}
-
-.review-banner-rating-button.selected {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
-  color: #d1d1d1; /* Matches hover for consistency */
+.rating-pill.active {
+   width: 50px;  /* bigger buttons */
+  height: 50px;
+  color: #ffffff;
   background-color: #c7f5d3;
+  border-color: #000000;
+  border: 0.5px solid black;
+  transform: scale(1.15);
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
 }
 
-.review-banner-rating-button:focus {
-  outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+.rating-scroll-hint {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.25rem;
+  text-align: center;
 }
 
-/* Textarea styling */
+/* Textarea */
 .review-banner-textarea {
-  width: 90%;
-  height: 7rem;
-  padding: 12px;
-  background: #e0e0e0; /* Neumorphic base */
-  border: none; /* Remove solid border */
-  border-radius: 8px;
+  width: 100%;
+  height: 6.5rem;
+  padding: 1rem;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 16px;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.95rem;
+  color: #333;
   resize: none;
-  margin-top: 12px;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Inset for depth */
+  margin-top: 1rem;
+  box-shadow: inset 2px 2px 5px #d1d1d1,
+              inset -2px -2px 5px #ffffff;
   transition: box-shadow 0.2s ease;
 }
-
 .review-banner-textarea:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: inset 2px 2px 5px #d1d1d1,
+              inset -2px -2px 5px #ffffff,
+              0 0 0 2px #b0b0b0;
 }
 
-/* Checkbox container styling */
+/* Checkbox group */
 .review-banner-checkbox-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
-  margin-top: 16px;
+  margin-top: 1.5rem;
 }
-
-/* Checkbox label styling */
 .review-banner-checkbox-label {
   display: flex;
   align-items: center;
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #333;
 }
-
-/* Checkbox input styling */
 .review-banner-checkbox {
   width: 16px;
   height: 16px;
   margin-right: 8px;
-  accent-color: #4b5563; /* Matches neumorphic hover/active color */
+  accent-color: #4b5563;
 }
 
-/* Action buttons container styling */
+/* Action buttons */
 .review-banner-actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 24px;
   gap: 12px;
 }
-
-/* Cancel button styling */
-.review-banner-cancel-button {
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  color: #333; /* Matches other elements */
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem; /* 14px */
-  cursor: pointer;
-  flex: 1;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.review-banner-cancel-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
-  transform: scale(1.05);
-}
-
-.review-banner-cancel-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
-}
-
-.review-banner-cancel-button:focus {
-  outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
-}
-
-/* Submit button styling */
+.review-banner-cancel-button,
 .review-banner-submit-button {
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  color: #333; /* Matches other elements */
-  padding: 8px 16px;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff);
+  color: #333;
+  padding: 10px 20px;
   border: none;
-  border-radius: 8px;
-  font-size: 0.875rem; /* 14px */
+  border-radius: 12px;
+  font-size: 1rem;
   cursor: pointer;
   flex: 1;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
+  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-
+.review-banner-cancel-button:hover,
 .review-banner-submit-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff;
   transform: scale(1.05);
 }
-
+.review-banner-cancel-button:active,
 .review-banner-submit-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  box-shadow: inset 2px 2px 5px #d1d1d1,
+              inset -2px -2px 5px #ffffff;
 }
-
+.review-banner-cancel-button:focus,
 .review-banner-submit-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: inset 2px 2px 5px #d1d1d1,
+              inset -2px -2px 5px #ffffff,
+              0 0 0 2px #b0b0b0;
 }
 
-/* Ensure hidden class overrides other styles */
-.hidden {
-  display: none !important;
+#specialty-details-section.hidden {
+  display: none;
 }
+.review-banner-toggle-details {
+  margin: 1rem 0;
+  background: none;
+  border: none;
+  color: #0077cc;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+#specialty-details-section label {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+#specialty-details-section select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #222;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 30px rgba(255, 255, 255, 0.1);
+  font-size: 1rem;
+  appearance: none; /* Remove default arrow */
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  outline: none;
+}
+
+/* On focus */
+#specialty-details-section select:focus {
+  background: rgba(255, 255, 255, 0.15);
+   border: 1px solid rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Optional: add a custom arrow using background image */
+#specialty-details-section select {
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23222' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='4 6 8 10 12 6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+}
+
 
 /* The entire modal container */
 #cities {
