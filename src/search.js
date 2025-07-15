@@ -7,8 +7,12 @@ let searchDropdown;
 let autocompleteService;
 let placesService;
 let currentMarkers = [];
+let searchInitialized = false;
 
 export function initSearch(supabase) {
+  if (searchInitialized) return;
+  searchInitialized = true;
+
   console.log('Initializing search...');
   if (!google?.maps?.places) {
     console.error('Google Maps API is not loaded');
@@ -32,6 +36,7 @@ export function initSearch(supabase) {
     console.error('Map instance is not available.');
     return;
   }
+
   const map = mapInstance.map;
   const coffeeIcon = mapInstance.customIcon;
 
@@ -96,7 +101,6 @@ export function initSearch(supabase) {
       currentMarkers.push(marker);
       map.setView([lat, lng], 15);
 
-      // Prepare shop object
       const shop = {
         name: place.name,
         address: place.formatted_address,
@@ -106,10 +110,8 @@ export function initSearch(supabase) {
         phone: place.formatted_phone_number || null
       };
 
-      // Ensure shop ID
       shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
 
-      // Show floating card
       await showFloatingCard(shop);
       searchDropdown.classList.add('hidden');
     } catch (error) {
@@ -124,6 +126,15 @@ function debounce(func, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
+}
+
+function ensurePlacesService() {
+  if (!placesService) {
+    const mapDiv = getMapInstance()?.map?.getDiv();
+    if (!mapDiv) throw new Error('Map container not found for PlacesService.');
+    placesService = new google.maps.places.PlacesService(mapDiv);
+  }
+  return placesService;
 }
 
 async function getPlacePredictions(query) {
@@ -146,6 +157,7 @@ async function getPlacePredictions(query) {
       if (status === google.maps.places.PlacesServiceStatus.OK) {
         resolve(predictions || []);
       } else {
+        console.error('Prediction error:', status);
         reject(status);
       }
     });
@@ -153,12 +165,13 @@ async function getPlacePredictions(query) {
 }
 
 async function getPlaceDetails(placeId) {
-  placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
+  const service = ensurePlacesService();
   return new Promise((resolve, reject) => {
-    placesService.getDetails({ placeId }, (place, status) => {
+    service.getDetails({ placeId }, (place, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK) {
         resolve(place);
       } else {
+        console.error('Place details error:', status);
         reject(status);
       }
     });
@@ -194,7 +207,7 @@ function extractCityFromAddressComponents(components) {
 }
 
 async function performTextSearch(query) {
-  placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
+  const service = ensurePlacesService();
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
 
@@ -209,10 +222,11 @@ async function performTextSearch(query) {
       request.radius = 50000;
     }
 
-    placesService.textSearch(request, (results, status) => {
+    service.textSearch(request, (results, status) => {
       if (status === google.maps.places.PlacesServiceStatus.OK) {
         resolve(results || []);
       } else {
+        console.error('Text search error:', status);
         reject(status);
       }
     });
@@ -222,6 +236,7 @@ async function performTextSearch(query) {
 async function displaySearchResults(results, mapInstance) {
   const map = mapInstance.map;
   const coffeeIcon = mapInstance.customIcon;
+
   currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
 
