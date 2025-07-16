@@ -328,32 +328,46 @@ body, html {
 
 /* Tab styling */
 .tab {
-  padding: 0.5rem;
+  padding: 0.6rem 1rem;
   font-size: 1rem;
-  color: #333; /* Darker for contrast */
+  color: #333;
   cursor: pointer;
   z-index: 1000;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  border-radius: 0.5rem;
-  border: 1px solid black;
-  transition: box-shadow 0.2s ease, color 0.3s ease;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    3px 3px 6px rgba(0, 0, 0, 0.05),
+    -3px -3px 6px rgba(255, 255, 255, 0.7),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem;
+  border: 0.5px solid black;
+  transition: box-shadow 0.2s ease, color 0.3s ease, transform 0.2s ease;
 }
 
 .tab:hover {
-  color: #4b5563; /* Slightly darker for hover */
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  color: #4b5563;
+  transform: scale(1.05);
+  box-shadow:
+    2px 2px 5px rgba(0, 0, 0, 0.05),
+    -2px -2px 5px rgba(255, 255, 255, 0.6);
 }
 
 .tab.active {
-  color: #c7f5d3; /* Darker for active state */
+  color: #c7f5d3;
   font-weight: 600;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  box-shadow:
+    inset 2px 2px 5px #d1d1d1,
+    inset -2px -2px 5px #ffffff;
 }
 
 .tab:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow:
+    inset 2px 2px 5px #d1d1d1,
+    inset -2px -2px 5px #ffffff,
+    0 0 0 2px #b0b0b0;
 }
 
 /* Bottom navigation bar */
@@ -362,69 +376,81 @@ body, html {
   bottom: 3rem;
   left: 50%;
   transform: translateX(-50%);
-  width: 80%;
+  width: 85%;
   max-width: 400px;
-  backdrop-filter: blur(55px);
+  padding: 1rem;
+  border-radius: 9999px;
   background: rgba(255, 255, 255, 0.2);
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Outer and inner shadows for 3D effect */
-  z-index: 1001;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 0.5px solid black;
+  box-shadow:
+    5px 5px 10px rgba(209, 209, 209, 0.5),
+    -5px -5px 10px rgba(255, 255, 255, 0.6),
+    inset 3px 3px 6px rgba(209, 209, 209, 0.4),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.4);
   display: flex;
   justify-content: space-around;
-  padding: 1.25rem;
-  border-radius: 9999px;
-  border: 1px solid black;
+  z-index: 1001;
 }
 
-/* Individual tab styling */
+/* Tab bar button */
 .tab-bar-button {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0.25rem;
-  background: transparent; /* Keep transparent to inherit nav bar gradient */
-  box-shadow: none; /* No shadow to avoid clutter */
-  font-size: 1rem;
-  color: #333; /* Darker for contrast */
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.95rem;
+  color: #333;
   cursor: pointer;
   z-index: 1000;
   transition: color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tab-bar-button:hover {
-  color: #4b5563; /* Slightly darker for hover */
+  color: #4b5563;
   transform: scale(1.1);
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  box-shadow:
+    2px 2px 4px #d1d1d1,
+    -2px -2px 4px #ffffff;
 }
 
 .tab-bar-button.active {
-  color: #4b5563; /* Darker for active state */
+  color: #4b5563;
   font-weight: 600;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  box-shadow:
+    inset 2px 2px 5px #d1d1d1,
+    inset -2px -2px 5px #ffffff;
 }
 
 .tab-bar-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #8d8d8d, inset -2px -2px 5px #959595, 0 0 0 0.5px #bdbdbd; /* Focus ring */
+  box-shadow:
+    inset 2px 2px 5px #8d8d8d,
+    inset -2px -2px 5px #ffffff,
+    0 0 0 2px #bdbdbd;
 }
 
 .tab-bar-button svg {
   width: 1.55rem;
   height: 1.5rem;
   margin-bottom: 0.125rem;
-  color: #333; /* Match text color */
+  color: #333;
+  transition: color 0.3s ease;
 }
 
-.tab-bar-button:hover svg {
-  color: #4b5563; /* Match hover color */
-}
-
+.tab-bar-button:hover svg,
 .tab-bar-button.active svg {
-  color: #4b5563; /* Match active color */
+  color: #4b5563;
 }
 
+/* Utility */
 .hidden {
   display: none !important;
 }
+
 
 /* Specific button overrides */
 #cities-button, #top-100-button, #favorites-button {
