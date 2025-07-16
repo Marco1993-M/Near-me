@@ -136,31 +136,41 @@
 
   <!-- Review banner -->
   <div id="review-banner" class="hidden">
-    <button class="review-banner-close-button" aria-label="Close review">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-    <h3 class="review-banner-heading">Write a Review</h3>
-    <p class="review-banner-instruction">Please share your experience</p>
-    <div class="review-banner-rating-container">
-      <button class="review-banner-rating-button">1</button>
-      <button class="review-banner-rating-button">2</button>
-      <button class="review-banner-rating-button">3</button>
-      <button class="review-banner-rating-button">4</button>
-      <button class="review-banner-rating-button">5</button>
+  <!-- Drag Handle for closing -->
+  <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
+
+  <h3 class="review-banner-heading">Write a Review</h3>
+  <p class="review-banner-instruction">Please share your experience</p>
+
+  <div class="review-banner-rating-container">
+    <div class="rating-carousel">
+      <button class="rating-pill active">1</button>
+      <button class="rating-pill">2</button>
+      <button class="rating-pill">3</button>
+      <button class="rating-pill">4</button>
+      <button class="rating-pill">5</button>
+      <button class="rating-pill">6</button>
+      <button class="rating-pill">7</button>
+      <button class="rating-pill">8</button>
+      <button class="rating-pill">9</button>
+      <button class="rating-pill">10</button>
     </div>
-    <textarea class="review-banner-textarea" placeholder="Your review..."></textarea>
-    <div class="review-banner-checkbox-container">
-      <label class="review-banner-checkbox-label">
-        <input type="checkbox" class="review-banner-checkbox"> Option
-      </label>
-    </div>
-    <div class="review-banner-actions">
-      <button class="review-banner-cancel-button">Cancel</button>
-      <button class="review-banner-submit-button">Submit</button>
-    </div>
+    <p class="rating-scroll-hint">scroll to choose a rating</p>
   </div>
+
+  <textarea class="review-banner-textarea" placeholder="Your review..."></textarea>
+
+  <div class="review-banner-checkbox-container">
+    <label class="review-banner-checkbox-label">
+      <input type="checkbox" class="review-banner-checkbox"> Option
+    </label>
+  </div>
+
+  <div class="review-banner-actions">
+    <button class="review-banner-cancel-button">Cancel</button>
+    <button class="review-banner-submit-button">Submit</button>
+  </div>
+</div>
 
   <!-- User location button -->
   <button id="user-location-button" aria-label="Find my location">
