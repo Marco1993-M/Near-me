@@ -1,8 +1,6 @@
 import supabase from './supabase.js';
 
-
 export async function showReviewBanner(shop) {
-  console.log('showReviewBanner for:', shop.name, 'Shop object:', shop);
   if (!shop || !shop.name || !shop.address || !shop.city) {
     console.warn('Invalid shop data:', shop);
     document.getElementById('review-banner')?.classList.add('hidden');
@@ -10,38 +8,34 @@ export async function showReviewBanner(shop) {
   }
 
   if (!supabase || !supabase.auth) {
-    console.error('Supabase client is not initialized');
     alert('Error: Database connection not available.');
     return;
   }
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
-    console.error('User not authenticated:', userError?.message);
     showAuthBanner(shop, () => showReviewBanner(shop));
     return;
   }
 
   const reviewBanner = document.getElementById('review-banner');
-  if (!reviewBanner) {
-    console.error('Review banner element not found');
-    return;
-  }
+  if (!reviewBanner) return;
 
   reviewBanner.innerHTML = `
-    <button class="review-banner-close-button" aria-label="Close review form for ${shop.name}">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
+    <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
+
     <h3 id="shop-name" class="review-banner-heading">Leave a Review for ${shop.name}</h3>
     <p class="review-banner-instruction">Select a rating</p>
+
     <div id="rating-container" class="rating-carousel">
       ${Array.from({ length: 10 }, (_, i) => `
         <button type="button" class="rating-pill">${i + 1}</button>
       `).join('')}
     </div>
+    <p class="rating-scroll-hint">scroll to choose a rating</p>
+
     <textarea id="review-text" class="review-banner-textarea" placeholder="Write your review..." required></textarea>
+
     <div class="review-banner-checkbox-container">
       <label class="review-banner-checkbox-label">
         <input id="review-parking" type="checkbox" class="review-banner-checkbox"> Parking
@@ -115,86 +109,68 @@ export async function showReviewBanner(shop) {
   `;
 
   reviewBanner.classList.remove('hidden');
+  reviewBanner.style.animation = 'slideUp 0.4s ease-out forwards';
+
   reviewBanner.addEventListener('click', (e) => e.stopPropagation());
 
+  // Center "5" rating button
   const ratingContainer = reviewBanner.querySelector('#rating-container');
   const ratingButtons = reviewBanner.querySelectorAll('.rating-pill');
-  let selectedRating = null;
+  let selectedRating = 5;
 
   ratingButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      e.stopPropagation();
+    button.addEventListener('click', () => {
       ratingButtons.forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
       selectedRating = parseInt(button.textContent);
-      console.log('Rating selected:', selectedRating);
     });
   });
 
-  // Center the "5" rating pill on load
-  const buttonsArray = Array.from(ratingButtons);
-  const middleButton = buttonsArray.find(btn => btn.textContent === '5');
-
+  const middleButton = Array.from(ratingButtons).find(btn => btn.textContent === '5');
   if (middleButton) {
-    const containerWidth = ratingContainer.offsetWidth;
-    const buttonCenter = middleButton.offsetLeft + middleButton.offsetWidth / 2;
-    const scrollLeft = buttonCenter - containerWidth / 2;
-
+    const scrollLeft = middleButton.offsetLeft + middleButton.offsetWidth / 2 - ratingContainer.offsetWidth / 2;
     ratingContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-
     middleButton.classList.add('active');
-    selectedRating = 5;
   }
 
-  reviewBanner.querySelector('.review-banner-close-button')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    reviewBanner.classList.add('hidden');
-    console.log('Review banner closed');
+  // Drag handle closes the modal
+  document.getElementById('review-drag-handle')?.addEventListener('click', () => {
+    reviewBanner.style.animation = 'slideDown 0.3s ease-in forwards';
+    reviewBanner.addEventListener('animationend', () => {
+      reviewBanner.classList.add('hidden');
+      reviewBanner.style.animation = '';
+    }, { once: true });
   });
 
-  reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', (e) => {
-    e.stopPropagation();
+  reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', () => {
     reviewBanner.classList.add('hidden');
-    console.log('Review banner cancelled');
   });
 
   const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
   const specialtySection = reviewBanner.querySelector('#specialty-details-section');
-  toggleBtn?.addEventListener('click', (e) => {
-    e.stopPropagation();
+  toggleBtn?.addEventListener('click', () => {
     specialtySection.classList.toggle('hidden');
     toggleBtn.textContent = specialtySection.classList.contains('hidden')
       ? '+ Add Specialty Coffee Info'
       : '− Hide Specialty Coffee Info';
   });
 
-  reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async (e) => {
-    e.stopPropagation();
-
+  reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async () => {
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
     const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
     const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
 
-    if (!selectedRating) {
-      alert('Please select a rating.');
-      return;
-    }
-    if (!reviewText) {
-      alert('Please write a review.');
-      return;
-    }
+    if (!selectedRating) return alert('Please select a rating.');
+    if (!reviewText) return alert('Please write a review.');
 
     let shopId = shop.id;
     if (!shopId) {
       try {
         shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
         shop.id = shopId;
-        console.log('Shop ID retrieved or created:', shopId);
       } catch (error) {
-        console.error('Error getting or creating shop:', error.message);
-        alert('Failed to submit review: Could not retrieve shop ID.');
-        return;
+        return alert('Failed to submit review: Could not retrieve shop ID.');
       }
     }
 
@@ -213,13 +189,8 @@ export async function showReviewBanner(shop) {
       created_at: new Date().toISOString()
     };
 
-    console.log('Submitting review:', review);
-    const { data, error } = await supabase.from('reviews').insert([review]);
-
-    if (error) {
-      alert(`Failed to submit review: ${error.message}`);
-      return;
-    }
+    const { error } = await supabase.from('reviews').insert([review]);
+    if (error) return alert(`Failed to submit review: ${error.message}`);
 
     reviewBanner.classList.add('hidden');
     showShopDetails?.(shop);
