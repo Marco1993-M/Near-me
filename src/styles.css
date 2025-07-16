@@ -437,21 +437,20 @@ body, html {
   bottom: 3rem;
   left: 50%;
   transform: translateX(-50%);
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(5px); /* Safari support */
-  background: rgba(255, 255, 255, 0.15);
-  border: 0.5px solid black;
-  box-shadow: 5px 5px 10px rgba(209, 209, 209, 0.5),
-              -5px -5px 10px rgba(255, 255, 255, 0.6),
-              inset 3px 3px 6px rgba(209, 209, 209, 0.4),
-              inset 3px 3px 6px rgba(209, 209, 209, 0.4);
-  border-radius: 15px;
-  padding: 15px;
-  padding-top: 1px;
   width: 85%;
   max-width: 450px;
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff, inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Outer and inner shadows for 3D effect */
-  z-index: 1002; /* Above map and nav bar, below modals */
+  padding: 15px;
+  padding-top: 1px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 1002;
+  color: #f8f8f8;
 }
 
 /* Close button styling */
@@ -459,57 +458,57 @@ body, html {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  border: none;
-  cursor: pointer;
-  padding: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 6px;
   border-radius: 50%;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
-
 .floating-card-close-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
   transform: scale(1.1);
 }
-
 .floating-card-close-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  transform: scale(0.95);
 }
-
 .floating-card-close-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
 }
-
 .floating-card-close-button svg {
   width: 20px;
   height: 20px;
-  stroke: #333; /* Darker for contrast */
+  stroke: #000000;
 }
 
-/* Heading styling (shop name with icon) */
+/* Heading */
 .floating-card-heading {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #333; /* Matches other elements for contrast */
+  color: #000000;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Info text styling (rating, address, phone, website) */
+/* Info */
 .floating-card-info {
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements for contrast */
+  font-size: 0.875rem;
+  color: #393939;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
+.floating-card-info .star-icon {
+  width: 16px;
+  height: 16px;
+  color: #000000;
+}
 
-/* Action buttons container */
+/* Actions */
 .floating-card-actions {
   display: flex;
   justify-content: flex-start;
@@ -520,50 +519,40 @@ body, html {
 
 /* Action buttons */
 .floating-card-action-button {
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  border: none; /* Remove solid border */
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
   width: 70px;
   height: 50px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: #333; /* Darker for contrast */
+  color: #000000;
   cursor: pointer;
   font-size: 0.7em;
   text-align: center;
   padding: 5px;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, background 0.3s ease;
 }
-
 .floating-card-action-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  background: rgba(255, 255, 255, 0.18);
   transform: scale(1.05);
 }
-
 .floating-card-action-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95);
 }
-
 .floating-card-action-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
 }
-
 .floating-card-action-button svg {
   margin-bottom: 2px;
   width: 20px;
   height: 20px;
-  color: #333; /* Matches text color */
-}
-
-/* Star icon in info */
-.floating-card-info .star-icon {
-  width: 16px; /* Adjusted for visibility */
-  height: 16px;
-  color: #333; /* Matches text color */
+  color: #000000;
 }
 
 /* Media queries */
@@ -579,16 +568,17 @@ body, html {
   }
 }
 
-/* Ensure hidden class overrides other styles */
+/* Hide state */
 .hidden {
   display: none !important;
 }
 #floating-card.hidden {
-  display: none; /* or */
+  display: none;
   pointer-events: none;
   visibility: hidden;
   opacity: 0;
 }
+
 
 /* Base styling for the shop details banner */
 #shop-details-banner {
@@ -602,15 +592,17 @@ body, html {
   max-width: 100vw;
   max-height: 90vh;
   overflow-y: auto;
-  padding: 2rem 1rem; /* Reduce horizontal padding */
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(50px);
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.15);
+  padding: 2rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.1);
   z-index: 1005;
-  animation: slideUp 0.4s forwards ease-out;
+  animation: slideUp 0.4s ease-out forwards;
   box-sizing: border-box;
+  color: #f8f8f8;
 }
 
 /* Optional: Drag handle to close */
@@ -619,7 +611,7 @@ body, html {
   display: block;
   width: 50px;
   height: 5px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 999px;
   margin: 0 auto 1rem auto;
   cursor: pointer;
@@ -640,261 +632,223 @@ body, html {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.2);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   border-radius: 50%;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.2s ease;
 }
-
 .shop-details-close-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
   transform: scale(1.1);
 }
-
 .shop-details-close-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  transform: scale(0.95);
 }
-
 .shop-details-close-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
 }
-
 .shop-details-close-button svg {
   width: 20px;
   height: 20px;
-  stroke: #333; /* Darker for contrast */
+  stroke: #000000;
 }
 
-/* Heading styling */
+/* Headings */
 .shop-details-heading {
-  font-size: 1.25rem; /* 20px */
+  font-size: 1.25rem;
   font-weight: 600;
-  color: #333; /* Matches other elements */
+  color: #000000;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Info text styling (address, phone, website) */
+/* Info text */
 .shop-details-info {
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #000000;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
 .shop-details-info a {
-  color: #4b5563; /* Darker gray for neumorphic consistency */
+  color: #000000;
   text-decoration: underline;
 }
-
-/* SVG icons in info sections */
 .shop-details-info svg {
   width: 16px;
   height: 16px;
-  color: #333; /* Matches text color */
+  color: #000000;
 }
 
-/* Ratings & Reviews section */
+/* Ratings & Reviews */
 .shop-details-ratings-section {
   margin: 16px 0;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient */
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
   padding: 12px;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Inset for depth */
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Subheading styling */
+/* Subheadings */
 .shop-details-subheading {
-  font-size: 1rem; /* 16px */
+  font-size: 1rem;
   font-weight: 500;
-  color: #333; /* Matches other elements */
+  color: #1e1e1e;
   margin-bottom: 8px;
 }
 
-/* Rating dots container */
+/* Rating dots */
 .shop-details-rating-dots {
   display: flex;
   gap: 4px;
   margin-bottom: 12px;
 }
-
-/* Individual rating dot */
 .shop-details-rating-dot {
-  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin: 0 2px;
-  vertical-align: middle;
-  background: #4b5563; /* Matches progress bar fill for consistency */
+  background: #000000;
 }
 
-/* Ratings breakdown row */
+/* Breakdown */
 .shop-details-breakdown-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
 }
-
-/* Breakdown category label */
 .shop-details-breakdown-label {
   width: 80px;
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #3f3f3f;
 }
-
-/* Progress bar container */
 .shop-details-progress-bar {
   flex: 1;
   height: 8px;
-  background: #e0e0e0; /* Neumorphic base */
+  background: rgba(86, 86, 86, 0.15);
   border-radius: 4px;
-  box-shadow: inset 2px 2px 4px #d1d1d1, inset -2px -2px 4px #ffffff; /* Inset for depth */
   overflow: hidden;
 }
-
-/* Progress bar fill */
 .shop-details-progress-bar-fill {
   height: 100%;
-  background: linear-gradient(145deg, #8bb697, #c7f5d3);
+  background: #8de4af;
   transition: width 0.3s ease;
 }
-
-/* Breakdown count */
 .shop-details-breakdown-count {
   width: 30px;
   text-align: right;
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #616161;
 }
-
-/* Total reviews text */
 .shop-details-total-reviews {
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #626262;
   margin-top: 8px;
 }
 
-/* Reviews section */
+/* Reviews */
 .shop-details-reviews-section {
   margin-top: 16px;
 }
-
-/* Reviews container */
 .shop-details-reviews-container {
   overflow-x: auto;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   max-height: 200px;
 }
-
-/* Reviews track */
 .shop-details-reviews-track {
   display: flex;
   gap: 16px;
   cursor: grab;
   flex-wrap: nowrap;
 }
-
-/* Individual review card */
 .shop-details-review-card {
   flex: 0 0 auto;
   width: 180px;
   padding: 12px;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  border: none; /* Remove solid border */
-  border-radius: 8px;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  overflow-y: auto;
+  background: rgba(43, 43, 43, 0.08);
+  border-radius: 10px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   max-height: 180px;
 }
-
-/* Review card text */
 .shop-details-review-card p {
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
+  font-size: 0.875rem;
+  color: #000000;
   margin-bottom: 4px;
   word-break: break-word;
 }
-
 .shop-details-review-card p strong {
   font-weight: 600;
 }
 
-/* Button container */
+/* Leave Review Button */
 .shop-details-button-container {
   margin-top: 16px;
   display: flex;
   justify-content: flex-start;
 }
-
-/* Leave a review button styling */
 .shop-details-leave-review-button {
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  color: #333; /* Matches other elements */
-  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.2);
   padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.875rem; /* 14px */
+  border-radius: 10px;
+  font-size: 0.875rem;
   cursor: pointer;
-  box-shadow: 3px 3px 6px #d1d1d1, -3px -3px 6px #ffffff; /* Raised effect */
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, background 0.3s ease;
 }
-
 .shop-details-leave-review-button:hover {
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle hover effect */
+  background: rgba(0, 0, 0, 0.18);
   transform: scale(1.05);
 }
-
 .shop-details-leave-review-button:active {
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff; /* Pressed effect */
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(0.95);
 }
-
 .shop-details-leave-review-button:focus {
   outline: none;
-  box-shadow: inset 2px 2px 5px #d1d1d1, inset -2px -2px 5px #ffffff, 0 0 0 2px #b0b0b0; /* Focus ring */
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Action buttons container */
+/* Amenities */
+.shop-details-amenities {
+  margin: 10px 0;
+  font-size: 0.875rem;
+  color: #000000;
+}
+.shop-details-amenity {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.1);
+  color: #000000;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-right: 8px;
+  backdrop-filter: blur(8px);
+}
+
+/* Actions */
 .shop-details-actions {
   display: flex;
   gap: 10px;
   margin: 10px 0;
 }
 
-/* Amenities section styling */
-.shop-details-amenities {
-  margin: 10px 0;
-  font-size: 0.875rem; /* 14px */
-  color: #333; /* Matches other elements */
-}
-
-/* Individual amenity tag */
-.shop-details-amenity {
-  display: inline-block;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Neumorphic gradient */
-  color: #333; /* Matches other elements */
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin-right: 8px;
-  box-shadow: 2px 2px 4px #d1d1d1, -2px -2px 4px #ffffff; /* Subtle raised effect */
-}
-
-/* Ensure hidden class overrides other styles */
+/* Hidden override */
 .hidden {
   display: none !important;
 }
+
 
 /* Base styling for the review banner */
 #review-banner {
