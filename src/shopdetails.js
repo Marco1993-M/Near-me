@@ -133,20 +133,35 @@ export async function showShopDetails(shop) {
       <button class="shop-details-leave-review-button" aria-label="Leave a review for ${shop.name}">Leave a Review</button>
     </div>
   `;
+
   shopDetailsBanner.classList.remove('hidden');
   console.log('Shop details banner displayed for:', shop.name);
 
-  // --- Event Listeners ---
+  // --- Slide-down close handler ---
+  function closeWithAnimation(callback) {
+    shopDetailsBanner.style.animation = 'slideDown 0.3s ease-in forwards';
+    shopDetailsBanner.addEventListener('animationend', () => {
+      shopDetailsBanner.classList.add('hidden');
+      shopDetailsBanner.style.animation = '';
+      if (callback) callback();
+    }, { once: true });
+  }
+
+  // Close button: slide down then hide
   shopDetailsBanner.querySelector('.shop-details-close-button')?.addEventListener('click', () => {
-    shopDetailsBanner.classList.add('hidden');
-    console.log('Shop details banner closed');
+    closeWithAnimation(() => {
+      console.log('Shop details banner closed with animation');
+    });
   });
 
+  // Leave review button: slide down, hide, then open review banner
   shopDetailsBanner.querySelector('.shop-details-leave-review-button')?.addEventListener('click', () => {
-    showReviewBanner({ ...shop, id: shopId });
-    shopDetailsBanner.classList.add('hidden');
+    closeWithAnimation(() => {
+      showReviewBanner({ ...shop, id: shopId });
+    });
   });
 
+  // Your other event listeners remain unchanged...
   shopDetailsBanner.querySelector('#call-button')?.addEventListener('click', () => {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
@@ -159,7 +174,7 @@ export async function showShopDetails(shop) {
     if (shop.website) window.open(shop.website, '_blank');
   });
 
-  // --- Scrollable Reviews Track ---
+  // Scrollable reviews track setup remains unchanged...
   const track = shopDetailsBanner.querySelector('.shop-details-reviews-track');
   if (track) {
     let isDown = false, startX, scrollLeft;
