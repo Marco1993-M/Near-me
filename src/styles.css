@@ -1898,14 +1898,14 @@ dialog#top100:not([open]) {
 
 /* Base styling for the favorites modal */
 #favorites {
- position: fixed !important; /* Ensure fixed positioning */
-  bottom: env(safe-area-inset-bottom, 0); /* Respect iOS safe area */
+  position: fixed !important;
+  bottom: env(safe-area-inset-bottom, 0);
   left: 50%;
-  transform: translateX(-50%);
-  width: min(96%, 1200px); /* Match #cities, #top100 */
-  height: clamp(60vh, 60vh, 60vh); /* Consistent height */
-  padding: clamp(0.75rem, 2vw, 1rem); /* Match #cities */
-  border-radius: 12px 12px 0 0; /* Match #cities, #top100 */
+  transform: translateX(-50%) translateY(100%);
+  width: min(96%, 1200px);
+  height: clamp(60vh, 60vh, 60vh);
+  padding: clamp(0.75rem, 2vw, 1rem);
+  border-radius: 12px 12px 0 0;
   border: 0.5px solid rgb(0, 0, 0);
   background: white;
   box-shadow: 
@@ -1919,7 +1919,21 @@ dialog#top100:not([open]) {
   z-index: 1009;
   box-sizing: border-box;
   overflow-y: auto;
+
+  animation: slideUpFavorites 0.4s ease-out forwards;
 }
+
+@keyframes slideUpFavorites {
+  0% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0%);
+    opacity: 1;
+  }
+}
+
 
 #favorites::after {
   content: '';
