@@ -106,33 +106,49 @@ export async function showShopDetails(shop) {
 
   // --- Render HTML ---
   shopDetailsBanner.innerHTML = `
-    <button class="shop-details-close-button" aria-label="Close ${shop.name} details">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
-    <h3 class="shop-details-heading">${shop.name}</h3>
-    <div class="shop-details-actions" style="display: flex; gap: 10px;">
-      ${shop.phone ? `<button id="call-button" class="floating-card-action-button" aria-label="Call"><svg ... /></svg><span>Call</span></button>` : ''}
-      ${shop.address ? `<button id="directions-button" class="floating-card-action-button" aria-label="Directions"><svg ... /></svg><span>Directions</span></button>` : ''}
-      ${shop.website ? `<button id="website-button" class="floating-card-action-button" aria-label="Website"><svg ... /></svg><span>Website</span></button>` : ''}
-    </div>
-    ${amenitiesHTML}
-    <div class="shop-details-ratings-section">
-      <h4 class="shop-details-subheading">Ratings & Reviews</h4>
-      <div class="shop-details-rating-dots">${dotsHTML}</div>
-      <h4 class="shop-details-subheading">Ratings Breakdown</h4>
-      ${breakdownHTML}
-      <p class="shop-details-total-reviews">${totalReviews} Reviews</p>
-    </div>
-    <div class="shop-details-reviews-section">
-      <h4 class="shop-details-subheading">Reviews</h4>
-      ${reviewsHTML}
-    </div>
-    <div class="shop-details-button-container">
-      <button class="shop-details-leave-review-button" aria-label="Leave a review for ${shop.name}">Leave a Review</button>
-    </div>
-  `;
+  <button class="shop-details-close-button" aria-label="Close ${shop.name} details">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+  <h3 class="shop-details-heading">${shop.name}</h3>
+  <div class="shop-details-actions" style="display: flex; gap: 10px;">
+    ${shop.phone ? `
+      <button id="call-button" class="floating-card-action-button" aria-label="Call">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-phone-icon lucide-phone"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg>
+        <span>Call</span>
+      </button>` : ''
+    }
+    ${shop.address ? `
+      <button id="directions-button" class="floating-card-action-button" aria-label="Directions">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin-icon lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+        <span>Directions</span>
+      </button>` : ''
+    }
+    ${shop.website ? `
+      <button id="website-button" class="floating-card-action-button" aria-label="Website">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link2-icon lucide-link-2"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 1 1 0 10h-2"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+        <span>Website</span>
+      </button>` : ''
+    }
+  </div>
+  ${amenitiesHTML}
+  <div class="shop-details-ratings-section">
+    <h4 class="shop-details-subheading">Ratings & Reviews</h4>
+    <div class="shop-details-rating-dots">${dotsHTML}</div>
+    <h4 class="shop-details-subheading">Ratings Breakdown</h4>
+    ${breakdownHTML}
+    <p class="shop-details-total-reviews">${totalReviews} Reviews</p>
+  </div>
+  <div class="shop-details-reviews-section">
+    <h4 class="shop-details-subheading">Reviews</h4>
+    ${reviewsHTML}
+  </div>
+  <div class="shop-details-button-container">
+    <button class="shop-details-leave-review-button" aria-label="Leave a review for ${shop.name}">Leave a Review</button>
+  </div>
+`;
+
 
   shopDetailsBanner.classList.remove('hidden');
   console.log('Shop details banner displayed for:', shop.name);
@@ -161,7 +177,7 @@ export async function showShopDetails(shop) {
     });
   });
 
-  // Your other event listeners remain unchanged...
+  // Other button event listeners
   shopDetailsBanner.querySelector('#call-button')?.addEventListener('click', () => {
     if (shop.phone) window.location.href = `tel:${shop.phone}`;
   });
@@ -174,7 +190,7 @@ export async function showShopDetails(shop) {
     if (shop.website) window.open(shop.website, '_blank');
   });
 
-  // Scrollable reviews track setup remains unchanged...
+  // Scrollable reviews track setup
   const track = shopDetailsBanner.querySelector('.shop-details-reviews-track');
   if (track) {
     let isDown = false, startX, scrollLeft;
