@@ -21,6 +21,8 @@ export async function showReviewBanner(shop) {
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) return;
 
+  document.body.classList.add('body-no-scroll'); // 🚫 Prevent background scroll
+
   reviewBanner.innerHTML = `
     <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
 
@@ -110,10 +112,9 @@ export async function showReviewBanner(shop) {
 
   reviewBanner.classList.remove('hidden');
   reviewBanner.style.animation = 'slideUp 0.4s ease-out forwards';
-
   reviewBanner.addEventListener('click', (e) => e.stopPropagation());
 
-  // Center "5" rating button
+  // Rating logic
   const ratingContainer = reviewBanner.querySelector('#rating-container');
   const ratingButtons = reviewBanner.querySelectorAll('.rating-pill');
   let selectedRating = 5;
@@ -133,19 +134,23 @@ export async function showReviewBanner(shop) {
     middleButton.classList.add('active');
   }
 
-  // Drag handle closes the modal
+  // Close modal via drag handle
   document.getElementById('review-drag-handle')?.addEventListener('click', () => {
     reviewBanner.style.animation = 'slideDown 0.3s ease-in forwards';
     reviewBanner.addEventListener('animationend', () => {
       reviewBanner.classList.add('hidden');
       reviewBanner.style.animation = '';
+      document.body.classList.remove('body-no-scroll'); // ✅ Re-enable scroll
     }, { once: true });
   });
 
+  // Cancel button
   reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', () => {
     reviewBanner.classList.add('hidden');
+    document.body.classList.remove('body-no-scroll');
   });
 
+  // Toggle specialty coffee info
   const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
   const specialtySection = reviewBanner.querySelector('#specialty-details-section');
   toggleBtn?.addEventListener('click', () => {
@@ -155,6 +160,7 @@ export async function showReviewBanner(shop) {
       : '− Hide Specialty Coffee Info';
   });
 
+  // Submit
   reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async () => {
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = reviewBanner.querySelector('#review-parking').checked;
@@ -193,6 +199,7 @@ export async function showReviewBanner(shop) {
     if (error) return alert(`Failed to submit review: ${error.message}`);
 
     reviewBanner.classList.add('hidden');
+    document.body.classList.remove('body-no-scroll');
     showShopDetails?.(shop);
   });
 }
