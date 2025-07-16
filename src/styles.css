@@ -879,8 +879,8 @@ body, html {
   position: fixed;
   bottom: 0;
   left: 0;
-  right: 0; /* ensure it stretches fully */
-  width: 100vw; /* full viewport width */
+  right: 0;
+  width: 100%; /* changed from 100vw */
   max-height: 90vh;
   overflow-y: auto;
   padding: 2rem 1.5rem;
@@ -891,10 +891,14 @@ body, html {
   box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.15);
   z-index: 1005;
 
+  /* Include padding in width */
+  box-sizing: border-box;
+
   /* Animation setup */
   transform: translateY(100%);
   animation: slideUp 0.4s forwards ease-out;
 }
+
 
 /* Optional small handle bar on top */
 #review-banner::before {
