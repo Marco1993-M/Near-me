@@ -212,3 +212,16 @@ openTop100Btn?.addEventListener('click', () => {
 closeTop100Btn?.addEventListener('click', () => {
   top100Modal.close();
 });
+
+// Prevent map from moving when interacting with the modal
+top100Modal.addEventListener('touchstart', (e) => {
+  e.stopPropagation();
+});
+
+top100Modal.addEventListener('touchmove', (e) => {
+  e.stopPropagation();
+});
+
+top100Modal.addEventListener('touchend', (e) => {
+  e.stopPropagation();
+});
