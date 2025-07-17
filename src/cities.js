@@ -44,7 +44,7 @@ export async function fetchCities(searchQuery = '') {
     });
 
     return Array.from(citySet).sort();
-    } catch (error) {
+  } catch (error) {
     console.error('Error fetching cities:', error);
     showError('Failed to load cities. Please try again.');
     return [];
@@ -303,22 +303,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentY = 0;
     let threshold = 150;
     let swipeDistance = 0;
+    let isDragging = false;
 
     citiesModal.addEventListener('touchstart', (e) => {
       startY = e.touches[0].clientY;
+      isDragging = true;
       e.stopPropagation();
     });
 
     citiesModal.addEventListener('touchmove', (e) => {
-      currentY = e.touches[0].clientY;
-      swipeDistance = currentY - startY;
+      if (isDragging) {
+        currentY = e.touches[0].clientY;
+        swipeDistance = currentY - startY;
 
-      citiesModal.style.transform = `translateY(${swipeDistance}px)`;
-      e.preventDefault();
-      e.stopPropagation();
+        requestAnimationFrame(() => {
+          citiesModal.style.transform = `translateY(${swipeDistance}px)`;
+        });
+        e.preventDefault();
+        e.stopPropagation();
+      }
     });
 
     citiesModal.addEventListener('touchend', () => {
+      isDragging = false;
       if (swipeDistance > threshold) {
         citiesModal.style.transition = 'transform 0.3s ease-out';
         citiesModal.style.transform = `translateY(${window.innerHeight}px)`;
