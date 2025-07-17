@@ -297,6 +297,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (shopResults) shopResults.remove();
       console.log('Cities modal closed');
     });
+
+    // Swipe down to close functionality
+    let startY = 0;
+    let currentY = 0;
+    let threshold = 100;
+    let swipeDistance = 0;
+
+    citiesModal.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    });
+
+    citiesModal.addEventListener('touchmove', (e) => {
+      currentY = e.touches[0].clientY;
+      swipeDistance = currentY - startY;
+
+      if (swipeDistance > 0) {
+        citiesModal.style.transform = `translateY(${swipeDistance}px)`;
+      }
+    });
+
+    citiesModal.addEventListener('touchend', () => {
+      if (swipeDistance > threshold) {
+        citiesModal.classList.add('hidden');
+        citiesModal.style.transform = '';
+        citySuggestions.classList.add('hidden');
+        const shopResults = document.querySelector('.shop-results');
+        if (shopResults) shopResults.remove();
+        console.log('Cities modal closed');
+      } else {
+        citiesModal.style.transform = '';
+      }
+    });
   } else {
     console.error('One or more city modal elements not found');
   }
