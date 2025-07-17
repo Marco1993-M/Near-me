@@ -1215,6 +1215,9 @@ body, html {
   }
 }
 
+#cities {
+  transition: transform 0.2s ease-out;
+}
 
 #cities::after {
   content: '';
