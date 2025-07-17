@@ -44,7 +44,7 @@ export async function fetchCities(searchQuery = '') {
     });
 
     return Array.from(citySet).sort();
-  } catch (error) {
+    } catch (error) {
     console.error('Error fetching cities:', error);
     showError('Failed to load cities. Please try again.');
     return [];
@@ -301,32 +301,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // Swipe down to close functionality
     let startY = 0;
     let currentY = 0;
-    let threshold = 100;
+    let threshold = 150;
     let swipeDistance = 0;
 
     citiesModal.addEventListener('touchstart', (e) => {
       startY = e.touches[0].clientY;
+      e.stopPropagation();
     });
 
     citiesModal.addEventListener('touchmove', (e) => {
       currentY = e.touches[0].clientY;
       swipeDistance = currentY - startY;
 
-      if (swipeDistance > 0) {
-        citiesModal.style.transform = `translateY(${swipeDistance}px)`;
-      }
+      citiesModal.style.transform = `translateY(${swipeDistance}px)`;
+      e.preventDefault();
+      e.stopPropagation();
     });
 
     citiesModal.addEventListener('touchend', () => {
       if (swipeDistance > threshold) {
-        citiesModal.classList.add('hidden');
-        citiesModal.style.transform = '';
-        citySuggestions.classList.add('hidden');
-        const shopResults = document.querySelector('.shop-results');
-        if (shopResults) shopResults.remove();
-        console.log('Cities modal closed');
+        citiesModal.style.transition = 'transform 0.3s ease-out';
+        citiesModal.style.transform = `translateY(${window.innerHeight}px)`;
+        setTimeout(() => {
+          citiesModal.classList.add('hidden');
+          citiesModal.style.transform = '';
+          citiesModal.style.transition = '';
+          citySuggestions.classList.add('hidden');
+          const shopResults = document.querySelector('.shop-results');
+          if (shopResults) shopResults.remove();
+          console.log('Cities modal closed');
+        }, 300);
       } else {
+        citiesModal.style.transition = 'transform 0.3s ease-out';
         citiesModal.style.transform = '';
+        setTimeout(() => {
+          citiesModal.style.transition = '';
+        }, 300);
       }
     });
   } else {
