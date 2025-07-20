@@ -150,23 +150,23 @@ export function initTasteProfile() {
     }
   }
 
-  function recommendCoffee(answers) {
-    const sweetness = answers[2];
-    const flavorNotes = answers[0];
-    const spice = answers[3];
+function recommendCoffee(answers) {
+  const sweetness = answers[2];
+  const flavorNotes = answers[0];
+  const spice = answers[3];
 
-    if (sweetness === 0 && flavorNotes === 0) {
-      return "Brazilian Santos"; // sweet and indulgent
-    } else if (flavorNotes === 1) {
-      return "Ethiopian Yirgacheffe"; // fruity and bright
-    } else if (spice === 0) {
-      return "Sumatran Mandheling"; // warm and spicy
-    } else if (flavorNotes === 2 && answers[4] === 0) {
-      return "Colombian Supremo"; // rich and nutty
-    } else {
-      return "Kenyan AA"; // balanced and complex
-    }
+  if (sweetness === 0 && flavorNotes === 0) {
+    return "Nicaragua Matagalpa - smooth, rich, and sweet with chocolate flavors and nutty notes";
+  } else if (flavorNotes === 1) {
+    return "Ethiopia Yirgacheffe - bright floral aroma and smooth body with sweet, fragrant flavors";
+  } else if (spice === 0) {
+    return "Sumatra Mandheling - heavy, complex, and syrupy with low acidity and earthy notes";
+  } else if (flavorNotes === 2 && answers[4] === 0) {
+    return "Colombia Hacienda Guayabal - smooth and balanced with notes of chocolate and caramel";
+  } else {
+    return "Guatemala Antigua - well-balanced cup with smoky flavor and chocolaty aroma";
   }
+}
 
   async function showExistingProfile() {
     const { data: { user } } = await supabase.auth.getUser();
