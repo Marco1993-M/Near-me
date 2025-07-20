@@ -2379,8 +2379,8 @@ dialog#favorites[open] {
 /* Floating Button */
 #taste-profile-btn {
     position: fixed;
-    bottom: 5rem;
-    right: 1rem;
+    top: 11rem;
+    right: 1.6rem;
     width: 50px;
     height: 50px;
     border: none;
@@ -2391,7 +2391,7 @@ dialog#favorites[open] {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 1000;
+    z-index: 1007;
     transition: background 0.3s;
 }
 
@@ -2404,7 +2404,8 @@ dialog#favorites[open] {
     height: 60%;
 }
 
-/* Modal Styles */
+
+/* Style the quiz modal */
 /* Style the quiz modal */
 #quiz-modal {
   position: fixed;
