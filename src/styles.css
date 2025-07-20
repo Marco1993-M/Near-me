@@ -2377,22 +2377,22 @@ dialog#favorites[open] {
 }
 
 /* Floating Button */
+/* Floating Button */
 #taste-profile-btn {
-    position: fixed;
-    top: 11rem;
-    right: 1.6rem;
-    width: 50px;
-    height: 50px;
-    border: none;
-    border-radius: 50%;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1007;
-    transition: background 0.3s;
+  position: fixed;
+  top: 11rem;
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
+  border: none; /* Remove solid border */
+  border-radius: 50%;
+  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic raised effect */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: box-shadow 0.2s ease;
 }
 
 #taste-profile-btn:hover {
