@@ -102,20 +102,44 @@ const tasteProfiles = [
   }
 
   async function saveTasteProfileToSupabase(profileName, answers) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.warn("User not logged in — can't save taste profile.");
-      return;
-    }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.warn("User not logged in — can't save taste profile.");
+    return;
+  }
 
+  const { data: existingProfile, error: existingError } = await supabase
+    .from('user_taste_profiles')
+    .select('*')
+    .eq('user_id', user.id);
+
+  if (existingError) {
+    console.error('Error checking existing profile:', existingError);
+  } else if (existingProfile.length > 0) {
+    // Update existing profile
     const { data, error } = await supabase
       .from('user_taste_profiles')
-      .upsert({
-        user_id: user.id,
+      .update({
         profile_name: profileName,
         answers: answers,
         updated_at: new Date(),
-      }, { onConflict: 'user_id' });
+      })
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating taste profile:', error);
+    } else {
+      console.log('Taste profile updated:', data);
+    }
+  } else {
+    // Insert new profile
+    const { data, error } = await supabase
+      .from('user_taste_profiles')
+      .insert({
+        user_id: user.id,
+        profile_name: profileName,
+        answers: answers,
+      });
 
     if (error) {
       console.error('Error saving taste profile:', error);
@@ -123,6 +147,7 @@ const tasteProfiles = [
       console.log('Taste profile saved:', data);
     }
   }
+}
 
   function spinWheel(profile) {
     if (wheel) {
