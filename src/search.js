@@ -131,8 +131,12 @@ function debounce(func, wait) {
 function ensurePlacesService() {
   if (!placesService) {
     const mapDiv = getMapInstance()?.map?.getDiv();
-    if (!mapDiv) throw new Error('Map container not found for PlacesService.');
-    placesService = new google.maps.places.PlacesService(mapDiv);
+    if (!mapDiv || typeof mapDiv.getDiv !== 'function' && !(mapDiv instanceof HTMLElement)) {
+      console.warn('Map div not found or invalid, using dummy div for PlacesService');
+      placesService = new google.maps.places.PlacesService(document.createElement('div'));
+    } else {
+      placesService = new google.maps.places.PlacesService(mapDiv);
+    }
   }
   return placesService;
 }
