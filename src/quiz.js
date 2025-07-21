@@ -95,7 +95,9 @@ export function initTasteProfile() {
           currentQuestionIndex++;
           showQuestion(currentQuestionIndex);
         } else {
-          showResults();
+          const profile = determineProfile(userAnswers);
+          saveTasteProfileToSupabase(profile.name, userAnswers);
+          displayResults(profile);
         }
       });
       quizOptions.appendChild(btn);
@@ -150,23 +152,23 @@ export function initTasteProfile() {
     }
   }
 
-function recommendCoffee(answers) {
-  const sweetness = answers[2];
-  const flavorNotes = answers[0];
-  const spice = answers[3];
+  function recommendCoffee(answers) {
+    const sweetness = answers[2];
+    const flavorNotes = answers[0];
+    const spice = answers[3];
 
-  if (sweetness === 0 && flavorNotes === 0) {
-    return "Nicaragua Matagalpa - smooth, rich, and sweet with chocolate flavors and nutty notes";
-  } else if (flavorNotes === 1) {
-    return "Ethiopia Yirgacheffe - bright floral aroma and smooth body with sweet, fragrant flavors";
-  } else if (spice === 0) {
-    return "Sumatra Mandheling - heavy, complex, and syrupy with low acidity and earthy notes";
-  } else if (flavorNotes === 2 && answers[4] === 0) {
-    return "Colombia Hacienda Guayabal - smooth and balanced with notes of chocolate and caramel";
-  } else {
-    return "Guatemala Antigua - well-balanced cup with smoky flavor and chocolaty aroma";
+    if (sweetness === 0 && flavorNotes === 0) {
+      return "Nicaragua Matagalpa - smooth, rich, and sweet with chocolate flavors and nutty notes";
+    } else if (flavorNotes === 1) {
+      return "Ethiopia Yirgacheffe - bright floral aroma and smooth body with sweet, fragrant flavors";
+    } else if (spice === 0) {
+      return "Sumatra Mandheling - heavy, complex, and syrupy with low acidity and earthy notes";
+    } else if (flavorNotes === 2 && answers[4] === 0) {
+      return "Colombia Hacienda Guayabal - smooth and balanced with notes of chocolate and caramel";
+    } else {
+      return "Guatemala Antigua - well-balanced cup with smoky flavor and chocolaty aroma";
+    }
   }
-}
 
   async function showExistingProfile() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -185,7 +187,7 @@ function recommendCoffee(answers) {
     } else if (existingProfile.length > 0) {
       const profile = existingProfile[0];
       quizQuestion.textContent = `Your taste profile: ${profile.profile_name}`;
-     quizOptions.innerHTML = `
+      quizOptions.innerHTML = `
         <p>Your profile: ${profile.profile_name}</p>
         <p>We recommend a ${recommendCoffee(profile.answers)} coffee for you!</p>
         <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
@@ -203,6 +205,25 @@ function recommendCoffee(answers) {
     }
   }
 
+  function displayResults(profile) {
+    quizQuestion.textContent = `Your taste profile: ${profile.name}`;
+    quizOptions.innerHTML = `
+      <p>Your profile: ${profile.name}</p>
+      <p>We recommend a ${recommendCoffee(userAnswers)} coffee for you!</p>
+      <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
+    `;
+
+    const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+    retakeQuizBtn.addEventListener('click', () => {
+      currentQuestionIndex = 0;
+      userAnswers.length = 0;
+      nextButton.style.display = 'inline-block';
+      showQuestion(currentQuestionIndex);
+    });
+
+    nextButton.style.display = 'none';
+  }
+
   function openQuiz() {
     currentQuestionIndex = 0;
     userAnswers.length = 0;
@@ -216,13 +237,5 @@ function recommendCoffee(answers) {
   }
 
   openButton.addEventListener('click', showExistingProfile);
-  nextButton.addEventListener('click', () => {
-    if (currentQuestionIndex < quizData.length - 1) {
-      currentQuestionIndex++;
-      showQuestion(currentQuestionIndex);
-    } else {
-      showResults();
-    }
-  });
   closeButton.addEventListener('click', closeQuiz);
 }
