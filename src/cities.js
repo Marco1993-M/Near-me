@@ -53,6 +53,7 @@ export async function fetchCities(searchQuery = '') {
 
 export async function fetchTrendingShops(city) {
   return new Promise((resolve) => {
+    // Use a detached div element for PlacesService (fixes getDiv error)
     const service = new google.maps.places.PlacesService(document.createElement('div'));
 
     const request = {
@@ -81,6 +82,7 @@ export async function fetchTrendingShops(city) {
     });
   });
 }
+
 
 async function fetchSupabaseShops(city) {
   try {
