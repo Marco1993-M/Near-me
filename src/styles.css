@@ -1464,6 +1464,8 @@ body, html {
   gap: 0.5rem;
   position: relative; /* To contain absolutely positioned children like suggestions */
   box-sizing: border-box;
+  flex-grow: 1; /* Make #city-buttons take up all available vertical space */
+  min-height: 0; /* Important for flex containers with scrollable children */
 }
 
 /* Search input field styling */
@@ -1619,11 +1621,13 @@ body, html {
 
 /* Shop results container */
 .shop-results {
-  max-height: 300px;
-  overflow-y: auto;
-  background: transparent; /* No background to keep consistent */
-  padding-right: 8px; /* for scrollbar spacing */
+  overflow-y: auto; /* This is where the scrollbar should appear */
+  flex-grow: 1; /* This makes it take available space within #city-buttons */
+  max-height: 100%; /* Can keep this, but less critical if flex-grow on parent is handled */
+  padding-right: 8px;
+  padding-bottom: 2rem;
   box-sizing: border-box;
+  background: transparent;
   border-radius: 0;
 }
 
