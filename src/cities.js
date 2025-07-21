@@ -1,110 +1,306 @@
-'use client';
+import { getMapInstance } from './map.js';
+import { loadFavorites } from './favorites.js';
+import { showFloatingCard } from './shops.js';
+import { getOrCreateShop } from './db.js';
+import supabase from './supabase.js';
 
-import { useEffect } from 'react';
+const map = getMapInstance();
+let favorites = [];
+let cityMarkers = [];
 
-export default function CitiesModalHandler() {
-  useEffect(() => {
-    const citiesButton = document.getElementById('open-cities');
-    const citiesModal = document.getElementById('cities');
-    const citySuggestions = document.getElementById('city-suggestions');
-    const closeModalBtn = document.getElementById('close-cities');
+async function initCities() {
+  try {
+    favorites = await loadFavorites();
+  } catch (error) {
+    console.error('Error initializing cities:', error);
+  }
+}
 
-    const openModal = () => {
-      if (citiesModal) {
-        citiesModal.classList.remove('hidden');
-      }
+initCities();
+
+function showError(message) {
+  const cityButtonsContainer = document.getElementById('city-buttons');
+  if (!cityButtonsContainer) return;
+  const errorDiv = document.createElement('div');
+  errorDiv.className = 'text-red-500 p-2 mb-2';
+  errorDiv.textContent = message;
+  cityButtonsContainer.prepend(errorDiv);
+  setTimeout(() => errorDiv.remove(), 3000);
+}
+
+export async function fetchCities(searchQuery = '') {
+  try {
+    const { data: shops, error } = await supabase
+      .from('shops')
+      .select('city')
+      .ilike('city', `%${searchQuery}%`);
+
+    if (error) throw error;
+    if (!shops) return [];
+
+    const citySet = new Set();
+    shops.forEach(shop => {
+      if (shop.city) citySet.add(shop.city.toLowerCase());
+    });
+
+    return Array.from(citySet).sort();
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    showError('Failed to load cities. Please try again.');
+    return [];
+  }
+}
+
+export async function fetchTrendingShops(city) {
+  return new Promise((resolve) => {
+    const service = new google.maps.places.PlacesService(document.createElement('div'));
+
+    const request = {
+      query: `${city} coffee`,
+      type: 'cafe'
     };
 
-    const closeModal = () => {
-      if (citiesModal) {
-        citiesModal.classList.add('hidden');
-      }
-
-      if (citySuggestions) {
-        citySuggestions.classList.add('hidden');
-      }
-
-      const shopResults = document.querySelector('.shop-results');
-      if (shopResults) {
-        shopResults.remove();
-      }
-
-      console.log('Cities modal closed');
-    };
-
-    if (citiesButton) citiesButton.addEventListener('click', openModal);
-    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-
-    // Swipe down to close functionality
-    let startY = 0;
-    let currentY = 0;
-    let threshold = 150;
-    let swipeDistance = 0;
-    let isDragging = false;
-
-    if (citiesModal) {
-      citiesModal.addEventListener('touchstart', (e) => {
-        startY = e.touches[0].clientY;
-        isDragging = true;
-        e.stopPropagation();
-      });
-
-      citiesModal.addEventListener('touchmove', (e) => {
-        if (isDragging) {
-          currentY = e.touches[0].clientY;
-          swipeDistance = currentY - startY;
-
-          // ✅ Only prevent default when swiping down from near the top
-          if (swipeDistance > 0 && startY < 100) {
-            e.preventDefault();
-          }
-
-          requestAnimationFrame(() => {
-            citiesModal.style.transform = `translateY(${swipeDistance}px)`;
-          });
-
-          e.stopPropagation();
-        }
-      });
-
-      citiesModal.addEventListener('touchend', () => {
-        isDragging = false;
-
-        if (swipeDistance > threshold) {
-          citiesModal.style.transition = 'transform 0.3s ease-out';
-          citiesModal.style.transform = `translateY(${window.innerHeight}px)`;
-
-          setTimeout(() => {
-            citiesModal.classList.add('hidden');
-            citiesModal.style.transform = '';
-            citiesModal.style.transition = '';
-            if (citySuggestions) {
-              citySuggestions.classList.add('hidden');
-            }
-            const shopResults = document.querySelector('.shop-results');
-            if (shopResults) {
-              shopResults.remove();
-            }
-
-            console.log('Cities modal closed');
-          }, 300);
-        } else {
-          citiesModal.style.transition = 'transform 0.3s ease-out';
-          citiesModal.style.transform = '';
-          setTimeout(() => {
-            citiesModal.style.transition = '';
-          }, 300);
-        }
-
-        swipeDistance = 0;
-      });
+    const mapInstance = getMapInstance();
+    const userLatLng = mapInstance?.map?.getCenter();
+    if (userLatLng) {
+      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+      request.radius = 5000;
     }
 
-    return () => {
-      if (citiesButton) citiesButton.removeEventListener('click', openModal);
-      if (closeModalBtn) closeModalBtn.removeEventListener('click', closeModal);
-    };
-  }, []);
-
-  return null;
+    service.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        const sorted = results
+          .filter(shop => shop.rating)
+          .sort((a, b) => b.rating - a.rating);
+        resolve(sorted.slice(0, 5));
+      } else {
+        console.error(`PlacesService textSearch failed for ${city}:`, status);
+        showError(`Failed to load trending shops for ${city}.`);
+        resolve([]);
+      }
+    });
+  });
 }
+
+async function fetchSupabaseShops(city) {
+  try {
+    const { data, error } = await supabase
+      .from('shops')
+      .select('*')
+      .ilike('city', `%${city}%`);
+
+    if (error) {
+      console.error('Supabase fetch error:', error);
+      return [];
+    }
+
+    return data.map(shop => ({
+      ...shop,
+      source: 'supabase'
+    }));
+  } catch (err) {
+    console.error('Failed to fetch Supabase shops:', err);
+    return [];
+  }
+}
+
+function extractCityFromAddressComponents(components) {
+  if (!components) return 'Unknown City';
+  const cityComponent = components.find(c =>
+    c.types.includes('locality') || c.types.includes('administrative_area_level_2')
+  );
+  return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
+}
+
+async function handleCityShopClick(shop) {
+  const mapInstance = getMapInstance();
+  const map = mapInstance?.map;
+  const coffeeIcon = mapInstance?.customIcon;
+
+  if (!map) return;
+
+  const citiesModal = document.getElementById('cities');
+  if (citiesModal) citiesModal.classList.add('hidden');
+
+  cityMarkers.forEach(marker => map.removeLayer(marker));
+  cityMarkers = [];
+
+  let lat, lng;
+
+  if (shop.source === 'supabase') {
+    lat = shop.lat;
+    lng = shop.lng;
+  } else {
+    lat = shop.geometry.location.lat();
+    lng = shop.geometry.location.lng();
+  }
+
+  const marker = L.marker([lat, lng], { icon: coffeeIcon })
+    .addTo(map)
+    .bindPopup(shop.name)
+    .openPopup();
+
+  cityMarkers.push(marker);
+  map.setView([lat, lng], 15);
+
+  const shopData = shop.source === 'supabase'
+    ? shop
+    : {
+        name: shop.name,
+        address: shop.formatted_address,
+        lat,
+        lng,
+        city: extractCityFromAddressComponents(shop.address_components),
+        phone: shop.formatted_phone_number || null,
+        id: await getOrCreateShop(
+          shop.name,
+          shop.formatted_address,
+          extractCityFromAddressComponents(shop.address_components),
+          lat,
+          lng
+        )
+      };
+
+  await showFloatingCard(shopData);
+}
+
+export function renderCitySuggestions(cities) {
+  const citySuggestions = document.getElementById('city-suggestions');
+  if (!citySuggestions) return;
+
+  citySuggestions.innerHTML = '';
+  citySuggestions.classList.toggle('hidden', cities.length === 0);
+
+  cities.forEach(city => {
+    const suggestionItem = document.createElement('div');
+    suggestionItem.className = 'city-suggestion-item px-3 py-1 hover:bg-gray-200 cursor-pointer';
+    suggestionItem.textContent = city.charAt(0).toUpperCase() + city.slice(1);
+    suggestionItem.dataset.city = city;
+
+    suggestionItem.addEventListener('click', async () => {
+      const citySearchInput = document.getElementById('city-search');
+      if (citySearchInput) citySearchInput.value = suggestionItem.textContent;
+      citySuggestions.classList.add('hidden');
+
+      const [googleShops, supabaseShops] = await Promise.all([
+        fetchTrendingShops(city),
+        fetchSupabaseShops(city)
+      ]);
+
+      const mergedShops = [
+        ...googleShops.map(shop => ({ ...shop, source: 'google' })),
+        ...supabaseShops
+      ];
+
+      renderShopResults(mergedShops);
+    });
+
+    citySuggestions.appendChild(suggestionItem);
+  });
+}
+
+export function renderShopResults(shops) {
+  const cityButtonsContainer = document.getElementById('city-buttons');
+  if (!cityButtonsContainer) return;
+
+  const existingResults = cityButtonsContainer.querySelector('.shop-results');
+  if (existingResults) existingResults.remove();
+
+  const shopResultsContainer = document.createElement('div');
+  shopResultsContainer.className = 'shop-results mt-2';
+
+  if (!shops || shops.length === 0) {
+    shopResultsContainer.innerHTML = '<p class="text-gray-500 p-2">No shops found for this city.</p>';
+  } else {
+    shopResultsContainer.innerHTML = `
+      <h4 class="section-title text-sm font-semibold mb-1">Trending Shops</h4>
+      <ul class="cities-modal-shops-list flex gap-2 overflow-x-auto"></ul>
+    `;
+
+    const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
+
+    shops.forEach(shop => {
+      const li = document.createElement('li');
+      li.className = `top100-modal-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
+
+      const tagLabel = shop.source === 'google' ? 'Curated' : 'Community';
+      const tagClass = shop.source;
+
+      li.innerHTML = `
+        <div class="top100-modal-shop-info font-medium">
+          ${shop.name}
+          <div class="shop-tag ${tagClass}">${tagLabel}</div>
+        </div>
+        <div class="top100-modal-actions">
+          <button class="top100-modal-button view-shop" data-shop-id="${shop.place_id || shop.id}" aria-label="View ${shop.name}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+      `;
+
+      li.addEventListener('click', () => handleCityShopClick(shop));
+      list.appendChild(li);
+    });
+  }
+
+  cityButtonsContainer.appendChild(shopResultsContainer);
+}
+
+const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const citySearchInput = document.getElementById('city-search');
+  const citySuggestions = document.getElementById('city-suggestions');
+  const cityButtonsContainer = document.getElementById('city-buttons');
+  const closeCitiesModal = document.querySelector('.close-cities-modal');
+  const citiesModal = document.getElementById('cities');
+
+  if (citySearchInput && citySuggestions && cityButtonsContainer && citiesModal) {
+    citySearchInput.addEventListener(
+      'input',
+      debounce(async () => {
+        const searchQuery = citySearchInput.value.trim().toLowerCase();
+
+        if (searchQuery.length === 0) {
+          citySuggestions.classList.add('hidden');
+          const shopResults = cityButtonsContainer.querySelector('.shop-results');
+          if (shopResults) shopResults.remove();
+          return;
+        }
+
+        const cities = await fetchCities(searchQuery);
+        renderCitySuggestions(cities);
+      }, 300)
+    );
+
+    citySearchInput.addEventListener('change', () => {
+      if (!citySearchInput.value.trim()) {
+        citySuggestions.classList.add('hidden');
+        const shopResults = cityButtonsContainer.querySelector('.shop-results');
+        if (shopResults) shopResults.remove();
+      }
+    });
+
+    closeCitiesModal.addEventListener('click', () => {
+      citiesModal.classList.add('hidden');
+      citySuggestions.classList.add('hidden');
+      const shopResults = cityButtonsContainer.querySelector('.shop-results');
+      if (shopResults) shopResults.remove();
+      console.log('Cities modal closed');
+    });
+
+    // Removed touchmove and swipe-to-close handlers to enable scroll
+
+  } else {
+    console.error('One or more city modal elements not found');
+  }
+});
