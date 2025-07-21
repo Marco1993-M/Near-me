@@ -1247,7 +1247,11 @@ body, html {
   padding: clamp(0.75rem, 2vw, 1rem);
   box-sizing: border-box;
   position: relative;
-  overflow: hidden;
+  /* REMOVE OR CHANGE THIS LINE: */
+  /* overflow: hidden; */ /* <--- THIS IS THE CULPRIT! */
+  /* Change it to 'overflow: auto;' if you want it to scroll in case other elements also overflow,
+     but generally, it's better to let flex-grow handle the main scrollable area.
+     For now, just remove it. */
 }
 
 /* Scrollable area for shop results */
@@ -1631,6 +1635,16 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+/* Add this new rule for the cities modal shop list items */
+.cities-modal-shops-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* You may want to copy other stylistic properties from .top100-modal-list-item if they apply here,
+     e.g., padding, background, border, border-radius, etc., to maintain consistent look.
+     Currently, shop-google/shop-supabase handle border/padding/radius. */
 }
 
 .shop-google {
