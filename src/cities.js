@@ -1,15 +1,12 @@
-import supabase from './supabase.js';
 import { getMapInstance } from './map.js';
 import { loadFavorites } from './favorites.js';
 import { showFloatingCard } from './shops.js';
 import { getOrCreateShop } from './db.js';
+import supabase from './supabase.js';
 
-const mapInstance = getMapInstance();
+const map = getMapInstance();
 let favorites = [];
 let cityMarkers = [];
-// This global variable will store the shops currently rendered in the list.
-// It's crucial for the event delegation to retrieve the correct shop object.
-let currentRenderedShops = [];
 
 async function initCities() {
   try {
@@ -63,8 +60,8 @@ export async function fetchTrendingShops(city) {
       type: 'cafe'
     };
 
-    const map = mapInstance?.map;
-    const userLatLng = map?.getCenter();
+    const mapInstance = getMapInstance();
+    const userLatLng = mapInstance?.map?.getCenter();
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
       request.radius = 5000;
@@ -115,84 +112,56 @@ function extractCityFromAddressComponents(components) {
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
 }
 
-// Function to handle shop clicks (delegated)
-async function handleShopItemClick(event) {
-    // console.log('handleShopItemClick started. Event:', event); // Debug log
-    const li = event.target.closest('.cities-modal-shops-list-item');
-    if (!li) {
-        // console.warn('handleShopItemClick called but li is null/undefined.'); // Debug log
-        return;
-    }
+async function handleCityShopClick(shop) {
+  const mapInstance = getMapInstance();
+  const map = mapInstance?.map;
+  const coffeeIcon = mapInstance?.customIcon;
 
-    const shopIndex = li.dataset.shopIndex;
-    // console.log('Shop index from dataset:', shopIndex); // Debug log
+  if (!map) return;
 
-    if (shopIndex === undefined || isNaN(Number(shopIndex))) { // Check if index is valid
-        console.error('Shop index not found or invalid on clicked item:', shopIndex);
-        return;
-    }
+  const citiesModal = document.getElementById('cities');
+  if (citiesModal) citiesModal.classList.add('hidden');
 
-    const shop = currentRenderedShops[Number(shopIndex)]; // Ensure shopIndex is a number for array access
-    // console.log('Retrieved shop data:', shop); // Debug log
+  cityMarkers.forEach(marker => map.removeLayer(marker));
+  cityMarkers = [];
 
-    if (!shop) {
-        console.error('Shop data not found for index:', shopIndex, 'in currentRenderedShops.');
-        return;
-    }
+  let lat, lng;
 
-    const map = mapInstance?.map;
-    const coffeeIcon = mapInstance?.customIcon;
+  if (shop.source === 'supabase') {
+    lat = shop.lat;
+    lng = shop.lng;
+  } else {
+    lat = shop.geometry.location.lat();
+    lng = shop.geometry.location.lng();
+  }
 
-    if (!map) {
-        console.error('Map instance not available.'); // Debug log
-        return;
-    }
+  const marker = L.marker([lat, lng], { icon: coffeeIcon })
+    .addTo(map)
+    .bindPopup(shop.name)
+    .openPopup();
 
-    const citiesModal = document.getElementById('cities');
-    if (citiesModal) citiesModal.classList.add('hidden'); // Close modal first
+  cityMarkers.push(marker);
+  map.setView([lat, lng], 15);
 
-    cityMarkers.forEach(marker => map.removeLayer(marker));
-    cityMarkers = [];
+  const shopData = shop.source === 'supabase'
+    ? shop
+    : {
+        name: shop.name,
+        address: shop.formatted_address,
+        lat,
+        lng,
+        city: extractCityFromAddressComponents(shop.address_components),
+        phone: shop.formatted_phone_number || null,
+        id: await getOrCreateShop(
+          shop.name,
+          shop.formatted_address,
+          extractCityFromAddressComponents(shop.address_components),
+          lat,
+          lng
+        )
+      };
 
-    let lat, lng;
-
-    if (shop.source === 'supabase') {
-        lat = shop.lat;
-        lng = shop.lng;
-    } else {
-        lat = shop.geometry.location.lat();
-        lng = shop.geometry.location.lng();
-    }
-
-    const marker = L.marker([lat, lng], { icon: coffeeIcon })
-        .addTo(map)
-        .bindPopup(shop.name)
-        .openPopup();
-
-    cityMarkers.push(marker);
-    map.setView([lat, lng], 15);
-
-    const shopData = shop.source === 'supabase'
-        ? shop
-        : {
-            name: shop.name,
-            address: shop.formatted_address,
-            lat,
-            lng,
-            city: extractCityFromAddressComponents(shop.address_components),
-            phone: shop.formatted_phone_number || null,
-            id: await getOrCreateShop(
-                shop.name,
-                shop.formatted_address,
-                extractCityFromAddressComponents(shop.address_components),
-                lat,
-                lng,
-                // Pass country code if available from Google Places data
-                shop.address_components?.find(c => c.types.includes('country'))?.short_name || null
-            )
-        };
-
-    await showFloatingCard(shopData);
+  await showFloatingCard(shopData);
 }
 
 export function renderCitySuggestions(cities) {
@@ -249,12 +218,10 @@ export function renderShopResults(shops) {
     `;
 
     const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
-    currentRenderedShops = shops; // Store shops globally for delegation
 
-    shops.forEach((shop, index) => {
+    shops.forEach(shop => {
       const li = document.createElement('li');
-      li.className = `cities-modal-shops-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
-      li.dataset.shopIndex = index; // Store index for retrieval later
+      li.className = `top100-modal-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
 
       const tagLabel = shop.source === 'google' ? 'Curated' : 'Community';
       const tagClass = shop.source;
@@ -274,6 +241,7 @@ export function renderShopResults(shops) {
         </div>
       `;
 
+      li.addEventListener('click', () => handleCityShopClick(shop));
       list.appendChild(li);
     });
   }
@@ -296,14 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeCitiesModal = document.querySelector('.close-cities-modal');
   const citiesModal = document.getElementById('cities');
 
-  // Apply the font-size fix here as well, directly on load or via CSS.
-  // This CSS approach is generally cleaner:
-  // if (citySearchInput) {
-  //   citySearchInput.style.fontSize = '1rem'; // Ensure it's 16px to prevent zoom
-  // }
-
-
-  if (citySearchInput && citySuggestions && cityButtonsContainer && citiesModal && closeCitiesModal) { // Added closeCitiesModal check
+  if (citySearchInput && citySuggestions && cityButtonsContainer && citiesModal) {
     citySearchInput.addEventListener(
       'input',
       debounce(async () => {
@@ -385,20 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
       }
     });
-
-    // IMPORTANT: Event delegation for shop item clicks
-    // Attach listener to the static parent container where shop results are rendered
-    cityButtonsContainer.addEventListener('click', (event) => {
-        // console.log('Click event on cityButtonsContainer:', event.target); // Debug log
-        // Only trigger handleShopItemClick if the clicked element or its closest ancestor
-        // has the class 'cities-modal-shops-list-item'.
-        if (event.target.closest('.cities-modal-shops-list-item')) {
-            // console.log('Delegated click caught for shop item.'); // Debug log
-            handleShopItemClick(event);
-        }
-    });
-
   } else {
-    console.error('One or more city modal elements not found (citySearchInput, citySuggestions, cityButtonsContainer, citiesModal, or closeCitiesModal).');
+    console.error('One or more city modal elements not found');
   }
 });
