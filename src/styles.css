@@ -1496,7 +1496,7 @@ body, html {
 @media (max-width: 480px) {
   .city-search-input {
     padding: 0.4rem 0.6rem; /* Slightly smaller */
-    font-size: 0.875rem; /* Original size (14px) for mobile */
+    font-size: 1rem; /* Original size (14px) for mobile */
     border-radius: 6px; /* Smaller radius */
     backdrop-filter: blur(1px) saturate(150%); /* Lighter blur */
     -webkit-backdrop-filter: blur(1px) saturate(150%);
