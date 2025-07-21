@@ -1,10 +1,10 @@
-import { getMapInstance } from './map.js';
-import { loadFavorites } from './favorites.js';
-import { showFloatingCard } from './shops.js';
-import { getOrCreateShop } from './db.js';
 import supabase from './supabase.js';
+import { getMapInstance } from './map.js'; // Assuming getMapInstance returns the Leaflet map and customIcon
+import { loadFavorites } from './favorites.js';
+import { showFloatingCard } from './shops.js'; // Assuming this shows the banner you mentioned
+import { getOrCreateShop } from './db.js';
 
-const map = getMapInstance();
+const mapInstance = getMapInstance(); // Get map instance once
 let favorites = [];
 let cityMarkers = [];
 
@@ -53,7 +53,6 @@ export async function fetchCities(searchQuery = '') {
 
 export async function fetchTrendingShops(city) {
   return new Promise((resolve) => {
-    // Use a detached div element for PlacesService (fixes getDiv error)
     const service = new google.maps.places.PlacesService(document.createElement('div'));
 
     const request = {
@@ -61,8 +60,8 @@ export async function fetchTrendingShops(city) {
       type: 'cafe'
     };
 
-    const mapInstance = getMapInstance();
-    const userLatLng = mapInstance?.map?.getCenter();
+    const map = mapInstance?.map; // Use the already obtained map instance
+    const userLatLng = map?.getCenter();
     if (userLatLng) {
       request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
       request.radius = 5000;
@@ -82,7 +81,6 @@ export async function fetchTrendingShops(city) {
     });
   });
 }
-
 
 async function fetchSupabaseShops(city) {
   try {
@@ -114,57 +112,81 @@ function extractCityFromAddressComponents(components) {
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
 }
 
-async function handleCityShopClick(shop) {
-  const mapInstance = getMapInstance();
-  const map = mapInstance?.map;
-  const coffeeIcon = mapInstance?.customIcon;
+// Function to handle shop clicks (either from Google Places or Supabase)
+async function handleShopItemClick(event) {
+    const li = event.target.closest('.cities-modal-shops-list-item'); // Changed class name
+    if (!li) return; // Not a click on a shop item
 
-  if (!map) return;
+    // Retrieve shop data from the element's dataset or a global array
+    // This assumes you store the full shop object somewhere accessible,
+    // or you can retrieve it from an array like 'processedShops' in top100.js
+    // For now, let's assume `data-shop-index` to get from `currentRenderedShops`
+    const shopIndex = li.dataset.shopIndex;
+    if (shopIndex === undefined) {
+        console.error('Shop index not found on clicked item');
+        return;
+    }
+    const shop = currentRenderedShops[shopIndex]; // Get the shop data from our temporary storage
+    if (!shop) {
+        console.error('Shop data not found for index:', shopIndex);
+        return;
+    }
 
-  const citiesModal = document.getElementById('cities');
-  if (citiesModal) citiesModal.classList.add('hidden');
+    const map = mapInstance?.map;
+    const coffeeIcon = mapInstance?.customIcon;
 
-  cityMarkers.forEach(marker => map.removeLayer(marker));
-  cityMarkers = [];
+    if (!map) return;
 
-  let lat, lng;
+    const citiesModal = document.getElementById('cities');
+    // Consider using top100Modal.close() instead of classList.add('hidden') for consistency
+    if (citiesModal) citiesModal.classList.add('hidden'); // Close modal first
 
-  if (shop.source === 'supabase') {
-    lat = shop.lat;
-    lng = shop.lng;
-  } else {
-    lat = shop.geometry.location.lat();
-    lng = shop.geometry.location.lng();
-  }
+    cityMarkers.forEach(marker => map.removeLayer(marker));
+    cityMarkers = [];
 
-  const marker = L.marker([lat, lng], { icon: coffeeIcon })
-    .addTo(map)
-    .bindPopup(shop.name)
-    .openPopup();
+    let lat, lng;
 
-  cityMarkers.push(marker);
-  map.setView([lat, lng], 15);
+    if (shop.source === 'supabase') {
+        lat = shop.lat;
+        lng = shop.lng;
+    } else {
+        lat = shop.geometry.location.lat();
+        lng = shop.geometry.location.lng();
+    }
 
-  const shopData = shop.source === 'supabase'
-    ? shop
-    : {
-        name: shop.name,
-        address: shop.formatted_address,
-        lat,
-        lng,
-        city: extractCityFromAddressComponents(shop.address_components),
-        phone: shop.formatted_phone_number || null,
-        id: await getOrCreateShop(
-          shop.name,
-          shop.formatted_address,
-          extractCityFromAddressComponents(shop.address_components),
-          lat,
-          lng
-        )
-      };
+    const marker = L.marker([lat, lng], { icon: coffeeIcon })
+        .addTo(map)
+        .bindPopup(shop.name)
+        .openPopup();
 
-  await showFloatingCard(shopData);
+    cityMarkers.push(marker);
+    map.setView([lat, lng], 15);
+
+    const shopData = shop.source === 'supabase'
+        ? shop
+        : {
+            name: shop.name,
+            address: shop.formatted_address,
+            lat,
+            lng,
+            city: extractCityFromAddressComponents(shop.address_components),
+            phone: shop.formatted_phone_number || null,
+            // Ensure getOrCreateShop takes country_code if available
+            id: await getOrCreateShop(
+                shop.name,
+                shop.formatted_address,
+                extractCityFromAddressComponents(shop.address_components),
+                lat,
+                lng,
+                shop.address_components?.find(c => c.types.includes('country'))?.short_name || null // Pass country code
+            )
+        };
+
+    await showFloatingCard(shopData);
 }
+
+// Global variable to store currently rendered shops for delegation
+let currentRenderedShops = [];
 
 export function renderCitySuggestions(cities) {
   const citySuggestions = document.getElementById('city-suggestions');
@@ -220,10 +242,13 @@ export function renderShopResults(shops) {
     `;
 
     const list = shopResultsContainer.querySelector('.cities-modal-shops-list');
+    currentRenderedShops = shops; // Store shops globally for delegation
 
-    shops.forEach(shop => {
+    shops.forEach((shop, index) => { // Added index here
       const li = document.createElement('li');
-      li.className = `top100-modal-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
+      // Changed class from top100-modal-list-item for clarity, use cities-modal-shops-list-item
+      li.className = `cities-modal-shops-list-item ${shop.source === 'google' ? 'shop-google' : 'shop-supabase'}`;
+      li.dataset.shopIndex = index; // Store index for retrieval later
 
       const tagLabel = shop.source === 'google' ? 'Curated' : 'Community';
       const tagClass = shop.source;
@@ -243,7 +268,7 @@ export function renderShopResults(shops) {
         </div>
       `;
 
-      li.addEventListener('click', () => handleCityShopClick(shop));
+      // REMOVED: li.addEventListener('click', () => handleCityShopClick(shop));
       list.appendChild(li);
     });
   }
@@ -348,6 +373,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
       }
     });
+
+    // *** NEW: Event delegation for shop item clicks ***
+    // Attach listener to the static parent container where shop results are rendered
+    // The `.shop-results` container is created and replaced, so the listener needs to be
+    // attached to a static parent that's always in the DOM, like `cityButtonsContainer`.
+    cityButtonsContainer.addEventListener('click', (event) => {
+        // Only trigger handleShopItemClick if the clicked element or its closest ancestor
+        // has the class 'cities-modal-shops-list-item'.
+        if (event.target.closest('.cities-modal-shops-list-item')) {
+            handleShopItemClick(event);
+        }
+    });
+
   } else {
     console.error('One or more city modal elements not found');
   }
