@@ -1197,7 +1197,8 @@ body, html {
   -webkit-backdrop-filter: blur(2px) saturate(180%);
   z-index: 1009;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-x: hidden; /* if you want to prevent horizontal scroll */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
