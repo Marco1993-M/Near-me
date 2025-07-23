@@ -12,16 +12,30 @@ export async function showReviewBanner(shop) {
     return;
   }
 
+  // Check if user is logged in
   const { data: { user }, error: userError } = await supabase.auth.getUser();
+
   if (userError || !user) {
-    showAuthBanner(shop, () => showReviewBanner(shop));
-    return;
+    // Show auth banner and wait for login
+    if (window.showAuthBannerIfNotLoggedIn) {
+      const loggedIn = await window.showAuthBannerIfNotLoggedIn();
+      if (!loggedIn) {
+        // User cancelled or failed login; do not proceed
+        return;
+      }
+      // After login, re-fetch user info
+      const { data: newData } = await supabase.auth.getUser();
+      if (!newData?.user) return;
+    } else {
+      alert('You must be logged in to leave a review.');
+      return;
+    }
   }
 
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) return;
 
-  document.body.classList.add('body-no-scroll'); // 🚫 Prevent background scroll
+  document.body.classList.add('body-no-scroll'); // Prevent background scroll
 
   reviewBanner.innerHTML = `
     <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
@@ -140,7 +154,7 @@ export async function showReviewBanner(shop) {
     reviewBanner.addEventListener('animationend', () => {
       reviewBanner.classList.add('hidden');
       reviewBanner.style.animation = '';
-      document.body.classList.remove('body-no-scroll'); // ✅ Re-enable scroll
+      document.body.classList.remove('body-no-scroll'); // Re-enable scroll
     }, { once: true });
   });
 
