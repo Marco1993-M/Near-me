@@ -5,15 +5,27 @@ export async function initFavorites() {
 }
 
 export async function addToFavorites(shop) {
+  // Check user login status via supabase
   const { data, error } = await supabase.auth.getUser();
   const userId = data?.user?.id;
-  
+
   if (!userId) {
-    console.error('User not authenticated');
-    alert('You must be signed in to add favorites');
-    return;
+    console.warn('User not authenticated');
+    
+    // Show login banner, only if function available
+    if (window.showAuthBannerIfNotLoggedIn) {
+      const loggedIn = await window.showAuthBannerIfNotLoggedIn();
+      if (!loggedIn) {
+        // User must log in first, stop action here
+        return;
+      }
+    } else {
+      alert('You must be signed in to add favorites');
+      return;
+    }
   }
 
+  // Now add favorite since user is authenticated
   const { error: insertError } = await supabase.from('favorites').insert([
     { 
       shop_id: shop.id,
