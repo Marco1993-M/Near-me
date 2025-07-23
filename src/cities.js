@@ -257,14 +257,18 @@ const debounce = (func, wait) => {
   };
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+function initCityModalHandlers() {
   const citySearchInput = document.getElementById('city-search');
   const citySuggestions = document.getElementById('city-suggestions');
   const cityButtonsContainer = document.getElementById('city-buttons');
   const closeCitiesModal = document.querySelector('.close-cities-modal');
   const citiesModal = document.getElementById('cities');
 
-  if (citySearchInput && citySuggestions && cityButtonsContainer && citiesModal) {
+  if (!citySearchInput || !citySuggestions || !cityButtonsContainer || !citiesModal) return;
+
+  if (!citySearchInput.dataset.bound) {
+    citySearchInput.dataset.bound = true;
+
     citySearchInput.addEventListener(
       'input',
       debounce(async () => {
@@ -289,6 +293,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (shopResults) shopResults.remove();
       }
     });
+  }
+
+  if (closeCitiesModal && !closeCitiesModal.dataset.bound) {
+    closeCitiesModal.dataset.bound = true;
 
     closeCitiesModal.addEventListener('click', () => {
       citiesModal.classList.add('hidden');
@@ -298,9 +306,22 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Cities modal closed');
     });
 
-    // Removed touchmove and swipe-to-close handlers to enable scroll
+    // swipe-to-close remains as is (you can add binding guard if needed)
+  }
+}
 
-  } else {
-    console.error('One or more city modal elements not found');
+// Run once on page load
+document.addEventListener('DOMContentLoaded', () => {
+  initCityModalHandlers();
+
+  const openCitiesButton = document.getElementById('open-cities');
+  if (openCitiesButton) {
+    openCitiesButton.addEventListener('click', () => {
+      const citiesModal = document.getElementById('cities');
+      if (citiesModal) {
+        citiesModal.classList.remove('hidden');
+        initCityModalHandlers(); // ← re-run when modal is opened
+      }
+    });
   }
 });
