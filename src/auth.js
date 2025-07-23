@@ -25,26 +25,27 @@ async function initAuth() {
     return;
   }
 
-const updateAuthBanner = async () => {
-  console.log('updateAuthBanner called');
-  const { data: sessionData } = await supabase.auth.getSession();
-  const session = sessionData.session;
-  console.log('Session:', session);
+  // This function will update the banner visibility based on login state
+  const updateAuthBanner = async () => {
+    console.log('updateAuthBanner called');
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData.session;
+    console.log('Session:', session);
 
-  if (!session) {
-    banner.classList.remove('hidden');
-    console.log('Banner should be visible');
-  } else {
-    banner.classList.add('hidden');
-    console.log('Banner should be hidden');
-  }
-};
+    if (!session) {
+      banner.classList.remove('hidden');
+      console.log('Banner should be visible');
+    } else {
+      banner.classList.add('hidden');
+      console.log('Banner should be hidden');
+    }
+  };
 
-
-  await updateAuthBanner();
-
+  // Listen for auth state changes to hide banner once logged in
   supabase.auth.onAuthStateChange(async (event, session) => {
-    await updateAuthBanner();
+    if (session) {
+      banner.classList.add('hidden');
+    }
   });
 
   submitBtn.addEventListener('click', async () => {
@@ -63,6 +64,10 @@ const updateAuthBanner = async () => {
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) alert('Login failed: ' + error.message);
+      else {
+        // Hide banner on successful login
+        banner.classList.add('hidden');
+      }
     }
   });
 
@@ -89,5 +94,21 @@ const updateAuthBanner = async () => {
     if (error) alert('Google Sign-in failed: ' + error.message);
   });
 }
+
+// IMPORTANT: Do NOT call updateAuthBanner on page load here.
+// Instead expose this function globally to trigger the banner only when needed:
+window.showAuthBannerIfNotLoggedIn = async () => {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const session = sessionData.session;
+
+  if (!session) {
+    const banner = document.getElementById('auth-banner');
+    if (banner) {
+      banner.classList.remove('hidden');
+    }
+    return false; // user not logged in
+  }
+  return true; // user logged in
+};
 
 initAuth();
