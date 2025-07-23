@@ -19,21 +19,94 @@
   <meta name="apple-mobile-web-app-title" content="Near Me" />
   <link rel="manifest" href="/favicon/site.webmanifest" />
 
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Near Me Cafe",
+    "url": "https://www.near-me.cafe",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://www.near-me.cafe/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CafeOrCoffeeShop",
+    "name": "The Artisan Brew",
+    "image": "https://near-me.cafe/images/artisan-brew.jpg",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "42 Roast Lane",
+      "addressLocality": "Cape Town",
+      "addressRegion": "Western Cape",
+      "postalCode": "8001",
+      "addressCountry": "ZA"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": -33.9249,
+      "longitude": 18.4241
+    },
+    "telephone": "+27-21-555-1234",
+    "url": "https://www.near-me.cafe/cafes/the-artisan-brew",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.7",
+      "reviewCount": "85"
+    },
+    "openingHours": "Mo-Sa 07:00-18:00",
+    "hasMap": "https://www.google.com/maps/place/The+Artisan+Brew/@-33.9249,18.4241,17z",
+    "review": [
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "Liam Coffee"
+        },
+        "datePublished": "2025-07-15",
+        "reviewBody": "Fantastic single-origin espresso and welcoming vibe. Highly recommend!",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "5"
+        }
+      },
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "Sophia Brewster"
+        },
+        "datePublished": "2025-07-10",
+        "reviewBody": "Great pour-over selection and cozy seating area.",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "4"
+        }
+      }
+    ]
+  }
+  </script>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
 
   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-X2Z44FJY9Z"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-X2Z44FJY9Z');
-</script>
-  
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-X2Z44FJY9Z"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-X2Z44FJY9Z');
+  </script>
 </head>
+
 
 <body>
   <!-- Map container -->
