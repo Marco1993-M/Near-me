@@ -284,6 +284,24 @@ body, html {
   display: none !important;
 }
 
+#search-dropdown .search-section-header {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  color: #777;
+}
+
+#search-dropdown .search-result {
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+#search-dropdown .search-result:hover {
+  background: #f2f2f2;
+}
+
+
 
 /* User location button */
 #user-location-button {
