@@ -286,6 +286,7 @@ body, html {
 
 #search-dropdown .search-section-header {
   font-weight: 600;
+  border: 2px solid #10B981;
   font-size: 0.75rem;
   text-transform: uppercase;
   padding: 4px 8px;
