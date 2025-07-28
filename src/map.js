@@ -1,20 +1,33 @@
 import L from 'leaflet';
 import 'leaflet-routing-machine';
 
-// Debug: Check if Leaflet is loaded
 console.log('Leaflet (L):', L);
 console.log(L.Routing);
 
 let map;
-// Replace divIcon with PNG icon for user marker
+
+// Default icon for all other markers
 const customPngIcon = L.divIcon({
-  className: 'custom-png-icon', // add custom class for CSS styling
+  className: 'custom-png-icon',
   html: `<img src="/marker.png" alt="Marker" />`,
-  iconSize: [32, 32],   // size of the div container
-  iconAnchor: [16, 32], // anchor at bottom-center of the image
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
   popupAnchor: [0, -32]
 });
 
+// Pulsing icon for user location marker ONLY
+const pulsingUserIcon = L.divIcon({
+  className: '',
+  html: `
+    <div class="user-location-icon">
+      <div class="pulse"></div>
+      <img src="/marker.png" class="marker-image" alt="You are here" />
+    </div>
+  `,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -40]
+});
 
 let userMarker;
 let userLocation;
@@ -24,11 +37,9 @@ export function initMap() {
     console.error('Leaflet is not defined. Check script tag or module resolution.');
     return;
   }
+
   map = L.map('map').setView([0, 0], 13);
 
-  // Removed old divIcon; using customPngIcon below in markers
-
-  // Carto Light Tiles
   const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: ' Carto',
   }).addTo(map);
@@ -54,13 +65,11 @@ export function initMap() {
 
   tileLayer.on('load', () => console.log('Carto tiles loaded successfully'));
 
-  // Recalculate map dimensions
   setTimeout(() => {
     map.invalidateSize();
     console.log('Map size recalculated');
   }, 100);
 
-  // Set up user location button
   const userLocationButton = document.getElementById('user-location-button');
   if (userLocationButton) {
     userLocationButton.addEventListener('click', () => {
@@ -71,7 +80,6 @@ export function initMap() {
     console.error('User location button not found');
   }
 
-  // Optionally auto-locate user
   locateUser();
 }
 
@@ -101,7 +109,8 @@ function locateUser() {
         map.setView(userLocation, 14);
         if (userMarker) map.removeLayer(userMarker);
 
-        userMarker = L.marker(userLocation, { icon: customPngIcon })  // <-- use PNG icon here
+        // Use pulsing icon only for user marker
+        userMarker = L.marker(userLocation, { icon: pulsingUserIcon })
           .addTo(map)
           .bindPopup('You are here')
           .openPopup();
@@ -127,7 +136,8 @@ function locateUser() {
       map?.setView(userLocation, 14);
       if (userMarker) map.removeLayer(userMarker);
 
-      userMarker = L.marker(userLocation, { icon: customPngIcon })  // <-- use PNG icon here too
+      // Use pulsing icon for fallback user marker too
+      userMarker = L.marker(userLocation, { icon: pulsingUserIcon })
         .addTo(map)
         .bindPopup('Default location (Paris)')
         .openPopup();
@@ -152,7 +162,7 @@ function resetLocationButton() {
 }
 
 export function getMapInstance() {
-  return { map, customIcon: customPngIcon };  // returning updated icon as well
+  return { map, customIcon: customPngIcon };
 }
 
 export function getUserLocation() {
@@ -183,7 +193,7 @@ export function showRouteTo(shopLatLng, userLatLng) {
     show: false,
     lineOptions: {
       styles: [
-        { color: '#333', weight: 8 },     // Border (thicker, dark color)
+        { color: '#333', weight: 8 },
         { color: '#c7f5d3', weight: 7 }
       ]
     }
