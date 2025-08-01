@@ -49,24 +49,23 @@ export async function loadShops() {
       // Show the floating card/modal with shop details
       showFloatingCard(shop);
 
-      // Update URL with the shop slug (if not on shop.html)
-      if (!window.location.pathname.includes('shop.html') && shop.slug) {
+      // Update URL with the shop slug cleanly
+      if (!window.location.pathname.includes(shop.slug)) {
         const newUrl = `/${shop.slug}`;
         window.history.pushState({}, '', newUrl);
       }
     });
   });
 
-  // On page load: open shop if slug present in URL
-  const params = new URLSearchParams(window.location.search);
-  const slug = params.get('slug');
+  // On page load: open shop if slug present in URL path
+  const slug = window.location.pathname.slice(1); // Remove leading '/'
   if (slug) {
     const shopToShow = shops.find(s => s.slug === slug);
     if (shopToShow) {
       // Show shop details for the slug found
       showFloatingCard(shopToShow);
 
-      // Optional: center map on that shop
+      // Center map on that shop
       map.setView([shopToShow.lat, shopToShow.lng], 15);
     }
   }
