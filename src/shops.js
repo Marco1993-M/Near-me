@@ -5,6 +5,7 @@ import { getOrCreateShop, calculateAverageRating } from './db.js';
 import { showMapsPrompt } from './utils.js';
 import { showShopDetails } from './shopdetails.js';
 import supabase from './supabase.js';
+import { generateSlug } from './utils.js';
 
 
 import L from 'leaflet';
@@ -12,7 +13,6 @@ import L from 'leaflet';
 
 export async function loadShops() {
   console.log('🚀 loadShops() is being called');
-  console.log('supabase object:', supabase); // now this will log a proper client object
 
   const { data: shops, error } = await supabase.from('shops').select('*');
 
@@ -30,15 +30,46 @@ export async function loadShops() {
   const map = mapInstance.map;
   const customIcon = mapInstance.customIcon;
 
+  // Add slug to each shop if missing
+  shops.forEach(shop => {
+    if (!shop.slug) {
+      shop.slug = generateSlug(shop.name);
+      // Optionally update DB here if you want permanent slugs saved
+    }
+  });
+
+  // Add markers and click handlers
   shops.forEach((shop) => {
     if (!shop.lat || !shop.lng) return;
 
     const marker = L.marker([shop.lat, shop.lng], { icon: customIcon }).addTo(map);
+
     marker.on('click', () => {
       console.log('Marker clicked:', shop);
+      // Show the floating card/modal with shop details
       showFloatingCard(shop);
+
+      // Update URL with the shop slug (if not on shop.html)
+      if (!window.location.pathname.includes('shop.html') && shop.slug) {
+        const newUrl = `/${shop.slug}`;
+        window.history.pushState({}, '', newUrl);
+      }
     });
   });
+
+  // On page load: open shop if slug present in URL
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('slug');
+  if (slug) {
+    const shopToShow = shops.find(s => s.slug === slug);
+    if (shopToShow) {
+      // Show shop details for the slug found
+      showFloatingCard(shopToShow);
+
+      // Optional: center map on that shop
+      map.setView([shopToShow.lat, shopToShow.lng], 15);
+    }
+  }
 }
 
 export async function showFloatingCard(shop) {
