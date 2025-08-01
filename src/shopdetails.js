@@ -104,6 +104,32 @@ export async function showShopDetails(shop) {
     ? `<div class="shop-details-amenities">${[...amenities].map(a => `<span class="shop-details-amenity">${a}</span>`).join(' ')}</div>`
     : '';
 
+  // --- Update canonical URL ---
+  const canonicalLink = document.querySelector("link[rel='canonical']") || (() => {
+    const link = document.createElement('link');
+    link.setAttribute('rel', 'canonical');
+    document.head.appendChild(link);
+    return link;
+  })();
+
+  const baseUrl = window.location.origin;
+  // Fallback slug or name-based slug
+  const slug = shop.slug || shop.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+  const shopUrl = `${baseUrl}/${slug}`;
+  canonicalLink.setAttribute('href', shopUrl);
+
+  // --- Optionally update document title and meta description ---
+  document.title = `${shop.name} — Near Me Cafe`;
+
+  const descriptionMeta = document.querySelector('meta[name="description"]') || (() => {
+    const meta = document.createElement('meta');
+    meta.setAttribute('name', 'description');
+    document.head.appendChild(meta);
+    return meta;
+  })();
+
+  descriptionMeta.setAttribute('content', `Find reviews and details for ${shop.name} located at ${shop.address}, ${shop.city}.`);
+
   // --- Render HTML ---
   shopDetailsBanner.innerHTML = `
   <button class="shop-details-close-button" aria-label="Close ${shop.name} details">
@@ -148,7 +174,6 @@ export async function showShopDetails(shop) {
     <button class="shop-details-leave-review-button" aria-label="Leave a review for ${shop.name}">Leave a Review</button>
   </div>
 `;
-
 
   shopDetailsBanner.classList.remove('hidden');
   console.log('Shop details banner displayed for:', shop.name);
