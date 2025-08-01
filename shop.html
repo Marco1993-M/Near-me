@@ -1,0 +1,35 @@
+<!-- public/shop.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shop Details</title>
+</head>
+<body>
+  <div id="shop-details-banner">Loading...</div>
+  <script type="module">
+    import supabase from './supabase.js';
+    import { showShopDetails } from './path-to-your-existing-file.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('slug');
+    if (!slug) {
+      document.getElementById('shop-details-banner').textContent = 'Shop not specified.';
+      throw new Error('Missing slug');
+    }
+
+    const { data: shopData, error } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error || !shopData) {
+      document.getElementById('shop-details-banner').textContent = 'Shop not found.';
+      console.error('Shop fetch error:', error);
+    } else {
+      await showShopDetails(shopData);
+    }
+  </script>
+</body>
+</html>
