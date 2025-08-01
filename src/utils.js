@@ -23,6 +23,14 @@ export function formatPhone(number) {
   return number?.replace?.(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3') ?? '';
 }
 
+// Generate URL-friendly slug from a string
+export function generateSlug(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')  // Replace non-alphanumeric chars with hyphens
+    .replace(/(^-|-$)+/g, '');    // Remove leading/trailing hyphens
+}
+
 export function showMapsPrompt(shop, callback) {
   const modal = document.createElement('div');
   modal.id = 'maps-prompt-modal';
@@ -70,4 +78,3 @@ export function showMapsPrompt(shop, callback) {
     }
   });
 }
-
