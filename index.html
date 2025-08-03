@@ -394,5 +394,82 @@
 
   <!-- Main module -->
   <script type="module" src="/src/main.js"></script>
+
+    <!-- Feedback Button -->
+<button id="feedback-btn" class="floating-btn" aria-label="Give Feedback">💬</button>
+
+<!-- Feedback Modal -->
+<div id="feedback-modal" class="modal hidden">
+  <div class="modal-content">
+    <button id="close-feedback" class="modal-close" aria-label="Close feedback">×</button>
+    <h2>Send Feedback</h2>
+<form id="feedback-form">
+  <!-- Hidden recipient email required by EmailJS template -->
+  <input type="hidden" name="email" value="your-email@example.com" />
+
+  <label for="category">Category</label>
+  <select name="category" id="category" required>
+    <option value="">Select a category</option>
+    <option value="Bug">Bug</option>
+    <option value="Feature Request">Feature Request</option>
+    <option value="General Feedback">General Feedback</option>
+  </select>
+
+  <textarea name="message" placeholder="Your message" required></textarea>
+  <input type="email" name="user_email" placeholder="Your email (optional)" />
+  <button type="submit">Send</button>
+
+  <p class="text-sm mt-2">We read every message and really appreciate your thoughts.</p>
+  <p id="feedback-status" class="text-sm mt-2"></p>
+</form>
+
+  </div>
+</div>
+
+
+<!-- EmailJS -->
+<script src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script>
+  (function () {
+    emailjs.init("ZXmMyysnC4dhk3KVb");
+  })();
+</script>
+
+<!-- Feedback Modal Script -->
+<script>
+  const feedbackBtn = document.getElementById("feedback-btn");
+  const feedbackModal = document.getElementById("feedback-modal");
+  const closeBtn = document.getElementById("close-feedback");
+  const form = document.getElementById("feedback-form");
+  const statusMsg = document.getElementById("feedback-status");
+
+  feedbackBtn.addEventListener("click", () => feedbackModal.classList.remove("hidden"));
+  closeBtn.addEventListener("click", () => feedbackModal.classList.add("hidden"));
+
+  form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  if (!form.category.value) {
+    statusMsg.textContent = "Please select a category.";
+    return;
+  }
+  if (!form.message.value.trim()) {
+    statusMsg.textContent = "Please enter a message.";
+    return;
+  }
+  
+  statusMsg.textContent = "Sending...";
+  emailjs.sendForm("service_7d4v8du", "template_9fjumz4", this)
+    .then(() => {
+      statusMsg.textContent = "Feedback sent! Thank you 🙌";
+      form.reset();
+      setTimeout(() => feedbackModal.classList.add("hidden"), 2000);
+    })
+    .catch((error) => {
+      console.error("EmailJS error:", error);
+      statusMsg.textContent = "Error sending message. Try again.";
+    });
+});
+
+</script>
 </body>
 </html>
