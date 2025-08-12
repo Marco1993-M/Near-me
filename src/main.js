@@ -13,28 +13,9 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Function to load Google Maps API dynamically and then call initSearch
-function loadGoogleMapsApi() {
-  return new Promise((resolve, reject) => {
-    if (window.google && window.google.maps) {
-      // Already loaded
-      resolve();
-      return;
-    }
-
-    window.initGoogleMaps = () => {
-      initSearch(supabase); // your original callback logic
-      resolve();
-    };
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps&libraries=places&callback=initGoogleMaps`;
-    script.async = true;
-    script.defer = true;
-    script.onerror = (e) => reject(e);
-    document.head.appendChild(script);
-  });
-}
+window.initGoogleMaps = function () {
+  initSearch(supabase); // Pass supabase for shop details
+};
 
 window.addEventListener('DOMContentLoaded', async () => {
   initMap();
@@ -43,11 +24,4 @@ window.addEventListener('DOMContentLoaded', async () => {
   initFavorites();
   initReviews();
   initTasteProfile();
-
-  // Dynamically load Google Maps API and init search
-  try {
-    await loadGoogleMapsApi();
-  } catch (err) {
-    console.error('Google Maps API failed to load', err);
-  }
 });
