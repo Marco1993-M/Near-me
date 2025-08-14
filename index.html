@@ -10,10 +10,11 @@
     src="https://js.sentry-cdn.com/46904a400fd9042e4dde6baaba37faeb.min.js"
     crossorigin="anonymous"
   ></script>
-
-  <!-- Leaflet Styles -->
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <link rel="stylesheet" href="/src/styles.css" />
 
   <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
@@ -39,58 +40,71 @@
   }
   </script>
 
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "CafeOrCoffeeShop",
-    "name": "Sorcery Coffee",
-    "image": "https://www.near-me.cafe/images/sorcery-coffee.jpg",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "177 Lunnon Rd",
-      "addressLocality": "Hillcrest",
-      "addressRegion": "Gauteng",
-      "postalCode": "0083",
-      "addressCountry": "ZA"
-    },
-    "geo": {
-      "@type": "GeoCoordinates",
-      "latitude": -25.7545,
-      "longitude": 28.2366
-    },
-    "telephone": "+27-12-345-6789",
-    "url": "https://www.near-me.cafe/cafes/sorcery-coffee",
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "reviewCount": "124"
-    },
-    "openingHours": "Mo-Su 07:00-17:00",
-    "hasMap": "https://www.google.com/maps/place/177+Lunnon+Rd,+Hillcrest,+Pretoria",
-    "review": [
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Ella Brew" },
-        "datePublished": "2025-07-21",
-        "reviewBody": "Absolutely loved the flat white. Cozy, welcoming and the baristas are top-tier!",
-        "reviewRating": { "@type": "Rating", "ratingValue": "5" }
+ <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CafeOrCoffeeShop",
+  "name": "Sorcery Coffee",
+  "image": "https://www.near-me.cafe/images/sorcery-coffee.jpg",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "177 Lunnon Rd",
+    "addressLocality": "Hillcrest",
+    "addressRegion": "Gauteng",
+    "postalCode": "0083",
+    "addressCountry": "ZA"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": -25.7545,
+    "longitude": 28.2366
+  },
+  "telephone": "+27-12-345-6789",
+  "url": "https://www.near-me.cafe/cafes/sorcery-coffee",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "reviewCount": "124"
+  },
+  "openingHours": "Mo-Su 07:00-17:00",
+  "hasMap": "https://www.google.com/maps/place/177+Lunnon+Rd,+Hillcrest,+Pretoria",
+  "review": [
+    {
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": "Ella Brew"
       },
-      {
-        "@type": "Review",
-        "author": { "@type": "Person", "name": "Tom Roast" },
-        "datePublished": "2025-07-18",
-        "reviewBody": "Excellent pour-over and a great spot to work from. Highly recommended for specialty coffee lovers.",
-        "reviewRating": { "@type": "Rating", "ratingValue": "4" }
+      "datePublished": "2025-07-21",
+      "reviewBody": "Absolutely loved the flat white. Cozy, welcoming and the baristas are top-tier!",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "5"
       }
-    ]
-  }
-  </script>
+    },
+    {
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": "Tom Roast"
+      },
+      "datePublished": "2025-07-18",
+      "reviewBody": "Excellent pour-over and a great spot to work from. Highly recommended for specialty coffee lovers.",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "4"
+      }
+    }
+  ]
+}
+</script>
 
-  <!-- Leaflet Scripts -->
+
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
 
-  <!-- Google Analytics -->
+  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-X2Z44FJY9Z"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -98,12 +112,6 @@
     gtag('js', new Date());
     gtag('config', 'G-X2Z44FJY9Z');
   </script>
-
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-
-  <!-- Google Maps -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps&libraries=places&callback=initGoogleMaps"></script>
 </head>
 
 
