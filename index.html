@@ -15,8 +15,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
   <link rel="stylesheet" href="/src/styles.css" />
-    <!-- Vite bundled CSS -->
-  <link rel="stylesheet" href="/assets/styles.[hash].css" />
 
   <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
@@ -405,8 +403,8 @@
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB6PCrEeC-cr9YRt_DX-iil3MbLX845_ps&libraries=places&callback=initGoogleMaps"
   ></script>
 
-  <!-- Main Vite Module -->
-  <script type="module" src="/assets/main.[hash].js"></script>
+  <!-- Main module -->
+  <script type="module" src="/src/main.js"></script>
 
     <!-- Feedback Button -->
 <button id="feedback-btn" class="floating-btn" aria-label="Give Feedback">💬</button>
