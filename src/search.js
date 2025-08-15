@@ -17,9 +17,8 @@ const CITY_TYPES = new Set([
   'country'
 ]);
 
-export function initSearch() {
+export function initSearch(supabase) {
   console.log('Initializing search...');
-
   if (!google?.maps?.places) {
     console.error('Google Maps API is not loaded');
     searchInput = document.getElementById('search-bar');
@@ -32,7 +31,6 @@ export function initSearch() {
 
   searchInput = document.getElementById('search-bar');
   searchDropdown = document.getElementById('search-dropdown');
-
   if (!searchInput || !searchDropdown) {
     console.error('Search elements not found');
     return;
@@ -56,10 +54,10 @@ export function initSearch() {
       }
 
       try {
-        const { cities, shops } = await performUnifiedSearch(searchQuery);
-        renderSearchResults({ cities, shops }, searchDropdown);
+        const { cities, places } = await getPlacePredictionsGrouped(searchQuery);
+        renderSearchResults({ cities, places }, searchDropdown);
       } catch (error) {
-        console.error('Search error:', error);
+        console.error('Error searching places:', error);
         searchDropdown.classList.add('hidden');
       }
     }, 300)
@@ -80,8 +78,9 @@ export function initSearch() {
         return;
       }
 
-      const { shops } = await performUnifiedSearch(query);
-      await displaySearchResults(shops, mapInstance);
+      // Not a city → treat as shop text search
+      const results = await performTextSearch(query);
+      await displaySearchResults(results, getMapInstance());
       searchDropdown.classList.add('hidden');
     } catch (error) {
       console.error('Text search error:', error);
@@ -89,12 +88,12 @@ export function initSearch() {
     }
   });
 
-  // Delegated click listener
+  // Delegated click listener (city vs shop)
   searchDropdown.addEventListener('click', async (e) => {
-    const li = e.target.closest('li[data-type]');
+    const li = e.target.closest('li[data-place-id]');
     if (!li) return;
 
-    const type = li.dataset.type;
+    const type = li.dataset.type; // "city" or "shop"
     const placeId = li.dataset.placeId;
 
     if (type === 'city') {
@@ -108,109 +107,19 @@ export function initSearch() {
       return;
     }
 
-    if (type === 'shop') {
-      try {
-        const place = await getPlaceDetails(placeId);
-        const shop = {
-          name: place.name,
-          formatted_address: place.formatted_address,
-          geometry: place.geometry,
-          address_components: place.address_components,
-          formatted_phone_number: place.formatted_phone_number
-        };
-        await focusShopOnMap(shop);
-        searchDropdown.classList.add('hidden');
-      } catch (error) {
-        console.error('Error handling shop click:', error);
-      }
-      return;
+    // Shop flow
+    try {
+      const place = await getPlaceDetails(placeId);
+      await focusShopOnMap(place);
+      searchDropdown.classList.add('hidden');
+    } catch (error) {
+      console.error('Error getting place details:', error);
     }
   });
 }
 
-/* -------------------- Unified Search -------------------- */
-async function performUnifiedSearch(query) {
-  query = query.trim();
-  if (!query) return { cities: [], shops: [] };
-
-  let places = { cities: [], places: [] };
-  try {
-    places = await getPlacePredictionsGrouped(query);
-  } catch (err) {
-    console.error('Places prediction error:', err);
-  }
-
-  const shops = Array.isArray(places.places) ? places.places : [];
-  const cities = Array.isArray(places.cities) ? places.cities : [];
-  return { cities, shops };
-}
-
-/* -------------------- Render dropdown -------------------- */
-function renderSearchResults({ cities, shops }, dropdown) {
-  dropdown.innerHTML = '';
-  const fragment = document.createDocumentFragment();
-
-  function appendSection(title, items, type) {
-    if (!items || items.length === 0) return;
-
-    const header = document.createElement('li');
-    header.className = 'search-section-header';
-    header.textContent = title;
-    header.style.borderLeft = '4px solid green';
-    header.style.paddingLeft = '8px';
-    header.style.marginTop = '6px';
-    header.style.marginBottom = '2px';
-    fragment.appendChild(header);
-
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.dataset.type = type;
-      li.className = `search-result search-result-${type}`;
-      li.textContent = item.description;
-      li.dataset.placeId = item.place_id;
-      fragment.appendChild(li);
-    });
-  }
-
-  appendSection('Cities', cities, 'city');
-  appendSection('Shops', shops, 'shop');
-
-  if (fragment.childNodes.length > 0) {
-    dropdown.appendChild(fragment);
-    dropdown.classList.remove('hidden');
-  } else {
-    dropdown.classList.add('hidden');
-  }
-}
-
-/* -------------------- Places Predictions -------------------- */
-async function getPlacePredictionsGrouped(query) {
-  autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
-  const mapInstance = getMapInstance();
-  const userLatLng = mapInstance?.map?.getCenter();
-  const baseNearbyOpts = userLatLng
-    ? { location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng), radius: 50000 }
-    : {};
-
-  const citiesPromise = new Promise((resolve) => {
-    autocompleteService.getPlacePredictions(
-      { input: query, types: ['(cities)'], ...baseNearbyOpts },
-      (predictions, status) => resolve(status === 'OK' ? predictions : [])
-    );
-  });
-
-  const placesPromise = new Promise((resolve) => {
-    autocompleteService.getPlacePredictions(
-      { input: query, types: ['establishment', 'geocode'], ...baseNearbyOpts },
-      (predictions, status) => resolve(status === 'OK' ? predictions : [])
-    );
-  });
-
-  const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
-  return { cities: cities || [], places: places || [] };
-}
-
 /* -------------------- Helpers -------------------- */
+
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -219,10 +128,133 @@ function debounce(func, wait) {
   };
 }
 
+/**
+ * Return both city and place predictions.
+ */
+async function getPlacePredictionsGrouped(query) {
+  autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
+  const mapInstance = getMapInstance();
+  const userLatLng = mapInstance?.map?.getCenter();
+
+  const baseNearbyOpts = userLatLng
+    ? {
+        location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng),
+        radius: 50000
+      }
+    : {};
+
+  const citiesPromise = new Promise((resolve) => {
+    autocompleteService.getPlacePredictions(
+      {
+        input: query,
+        types: ['(cities)'],
+        ...baseNearbyOpts
+      },
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) resolve(predictions || []);
+        else resolve([]); // swallow to avoid killing UX
+      }
+    );
+  });
+
+  const placesPromise = new Promise((resolve) => {
+    autocompleteService.getPlacePredictions(
+      {
+        input: query,
+        types: ['establishment', 'geocode'],
+        ...baseNearbyOpts
+      },
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) resolve(predictions || []);
+        else resolve([]);
+      }
+    );
+  });
+
+  const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
+
+  // Deduplicate any overlapping predictions (rare, but safe)
+  const placeIds = new Set();
+  const uniqueCities = [];
+  const uniquePlaces = [];
+
+  cities.forEach((c) => {
+    if (!placeIds.has(c.place_id)) {
+      placeIds.add(c.place_id);
+      uniqueCities.push(c);
+    }
+  });
+
+  places.forEach((p) => {
+    if (!placeIds.has(p.place_id)) {
+      placeIds.add(p.place_id);
+      uniquePlaces.push(p);
+    }
+  });
+
+  return { cities: uniqueCities, places: uniquePlaces };
+}
+
+function renderSearchResults({ cities, places }, dropdown) {
+  dropdown.innerHTML = '';
+
+  const hasCities = cities && cities.length > 0;
+  const hasPlaces = places && places.length > 0;
+
+  if (!hasCities && !hasPlaces) {
+    const li = document.createElement('li');
+    li.textContent = 'No results found';
+    dropdown.appendChild(li);
+    dropdown.classList.remove('hidden');
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  if (hasCities) {
+    const header = document.createElement('li');
+    header.className = 'search-section-header';
+    header.textContent = 'Cities';
+    fragment.appendChild(header);
+
+    cities.forEach((prediction) => {
+      const li = document.createElement('li');
+      li.textContent = prediction.description;
+      li.dataset.placeId = prediction.place_id;
+      li.dataset.type = 'city';
+      li.className = 'search-result search-result-city';
+      fragment.appendChild(li);
+    });
+  }
+
+  if (hasPlaces) {
+    const header = document.createElement('li');
+    header.className = 'search-section-header';
+    header.textContent = 'Shops';
+    fragment.appendChild(header);
+
+    places.forEach((prediction) => {
+      const li = document.createElement('li');
+      li.textContent = prediction.description;
+      li.dataset.placeId = prediction.place_id;
+      li.dataset.type = 'shop';
+      li.className = 'search-result search-result-shop';
+      fragment.appendChild(li);
+    });
+  }
+
+  dropdown.appendChild(fragment);
+  dropdown.classList.remove('hidden');
+}
+
+/**
+ * Called on Enter. If the query looks like a city, handle and return true.
+ */
 async function tryHandleAsCity(query) {
   const { cities } = await getPlacePredictionsGrouped(query);
   if (!cities.length) return false;
 
+  // Use the top city result
   try {
     const result = await geocodePlaceId(cities[0].place_id);
     if (result?.types?.some((t) => CITY_TYPES.has(t))) {
@@ -230,8 +262,9 @@ async function tryHandleAsCity(query) {
       return true;
     }
   } catch (e) {
-    console.warn('Failed to center on city.', e);
+    console.warn('Failed to center on city, falling back to shop search.', e);
   }
+
   return false;
 }
 
@@ -239,8 +272,11 @@ async function geocodePlaceId(placeId) {
   geocoder = geocoder || new google.maps.Geocoder();
   return new Promise((resolve, reject) => {
     geocoder.geocode({ placeId }, (results, status) => {
-      if (status === 'OK' && results && results[0]) resolve(results[0]);
-      else reject(status);
+      if (status === 'OK' && results && results[0]) {
+        resolve(results[0]);
+      } else {
+        reject(status);
+      }
     });
   });
 }
@@ -249,6 +285,7 @@ async function centerMapOnCity(geoResult) {
   const { map } = getMapInstance();
   if (!map || !geoResult) return;
 
+  // Remove any previous markers (optional UX choice)
   currentMarkers.forEach((m) => map.removeLayer(m));
   currentMarkers = [];
 
@@ -263,6 +300,7 @@ async function centerMapOnCity(geoResult) {
     map.setView([lat, lng], 11);
   }
 
+  // Optional toast:
   console.log(`Centered on ${geoResult.formatted_address}`);
 }
 
@@ -270,8 +308,11 @@ async function getPlaceDetails(placeId) {
   placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
   return new Promise((resolve, reject) => {
     placesService.getDetails({ placeId }, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK) resolve(place);
-      else reject(status);
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        resolve(place);
+      } else {
+        reject(status);
+      }
     });
   });
 }
@@ -280,7 +321,8 @@ async function focusShopOnMap(place) {
   const { map, customIcon } = getMapInstance();
   if (!map) return;
 
-  currentMarkers.forEach((marker) => map.removeLayer(marker));
+  // Clear existing markers
+  currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
 
   const lat = place.geometry.location.lat();
@@ -294,32 +336,61 @@ async function focusShopOnMap(place) {
   currentMarkers.push(marker);
   map.setView([lat, lng], 15);
 
+  // Prepare shop object
   const shop = {
     name: place.name,
     address: place.formatted_address,
     lat,
     lng,
-    city: place.address_components ? extractCityFromAddressComponents(place.address_components) : 'Unknown',
+    city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
     phone: place.formatted_phone_number || null
   };
 
+  // Ensure shop ID
   shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+
+  // Show floating card
   await showFloatingCard(shop);
 }
 
 function extractCityFromAddressComponents(components) {
   if (!components) return 'Unknown City';
-  const cityComponent = components.find((c) =>
+  const cityComponent = components.find(c =>
     c.types.includes('locality') || c.types.includes('administrative_area_level_2')
   );
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
 }
 
+async function performTextSearch(query) {
+  placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
+  const mapInstance = getMapInstance();
+  const userLatLng = mapInstance?.map?.getCenter();
+
+  return new Promise((resolve, reject) => {
+    const request = {
+      query: `coffee shop ${query}`,
+      type: 'cafe'
+    };
+
+    if (userLatLng) {
+      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+      request.radius = 50000;
+    }
+
+    placesService.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.OK) {
+        resolve(results || []);
+      } else {
+        reject(status);
+      }
+    });
+  });
+}
+
 async function displaySearchResults(results, mapInstance) {
   const map = mapInstance.map;
   const coffeeIcon = mapInstance.customIcon;
-
-  currentMarkers.forEach((marker) => map.removeLayer(marker));
+  currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
 
   for (const place of results) {
@@ -346,6 +417,12 @@ async function displaySearchResults(results, mapInstance) {
   }
 
   if (results.length > 0) {
-    map.setView([results[0].geometry.location.lat(), results[0].geometry.location.lng()], 13);
+    map.setView(
+      [
+        results[0].geometry.location.lat(),
+        results[0].geometry.location.lng()
+      ],
+      13
+    );
   }
 }
