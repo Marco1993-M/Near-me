@@ -58,7 +58,6 @@ export function initSearch(supabase) {
         renderSearchResults({ cities, places }, searchDropdown);
       } catch (error) {
         console.error('Error searching places:', error);
-        console.error('MIME Error:', error);
         searchDropdown.classList.add('hidden');
       }
     }, 300)
