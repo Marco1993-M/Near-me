@@ -160,29 +160,37 @@ async function performUnifiedSearch(query) {
   if (!query) return { cities: [], shops: [], roasters: [] };
 
   // --- Google Places: shops ---
-  const places = await getPlacePredictionsGrouped(query);
-  const shops = places.places || [];
+  let places = { cities: [], places: [] };
+  try {
+    places = await getPlacePredictionsGrouped(query);
+  } catch (err) {
+    console.error('Places prediction error:', err);
+  }
+  const shops = Array.isArray(places.places) ? places.places : [];
+  const cities = Array.isArray(places.cities) ? places.cities : [];
 
   // --- Supabase: roasters only ---
-  // Pull only rows where "roasters" column has a value
-  let { data: roasterData, error: roasterError } = await supabase
-    .from('shops')
-    .select('id, name, city, roasters')
-    .not('roasters', 'is', null)
-    .or(
-      `roasters.ilike.%${query}%,name.ilike.%${query}%,city.ilike.%${query}%`
-    );
+  let roasters = [];
+  try {
+    const { data, error } = await supabase
+      .from('shops')
+      .select('*')
+      .not('roasters', 'is', null)
+      .or([
+        `roasters.ilike.%${query}%`,
+        `name.ilike.%${query}%`,
+        `city.ilike.%${query}%`
+      ]);
 
-  if (roasterError) {
-    console.error('Error fetching roasters:', roasterError);
-    roasterData = [];
+    if (error) throw error;
+    if (data && data.length > 0) {
+      roasters = data;
+    }
+  } catch (err) {
+    console.error('Roaster search error:', err);
   }
 
-  return {
-    cities: places.cities || [],
-    shops,
-    roasters: roasterData || []
-  };
+  return { cities, shops, roasters };
 }
 
 /* -------------------- Render dropdown -------------------- */
