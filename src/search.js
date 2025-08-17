@@ -33,39 +33,48 @@ export function initSearch() {
 
   searchInput = document.getElementById('search-bar');
   searchDropdown = document.getElementById('search-dropdown');
-  if (!searchInput || !searchDropdown) return;
+
+  if (!searchInput || !searchDropdown) {
+    console.error('Search elements not found');
+    return;
+  }
 
   const mapInstance = getMapInstance();
-  if (!mapInstance) return;
+  if (!mapInstance) {
+    console.error('Map instance is not available.');
+    return;
+  }
 
-  // Debounced input handler
-  searchInput.addEventListener('input', debounce(async (e) => {
-    const query = e.target.value.trim();
-    if (!query) {
-      searchDropdown.classList.add('hidden');
-      searchDropdown.innerHTML = '';
-      resetMapToAllShops();
-      return;
-    }
-    try {
-      const { cities, shops, roasters } = await performUnifiedSearch(query);
-      renderSearchResults({ cities, shops, roasters }, searchDropdown);
-    } catch (err) {
-      console.error('Search error:', err);
-      searchDropdown.classList.add('hidden');
-    }
-  }, 300));
+  // --- Input handler (debounced) ---
+  searchInput.addEventListener(
+    'input',
+    debounce(async (e) => {
+      const searchQuery = e.target.value.trim();
+      if (!searchQuery) {
+        // Reset map to default state showing all shops
+        await resetMapToAllShops();
+        searchDropdown.classList.add('hidden');
+        searchDropdown.innerHTML = '';
+        return;
+      }
 
-  // Enter key handler
+      try {
+        const { cities, shops, roasters } = await performUnifiedSearch(searchQuery);
+        renderSearchResults({ cities, shops, roasters }, searchDropdown);
+      } catch (error) {
+        console.error('Search error:', error);
+        searchDropdown.classList.add('hidden');
+      }
+    }, 300)
+  );
+
+  // --- Enter key handler ---
   searchInput.addEventListener('keydown', async (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
 
     const query = searchInput.value.trim();
-    if (!query) {
-      resetMapToAllShops();
-      return;
-    }
+    if (!query) return;
 
     try {
       const didHandleAsCity = await tryHandleAsCity(query);
@@ -76,14 +85,15 @@ export function initSearch() {
 
       const { shops, roasters } = await performUnifiedSearch(query);
       const combinedResults = [...shops, ...roasters];
-      await displayShopsOnMap(combinedResults);
+      await displaySearchResults(combinedResults, getMapInstance());
       searchDropdown.classList.add('hidden');
-    } catch (err) {
-      console.error('Enter key search error:', err);
+    } catch (error) {
+      console.error('Text search error:', error);
+      searchDropdown.classList.add('hidden');
     }
   });
 
-  // Delegated click listener
+  // --- Click listener for dropdown ---
   searchDropdown.addEventListener('click', async (e) => {
     const li = e.target.closest('li[data-type]');
     if (!li) return;
@@ -123,15 +133,22 @@ export function initSearch() {
 
     if (type === 'roaster') {
       try {
-        const roasterName = li.textContent.replace(/\(.*\)/, '').trim();
+        // --- Fetch shops using this specific roaster ---
         const { data: roasterShops, error } = await supabase
           .from('shops')
           .select('*')
-          .not('roasters', 'is', null)
-          .ilike('roasters', `%${roasterName}%`);
+          .not('roasters', 'is', null);
+
         if (error) throw error;
 
-        await displayShopsOnMap(roasterShops);
+        const roasterName = li.textContent.replace(/\(.*\)/, '').trim().toLowerCase();
+
+        const filteredShops = roasterShops.filter(r =>
+          Array.isArray(r.roasters) && r.roasters.some(x => x.toLowerCase() === roasterName)
+        );
+
+        // Display only filtered markers
+        await displayShopsOnMap(filteredShops);
         searchDropdown.classList.add('hidden');
       } catch (err) {
         console.error('Roaster click failed', err);
@@ -146,24 +163,33 @@ async function performUnifiedSearch(query) {
   query = query.trim();
   if (!query) return { cities: [], shops: [], roasters: [] };
 
-  // Google Places
+  // --- Google Places: shops ---
   const places = await getPlacePredictionsGrouped(query);
   const shops = Array.isArray(places.places) ? places.places : [];
-  const cities = Array.isArray(places.cities) ? places.cities : [];
 
-  // Supabase roasters only
+  // --- Supabase: roasters only ---
   let roasterData = [];
   try {
     const { data, error } = await supabase
       .from('shops')
       .select('*')
-      .not('roasters', 'is', null)
-      .ilike('roasters', `%${query}%`);
+      .not('roasters', 'is', null);
+
     if (error) throw error;
-    roasterData = data || [];
+
+    if (data && data.length > 0) {
+      const q = query.toLowerCase();
+      roasterData = data.filter(r =>
+        (Array.isArray(r.roasters) && r.roasters.some(x => x.toLowerCase().includes(q))) ||
+        (r.name && r.name.toLowerCase().includes(q)) ||
+        (r.city && r.city.toLowerCase().includes(q))
+      );
+    }
   } catch (err) {
     console.error('Roaster search error:', err);
   }
+
+  const cities = Array.isArray(places.cities) ? places.cities : [];
 
   return { cities, shops, roasters: roasterData };
 }
@@ -181,18 +207,23 @@ async function getPlacePredictionsGrouped(query) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
+  const baseNearbyOpts = userLatLng
+    ? { location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng), radius: 50000 }
+    : {};
 
-  const baseOpts = userLatLng ? { location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng), radius: 50000 } : {};
+  const citiesPromise = new Promise(resolve =>
+    autocompleteService.getPlacePredictions(
+      { input: query, types: ['(cities)'], ...baseNearbyOpts },
+      (predictions, status) => resolve(status === 'OK' ? predictions : [])
+    )
+  );
 
-  const citiesPromise = new Promise(resolve => {
-    autocompleteService.getPlacePredictions({ input: query, types: ['(cities)'], ...baseOpts },
-      (predictions, status) => resolve(status === 'OK' ? predictions : []));
-  });
-
-  const placesPromise = new Promise(resolve => {
-    autocompleteService.getPlacePredictions({ input: query, types: ['establishment', 'geocode'], ...baseOpts },
-      (predictions, status) => resolve(status === 'OK' ? predictions : []));
-  });
+  const placesPromise = new Promise(resolve =>
+    autocompleteService.getPlacePredictions(
+      { input: query, types: ['establishment', 'geocode'], ...baseNearbyOpts },
+      (predictions, status) => resolve(status === 'OK' ? predictions : [])
+    )
+  );
 
   const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
   return { cities: cities || [], places: places || [] };
@@ -241,6 +272,7 @@ function renderSearchResults({ cities, shops, roasters }, dropdown) {
   }
 }
 
+// --- City handling ---
 async function tryHandleAsCity(query) {
   const { cities } = await getPlacePredictionsGrouped(query);
   if (!cities.length) return false;
@@ -251,8 +283,8 @@ async function tryHandleAsCity(query) {
       await centerMapOnCity(result);
       return true;
     }
-  } catch (err) {
-    console.warn('Failed to center on city.', err);
+  } catch (e) {
+    console.warn('Failed to center on city.', e);
   }
   return false;
 }
@@ -280,7 +312,9 @@ async function centerMapOnCity(geoResult) {
     const ne = [viewport.getNorthEast().lat(), viewport.getNorthEast().lng()];
     map.fitBounds([sw, ne]);
   } else {
-    map.setView([geoResult.geometry.location.lat(), geoResult.geometry.location.lng()], 11);
+    const lat = geoResult.geometry.location.lat();
+    const lng = geoResult.geometry.location.lng();
+    map.setView([lat, lng], 11);
   }
 }
 
@@ -294,6 +328,45 @@ async function getPlaceDetails(placeId) {
   });
 }
 
+// --- Display shops ---
+async function displayShopsOnMap(shops) {
+  const { map, customIcon } = getMapInstance();
+  if (!map) return;
+
+  currentMarkers.forEach(marker => map.removeLayer(marker));
+  currentMarkers = [];
+
+  for (const s of shops) {
+    const lat = s.lat;
+    const lng = s.lng;
+
+    const marker = L.marker([lat, lng], { icon: customIcon })
+      .addTo(map)
+      .bindPopup(s.name);
+
+    currentMarkers.push(marker);
+
+    marker._shopId = s.id;
+    marker.on('click', () => showFloatingCard(s));
+  }
+
+  if (shops.length > 0) {
+    const first = shops[0];
+    map.setView([first.lat, first.lng], 13);
+  }
+}
+
+// --- Reset map to all shops ---
+async function resetMapToAllShops() {
+  const { data: allShops, error } = await supabase.from('shops').select('*');
+  if (error) {
+    console.error('Failed to fetch all shops:', error);
+    return;
+  }
+  await displayShopsOnMap(allShops);
+}
+
+// --- Focus single shop ---
 async function focusShopOnMap(place) {
   const { map, customIcon } = getMapInstance();
   if (!map) return;
@@ -327,47 +400,8 @@ async function focusShopOnMap(place) {
 
 function extractCityFromAddressComponents(components) {
   if (!components) return 'Unknown City';
-  const cityComponent = components.find(c => c.types.includes('locality') || c.types.includes('administrative_area_level_2'));
+  const cityComponent = components.find(c =>
+    c.types.includes('locality') || c.types.includes('administrative_area_level_2')
+  );
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
-}
-
-/* -------------------- Display shops on map -------------------- */
-async function displayShopsOnMap(shops) {
-  const { map, customIcon } = getMapInstance();
-  if (!map) return;
-
-  currentMarkers.forEach(marker => {
-    if (marker && map.hasLayer(marker)) map.removeLayer(marker);
-  });
-  currentMarkers = [];
-
-  for (const s of shops) {
-    const lat = s.lat;
-    const lng = s.lng;
-    if (lat == null || lng == null) continue;
-
-    const marker = L.marker([lat, lng], { icon: customIcon })
-      .addTo(map)
-      .bindPopup(s.name);
-
-    currentMarkers.push(marker);
-
-    marker._shopId = s.id;
-    marker.on('click', () => showFloatingCard(s));
-  }
-
-  if (shops.length > 0) {
-    map.setView([shops[0].lat, shops[0].lng], 13);
-  }
-}
-
-/* -------------------- Reset map to all shops -------------------- */
-async function resetMapToAllShops() {
-  try {
-    const { data: allShops, error } = await supabase.from('shops').select('*');
-    if (error) throw error;
-    await displayShopsOnMap(allShops);
-  } catch (err) {
-    console.error('Failed to fetch all shops:', err);
-  }
 }
