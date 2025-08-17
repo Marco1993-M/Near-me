@@ -45,12 +45,14 @@ export function initSearch() {
     return;
   }
 
-  // Debounced input handler
+  // --- Input handler (debounced) ---
   searchInput.addEventListener(
     'input',
     debounce(async (e) => {
       const searchQuery = e.target.value.trim();
       if (!searchQuery) {
+        // Reset map to default state showing all shops
+        await resetMapToAllShops();
         searchDropdown.classList.add('hidden');
         searchDropdown.innerHTML = '';
         return;
@@ -66,7 +68,7 @@ export function initSearch() {
     }, 300)
   );
 
-  // Enter key
+  // --- Enter key handler ---
   searchInput.addEventListener('keydown', async (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -91,7 +93,7 @@ export function initSearch() {
     }
   });
 
-  // Delegated click listener
+  // --- Click listener for dropdown ---
   searchDropdown.addEventListener('click', async (e) => {
     const li = e.target.closest('li[data-type]');
     if (!li) return;
@@ -111,43 +113,45 @@ export function initSearch() {
       return;
     }
 
-    if (type === 'shop' || type === 'roaster') {
+    if (type === 'shop') {
       try {
-        let shop;
-        if (type === 'shop') {
-          const place = await getPlaceDetails(placeId);
-          shop = {
-            name: place.name,
-            formatted_address: place.formatted_address,
-            geometry: place.geometry,
-            address_components: place.address_components,
-            formatted_phone_number: place.formatted_phone_number
-          };
-        } else if (type === 'roaster') {
-          const { data, error } = await supabase
-            .from('shops')
-            .select('*')
-            .eq('id', shopId)
-            .single();
-
-          if (error || !data) {
-            console.error('Roaster shop lookup failed', error);
-            return;
-          }
-
-          shop = {
-            name: data.name,
-            formatted_address: data.address,
-            geometry: { location: { lat: () => data.lat, lng: () => data.lng } },
-            address_components: [],
-            formatted_phone_number: data.phone
-          };
-        }
-
+        const place = await getPlaceDetails(placeId);
+        const shop = {
+          name: place.name,
+          formatted_address: place.formatted_address,
+          geometry: place.geometry,
+          address_components: place.address_components,
+          formatted_phone_number: place.formatted_phone_number
+        };
         await focusShopOnMap(shop);
         searchDropdown.classList.add('hidden');
-      } catch (error) {
-        console.error('Error handling shop/roaster click:', error);
+      } catch (err) {
+        console.error('Shop click failed', err);
+      }
+      return;
+    }
+
+    if (type === 'roaster') {
+      try {
+        // --- Fetch shops using this specific roaster ---
+        const { data: roasterShops, error } = await supabase
+          .from('shops')
+          .select('*')
+          .not('roasters', 'is', null);
+
+        if (error) throw error;
+
+        const roasterName = li.textContent.replace(/\(.*\)/, '').trim().toLowerCase();
+
+        const filteredShops = roasterShops.filter(r =>
+          Array.isArray(r.roasters) && r.roasters.some(x => x.toLowerCase() === roasterName)
+        );
+
+        // Display only filtered markers
+        await displayShopsOnMap(filteredShops);
+        searchDropdown.classList.add('hidden');
+      } catch (err) {
+        console.error('Roaster click failed', err);
       }
       return;
     }
@@ -169,7 +173,7 @@ async function performUnifiedSearch(query) {
     const { data, error } = await supabase
       .from('shops')
       .select('*')
-      .not('roasters', 'is', null); // only rows with roasters
+      .not('roasters', 'is', null);
 
     if (error) throw error;
 
@@ -185,14 +189,9 @@ async function performUnifiedSearch(query) {
     console.error('Roaster search error:', err);
   }
 
-  // --- Cities from Google Places ---
   const cities = Array.isArray(places.cities) ? places.cities : [];
 
-  return {
-    cities,
-    shops,
-    roasters: roasterData
-  };
+  return { cities, shops, roasters: roasterData };
 }
 
 /* -------------------- Helpers -------------------- */
@@ -208,24 +207,23 @@ async function getPlacePredictionsGrouped(query) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
-
   const baseNearbyOpts = userLatLng
     ? { location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng), radius: 50000 }
     : {};
 
-  const citiesPromise = new Promise((resolve) => {
+  const citiesPromise = new Promise(resolve =>
     autocompleteService.getPlacePredictions(
       { input: query, types: ['(cities)'], ...baseNearbyOpts },
       (predictions, status) => resolve(status === 'OK' ? predictions : [])
-    );
-  });
+    )
+  );
 
-  const placesPromise = new Promise((resolve) => {
+  const placesPromise = new Promise(resolve =>
     autocompleteService.getPlacePredictions(
       { input: query, types: ['establishment', 'geocode'], ...baseNearbyOpts },
       (predictions, status) => resolve(status === 'OK' ? predictions : [])
-    );
-  });
+    )
+  );
 
   const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
   return { cities: cities || [], places: places || [] };
@@ -274,13 +272,14 @@ function renderSearchResults({ cities, shops, roasters }, dropdown) {
   }
 }
 
+// --- City handling ---
 async function tryHandleAsCity(query) {
   const { cities } = await getPlacePredictionsGrouped(query);
   if (!cities.length) return false;
 
   try {
     const result = await geocodePlaceId(cities[0].place_id);
-    if (result?.types?.some((t) => CITY_TYPES.has(t))) {
+    if (result?.types?.some(t => CITY_TYPES.has(t))) {
       await centerMapOnCity(result);
       return true;
     }
@@ -304,7 +303,7 @@ async function centerMapOnCity(geoResult) {
   const { map } = getMapInstance();
   if (!map || !geoResult) return;
 
-  currentMarkers.forEach((m) => map.removeLayer(m));
+  currentMarkers.forEach(m => map.removeLayer(m));
   currentMarkers = [];
 
   const viewport = geoResult.geometry.viewport;
@@ -317,8 +316,6 @@ async function centerMapOnCity(geoResult) {
     const lng = geoResult.geometry.location.lng();
     map.setView([lat, lng], 11);
   }
-
-  console.log(`Centered on ${geoResult.formatted_address}`);
 }
 
 async function getPlaceDetails(placeId) {
@@ -331,11 +328,50 @@ async function getPlaceDetails(placeId) {
   });
 }
 
+// --- Display shops ---
+async function displayShopsOnMap(shops) {
+  const { map, customIcon } = getMapInstance();
+  if (!map) return;
+
+  currentMarkers.forEach(marker => map.removeLayer(marker));
+  currentMarkers = [];
+
+  for (const s of shops) {
+    const lat = s.lat;
+    const lng = s.lng;
+
+    const marker = L.marker([lat, lng], { icon: customIcon })
+      .addTo(map)
+      .bindPopup(s.name);
+
+    currentMarkers.push(marker);
+
+    marker._shopId = s.id;
+    marker.on('click', () => showFloatingCard(s));
+  }
+
+  if (shops.length > 0) {
+    const first = shops[0];
+    map.setView([first.lat, first.lng], 13);
+  }
+}
+
+// --- Reset map to all shops ---
+async function resetMapToAllShops() {
+  const { data: allShops, error } = await supabase.from('shops').select('*');
+  if (error) {
+    console.error('Failed to fetch all shops:', error);
+    return;
+  }
+  await displayShopsOnMap(allShops);
+}
+
+// --- Focus single shop ---
 async function focusShopOnMap(place) {
   const { map, customIcon } = getMapInstance();
   if (!map) return;
 
-  currentMarkers.forEach((marker) => map.removeLayer(marker));
+  currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
 
   const lat = place.geometry.location.lat();
@@ -364,43 +400,8 @@ async function focusShopOnMap(place) {
 
 function extractCityFromAddressComponents(components) {
   if (!components) return 'Unknown City';
-  const cityComponent = components.find((c) =>
+  const cityComponent = components.find(c =>
     c.types.includes('locality') || c.types.includes('administrative_area_level_2')
   );
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
-}
-
-async function displaySearchResults(results, mapInstance) {
-  const map = mapInstance.map;
-  const coffeeIcon = mapInstance.customIcon;
-
-  currentMarkers.forEach((marker) => map.removeLayer(marker));
-  currentMarkers = [];
-
-  for (const place of results) {
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-
-    const marker = L.marker([lat, lng], { icon: coffeeIcon })
-      .addTo(map)
-      .bindPopup(place.name);
-    currentMarkers.push(marker);
-
-    const shop = {
-      name: place.name,
-      address: place.formatted_address,
-      lat,
-      lng,
-      city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
-      phone: place.formatted_phone_number || null
-    };
-
-    shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
-    marker._shopId = shop.id;
-    marker.on('click', () => showFloatingCard(shop));
-  }
-
-  if (results.length > 0) {
-    map.setView([results[0].geometry.location.lat(), results[0].geometry.location.lng()], 13);
-  }
 }
