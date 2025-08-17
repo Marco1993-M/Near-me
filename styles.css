@@ -33,6 +33,17 @@ body, html {
   border: none !important;
 }
 
+.custom-png-icon img {
+  filter: drop-shadow(3px 0px 2px rgba(143, 143, 143, 0.4));
+  /* Or add box-shadow if you prefer: */
+  /* box-shadow: 2px 4px 6px rgba(0,0,0,0.4); */
+  display: block;
+  width: 32px;  /* match iconSize */
+  height: 32px;
+  user-select: none;
+  pointer-events: none; /* optional, so clicks pass through */
+}
+
 .neumorphic-marker {
   width: 24px;
   height: 24px;
@@ -91,9 +102,6 @@ body, html {
     opacity: 0;
   }
 }
-
-
-
 
 #auth-banner {
   position: fixed;
@@ -236,18 +244,6 @@ body, html {
   padding: 0.05rem; /* Slight padding to frame the input */
 }
 
-.custom-png-icon img {
-  filter: drop-shadow(3px 0px 2px rgba(143, 143, 143, 0.4));
-  /* Or add box-shadow if you prefer: */
-  /* box-shadow: 2px 4px 6px rgba(0,0,0,0.4); */
-  display: block;
-  width: 32px;  /* match iconSize */
-  height: 32px;
-  user-select: none;
-  pointer-events: none; /* optional, so clicks pass through */
-}
-
-
 /* Search bar */
 #search-bar {
   flex: 1;
@@ -329,6 +325,25 @@ body, html {
 #search-dropdown.hidden {
   display: none !important;
 }
+
+#search-dropdown .search-section-header {
+  font-weight: 600;
+  border: 2px solid #10B981;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  color: #777;
+}
+
+#search-dropdown .search-result {
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+#search-dropdown .search-result:hover {
+  background: #f2f2f2;
+}
+
 
 
 /* User location button */
@@ -497,6 +512,11 @@ body, html {
   display: none !important;
 }
 
+
+/* Specific button overrides */
+#cities-button, #top-100-button, #favorites-button {
+  color: #333; /* Consistent with other tabs */
+}
 
 /* Floating card */
 #floating-card {
@@ -1219,7 +1239,6 @@ body, html {
 }
 
 
-
 /* The entire modal container */
 #cities {
   position: fixed !important;
@@ -1239,7 +1258,8 @@ body, html {
   -webkit-backdrop-filter: blur(2px) saturate(180%);
   z-index: 1009;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow-x: hidden; /* if you want to prevent horizontal scroll */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
@@ -1261,7 +1281,26 @@ body, html {
   transition: transform 0.2s ease-out;
 }
 
-/* Scroll container setup */
+#cities::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px 12px 0 0;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(1px);
+  box-shadow: 
+    inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
+    inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
+  opacity: 0.6;
+  z-index: -1;
+  filter: blur(4px) drop-shadow(10px 4px 6px black) brightness(115%);
+}
+
+/* Scroll container inside the modal */
 .modal-content {
   display: flex;
   flex-direction: column;
@@ -1270,20 +1309,26 @@ body, html {
   padding: clamp(0.75rem, 2vw, 1rem);
   box-sizing: border-box;
   position: relative;
-  overflow: hidden;
+  /* REMOVE OR CHANGE THIS LINE: */
+  /* overflow: hidden; */ /* <--- THIS IS THE CULPRIT! */
+  /* Change it to 'overflow: auto;' if you want it to scroll in case other elements also overflow,
+     but generally, it's better to let flex-grow handle the main scrollable area.
+     For now, just remove it. */
 }
 
-/* Scrollable list area only */
+/* Scrollable area for shop results */
 .shop-results {
   overflow-y: auto;
   flex-grow: 1;
   max-height: 100%;
   padding-right: 8px;
+  padding-bottom: 2rem; /* 👈 Ensures final list item isn't clipped */
   box-sizing: border-box;
   background: transparent;
   border-radius: 0;
 }
 
+/* Shop list items */
 .cities-modal-shops-list {
   list-style: none;
   margin: 0;
@@ -1293,7 +1338,7 @@ body, html {
   gap: 0.5rem;
 }
 
-/* Responsive modal adjustments */
+/* Responsive adjustments */
 @media (max-width: 480px) {
   #cities {
     width: calc(100% - env(safe-area-inset-left, 0) - env(safe-area-inset-right, 0));
@@ -1317,6 +1362,7 @@ body, html {
 
   .shop-results {
     max-height: 100%;
+    padding-bottom: 2.5rem; /* Extra bottom space for shorter screens */
   }
 }
 
@@ -1339,6 +1385,7 @@ body, html {
     padding-bottom: 2rem;
   }
 }
+
 
 .cities-modal-heading {
   font-size: clamp(1.5rem, 5vw, 2rem); /* 24px-32px */
@@ -1479,6 +1526,8 @@ body, html {
   gap: 0.5rem;
   position: relative; /* To contain absolutely positioned children like suggestions */
   box-sizing: border-box;
+  flex-grow: 1; /* Make #city-buttons take up all available vertical space */
+  min-height: 0; /* Important for flex containers with scrollable children */
 }
 
 /* Search input field styling */
@@ -1511,7 +1560,7 @@ body, html {
 @media (max-width: 480px) {
   .city-search-input {
     padding: 0.4rem 0.6rem; /* Slightly smaller */
-    font-size: 0.875rem; /* Original size (14px) for mobile */
+    font-size: 1rem; /* Original size (14px) for mobile */
     border-radius: 6px; /* Smaller radius */
     backdrop-filter: blur(1px) saturate(150%); /* Lighter blur */
     -webkit-backdrop-filter: blur(1px) saturate(150%);
@@ -1634,11 +1683,13 @@ body, html {
 
 /* Shop results container */
 .shop-results {
-  max-height: 300px;
-  overflow-y: auto;
-  background: transparent; /* No background to keep consistent */
-  padding-right: 8px; /* for scrollbar spacing */
+  overflow-y: auto; /* This is where the scrollbar should appear */
+  flex-grow: 1; /* This makes it take available space within #city-buttons */
+  max-height: 100%; /* Can keep this, but less critical if flex-grow on parent is handled */
+  padding-right: 8px;
+  padding-bottom: 2rem;
   box-sizing: border-box;
+  background: transparent;
   border-radius: 0;
 }
 
@@ -1652,14 +1703,24 @@ body, html {
   gap: 0.5rem;
 }
 
+/* Add this new rule for the cities modal shop list items */
+.cities-modal-shops-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* You may want to copy other stylistic properties from .top100-modal-list-item if they apply here,
+     e.g., padding, background, border, border-radius, etc., to maintain consistent look.
+     Currently, shop-google/shop-supabase handle border/padding/radius. */
+}
+
 .shop-google {
-  border: 2px solid #3B82F6; /* Blue */
+  border: 0.5px solid #3B82F6 !important;
   border-radius: 8px;
   padding: 0.5rem;
 }
 
 .shop-supabase {
-  border: 2px solid #10B981; /* Green */
+  border: 0.5px solid #c7f5d3 !important;
   border-radius: 8px;
   padding: 0.5rem;
 }
@@ -1680,7 +1741,7 @@ body, html {
 }
 
 .shop-tag.supabase {
-  background-color: #10B981;
+  background-color: #c7f5d3;
   color: white;
 }
 
@@ -1720,7 +1781,6 @@ body, html {
     opacity: 1;
   }
 }
-
 
 .modal-content {
   display: flex;
@@ -1767,6 +1827,14 @@ body, html {
   opacity: 0.6;
   z-index: -1;
   filter: blur(4px) drop-shadow(10px 4px 6px black) brightness(115%);
+}
+
+dialog#top100 {
+  max-width: none;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 dialog#top100[open] {
@@ -1913,14 +1981,14 @@ dialog#top100:not([open]) {
 
 /* Base styling for the favorites modal */
 #favorites {
- position: fixed !important; /* Ensure fixed positioning */
-  bottom: env(safe-area-inset-bottom, 0); /* Respect iOS safe area */
+  position: fixed !important;
+  bottom: env(safe-area-inset-bottom, 0);
   left: 50%;
-  transform: translateX(-50%);
-  width: min(96%, 1200px); /* Match #cities, #top100 */
-  height: clamp(60vh, 60vh, 60vh); /* Consistent height */
-  padding: clamp(0.75rem, 2vw, 1rem); /* Match #cities */
-  border-radius: 12px 12px 0 0; /* Match #cities, #top100 */
+  transform: translateX(-50%) translateY(100%);
+  width: min(96%, 1200px);
+  height: clamp(60vh, 60vh, 60vh);
+  padding: clamp(0.75rem, 2vw, 1rem);
+  border-radius: 12px 12px 0 0;
   border: 0.5px solid rgb(0, 0, 0);
   background: white;
   box-shadow: 
@@ -1934,7 +2002,21 @@ dialog#top100:not([open]) {
   z-index: 1009;
   box-sizing: border-box;
   overflow-y: auto;
+
+  animation: slideUpFavorites 0.4s ease-out forwards;
 }
+
+@keyframes slideUpFavorites {
+  0% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0%);
+    opacity: 1;
+  }
+}
+
 
 #favorites::after {
   content: '';
@@ -2045,9 +2127,25 @@ dialog#favorites[open] {
 }
 
 
+@media (max-width: 480px) {
+  .favorite-modal-heading {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    margin: 1.5rem 0 0.5rem;
+    padding: 0 0.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .favorite-modal-heading {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    margin: 2.5rem 0 1rem;
+  }
+}
+
+
 /* Smaller screens (e.g., iPhone 12, ~390px) */
 @media (max-width: 480px) {
-  .favorite-sub-heading {
+  .top100-sub-heading {
     font-size: clamp(1.25rem, 4vw, 1.5rem); /* 20px-24px */
     text-shadow: 
       0 1px 2px rgba(31, 38, 135, 0.3),
@@ -2059,7 +2157,7 @@ dialog#favorites[open] {
 
 /* Larger screens (e.g., desktop) */
 @media (min-width: 1200px) {
-  .favorite-sub-heading {
+  .top100-sub-heading {
     font-size: clamp(1.75rem, 4vw, 2.25rem); /* 28px-36px */
     margin: 2.5rem 0 1rem;
   }
@@ -2072,7 +2170,7 @@ dialog#favorites[open] {
   margin: 0;
   border: 0.5px solid rgb(185, 185, 185) ; /* Glassy border */
   border-radius: 12px;
-  max-height: clamp(100%, 60vh, 100%); /* Responsive height */
+  max-height: clamp(340px, 50vh, 340px); /* Responsive height */
   overflow-y: auto;
 }
 
@@ -2081,22 +2179,24 @@ dialog#favorites[open] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.25rem;
-  margin: 0 0 1rem;
-  background: #f9f9f9;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eaeaea;
+  padding: 1.5rem;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid black ; /* Glassy border */
+  box-shadow: 
+    0 4px 16px rgba(31, 38, 135, 0.2),
+    inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(2px) saturate(180%);
+  -webkit-backdrop-filter: blur(2px) saturate(180%);
+  border-radius: 8px;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #111;
 }
 
-
 .favorite-modal-list-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  transform: scale(1.01);
+  box-shadow: 
+    0 6px 20px rgba(31, 38, 135, 0.25),
+    inset 0 3px 12px rgba(255, 255, 255, 0.35);
+  transform: scale(1.02);
 }
 
 /* Favorite item styling */
@@ -2136,27 +2236,30 @@ dialog#favorites[open] {
 
 /* View and Remove buttons */
 .favorite-modal-button {
-  background: white;
-  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 4px 16px rgba(31, 38, 135, 0.2),
+    inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(2px) saturate(180%);
+  -webkit-backdrop-filter: blur(2px) saturate(180%);
   border-radius: 50%;
-  padding: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  width: 2rem;
-  height: 2rem;
+  padding: 0.4rem;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .favorite-modal-button:hover {
+  box-shadow: 
+    0 6px 20px rgba(31, 38, 135, 0.25),
+    inset 0 3px 12px rgba(255, 255, 255, 0.35);
   transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
-
-
-
 
 .favorite-modal-button:active {
   box-shadow: 
@@ -2173,10 +2276,11 @@ dialog#favorites[open] {
 }
 
 .favorite-modal-button svg {
-  width: 1.25rem;
-  height: 1.25rem;
-  fill: black; /* Filled heart */
+  width: 1rem;
+  height: 1rem;
+  stroke: #fff;
 }
+
 .favorite-modal-button.remove svg {
   stroke: #ff4d4f; /* Red for remove icon */
 }
@@ -2284,8 +2388,6 @@ dialog#favorites[open] {
   }
 }
 
-
-
   /* Reviews section in Shop Details */
   .shop-details-reviews-container {
     max-height: 100px; /* Reduce height to fit mobile screens */
@@ -2355,6 +2457,7 @@ dialog#favorites[open] {
 }
 
 /* Floating Button */
+/* Floating Button */
 #taste-profile-btn {
   position: fixed;
   top: 11rem;
@@ -2381,83 +2484,235 @@ dialog#favorites[open] {
     height: 60%;
 }
 
-/* Round Feedback Button */
+
+/* Style the quiz modal */
+/* Style the quiz modal */
+#quiz-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+   backdrop-filter: blur(5px) saturate(180%);
+  -webkit-backdrop-filter: blur(5px) saturate(180%);
+  z-index: 1009;
+}
+
+.quiz-container {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  width: 80%;
+  max-width: 500px;
+}
+
+#quiz-question {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+#quiz-options {
+  margin-bottom: 20px;
+}
+
+.quiz-option {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  color: #fff;
+}
+
+.quiz-option:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+#quiz-next-btn, #quiz-close-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+}
+
+#quiz-next-btn:hover, #quiz-close-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.quiz-option, #quiz-next-btn, #quiz-close-btn {
+  transition: background 0.2s ease-in-out;
+}
+
+#quiz-modal {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+
+.taste-profile-wheel {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background-image: conic-gradient(
+    #964b00 0deg 72deg, /* French Roast */
+    #786c3b 72deg 144deg, /* Espresso Roast */
+    #a67f59 144deg 216deg, /* Light Roast */
+    #452b1f 216deg 288deg, /* Dark Roast */
+    #663300 288deg 360deg /* Vienna Roast */
+  );
+  transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin: 0 auto; /* center the wheel */
+  z-index: 10000;
+}
+
+.taste-profile-wheel::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background-color: #fff;
+  border-radius: 50%;
+}
+
+.profile-name {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.hidden {
+  display: none;
+}
+
+.body-no-scroll {
+  overflow: hidden;
+  height: 100vh;
+}
+
 #feedback-btn {
   position: fixed;
-  top: 15rem;
+  bottom: 10rem;
   right: 20px;
   z-index: 9999;
   background-color: #c7f4d3;
-  color: black; /* better contrast */
+  color: white;
   border: 0.5px solid black;
-  border-radius: 50%;      
-  width: 60px;             
-  height: 60px;
+  border-radius: 9999px;
+  padding: 12px 16px;
   font-size: 18px;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease; /* smooth hover */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
 }
 
 #feedback-btn:hover {
-  transform: scale(1.1);  /* button pops slightly */
-  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transform: scale(1.05);
 }
 
-/* Modal Overlay */
 #feedback-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10000; /* above button */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+  z-index: 9999;
+  padding: 1rem;
 }
 
-/* Show modal */
-#feedback-modal.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Modal Content */
 #feedback-modal .modal-content {
   background: white;
   padding: 24px;
   border-radius: 10px;
-  width: 90%;
+  width: 100%;
   max-width: 400px;
   position: relative;
-  transform: translateY(-20px);
-  transition: transform 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  max-height: 90vh;
 }
 
-#feedback-modal.active .modal-content {
-  transform: translateY(0);
-}
-
-/* Inputs, textarea, select */
 #feedback-modal textarea,
-#feedback-modal input,
-#feedback-modal select {
+#feedback-modal input {
   width: 100%;
   margin-top: 8px;
-  padding: 8px 12px;
+  padding: 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
   resize: vertical;
-  font-size: 14px;
+  font-size: 16px;
+}
+
+#feedback-modal button[type="submit"] {
+  margin-top: 12px;
+  background: #c7f4d3;
+  color: black;
+  border: 0.5px solid black;
+  padding: 10px;
+  width: 100%;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+#feedback-modal button[type="submit"]:hover {
+  background: #b2ebc4;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  font-size: 24px;
+  border: none;
+  cursor: pointer;
+  color: #666;
 }
 
 #feedback-modal select {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: white;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -2471,33 +2726,25 @@ dialog#favorites[open] {
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
-/* Submit Button */
-#feedback-modal button[type="submit"] {
-  margin-top: 12px;
-  background: #c7f4d3;
-  color: black;
-  border: 0.5px solid black;
-  padding: 10px;
-  width: 100%;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  #feedback-btn {
+    bottom: 6rem;
+    right: 16px;
+    padding: 10px 14px;
+    font-size: 16px;
+  }
 
-#feedback-modal button[type="submit"]:hover {
-  background: #a6e6b8;
-  transform: scale(1.02);
-}
+  #feedback-modal .modal-content {
+    padding: 16px;
+    width: 100%;
+    border-radius: 8px;
+  }
 
-/* Close Button */
-.modal-close {
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  background: none;
-  font-size: 24px;
-  border: none;
-  cursor: pointer;
+  #feedback-modal button[type="submit"] {
+    padding: 10px;
+    font-size: 15px;
+  }
 }
 
 
