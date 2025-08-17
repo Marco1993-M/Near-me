@@ -2572,7 +2572,7 @@ dialog#favorites[open] {
 
 #feedback-btn {
   position: fixed;
-  bottom: 10rem;
+  top: 15rem;
   right: 20px;
   z-index: 9999;
   background-color: #c7f4d3;
