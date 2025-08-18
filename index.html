@@ -376,17 +376,21 @@
 <div id="quiz-modal" class="hidden">
   <div class="quiz-container">
     <button id="quiz-close-btn" class="modal-close" aria-label="Close">&times;</button>
-    
-    <!-- Progress bar / question number -->
-    <div id="quiz-progress" style="margin-bottom: 16px; font-weight: bold; color: #000; text-align: center;"></div>
-    
+
+    <!-- Progress -->
+    <div id="quiz-progress" class="quiz-progress"></div>
+
     <!-- Question -->
     <div id="quiz-question"></div>
 
-    <!-- Options will be dynamically inserted here -->
-    <div id="quiz-options" style="margin-top: 16px;"></div>
+    <!-- Options -->
+    <div id="quiz-options"></div>
+
+    <!-- Flavor wheel placeholder -->
+    <canvas id="flavor-wheel" width="200" height="200" style="margin-top: 16px; display:none;"></canvas>
   </div>
 </div>
+
 
 
 <button id="taste-profile-btn" class="floating-btn" aria-label="Take the coffee quiz">
