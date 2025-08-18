@@ -375,12 +375,19 @@
   <!-- Quiz Modal -->
 <div id="quiz-modal" class="hidden">
   <div class="quiz-container">
-    <h2 id="quiz-question"></h2>
-    <div id="quiz-options"></div>
-    <button id="quiz-next-btn">Next</button>
-    <button id="quiz-close-btn">Close</button>
+    <button id="quiz-close-btn" class="modal-close" aria-label="Close">&times;</button>
+    
+    <!-- Progress bar / question number -->
+    <div id="quiz-progress" style="margin-bottom: 16px; font-weight: bold; color: #fff; text-align: center;"></div>
+    
+    <!-- Question -->
+    <div id="quiz-question"></div>
+
+    <!-- Options will be dynamically inserted here -->
+    <div id="quiz-options" style="margin-top: 16px;"></div>
   </div>
 </div>
+
 
 <button id="taste-profile-btn" class="floating-btn" aria-label="Take the coffee quiz">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" width="24" height="24">
