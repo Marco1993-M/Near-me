@@ -128,12 +128,12 @@ export function initTasteProfile() {
     function openQuiz() {
       currentQuestionIndex = 0;
       userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
-      quizModal.classList.remove('hidden');
+      quizModal.classList.remove('active');
       showQuestion(currentQuestionIndex);
     }
 
     function closeQuiz() {
-      quizModal.classList.add('hidden');
+      quizModal.classList.add('active');
     }
 
     if(openButton) openButton.addEventListener('click', openQuiz);
