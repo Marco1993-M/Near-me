@@ -142,27 +142,40 @@ export function initTasteProfile() {
     profile = tasteProfiles[4];
   }
 
-  // Build flavor summary based on scores
+  // Build flavor summary
   let flavorSummary = [];
   for (const [key, val] of Object.entries(userScores)) {
     if (val > 0) flavorSummary.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${val}`);
   }
 
-  quizQuestion.textContent = `Your Coffee Profile: ${profile.name}`;
-  quizOptions.innerHTML = `
-    <p>${profile.description}</p>
-    <p><strong>Your preferred flavors & characteristics:</strong> ${flavorSummary.join(', ')}</p>
-    <p><strong>Recommended Beans:</strong></p>
-    <ul>${profile.beans.map(bean => `<li>${bean}</li>`).join('')}</ul>
-    <button id="retake-quiz-btn" class="quiz-option-button">Retake Quiz</button>
-  `;
+  // Hide questions
+  document.getElementById('quiz-question').style.display = 'none';
+  document.getElementById('quiz-options').style.display = 'none';
+  document.getElementById('quiz-progress').style.display = 'none';
 
+  // Show results container
+  const resultsContainer = document.getElementById('quiz-results');
+  resultsContainer.style.display = 'block';
+  document.getElementById('quiz-results-heading').textContent = profile.name;
+  document.getElementById('quiz-results-description').textContent = profile.description;
+  document.getElementById('quiz-results-flavors').textContent = `Your preferred flavors & characteristics: ${flavorSummary.join(', ')}`;
+  document.getElementById('quiz-results-beans').innerHTML = profile.beans.map(bean => `<li>${bean}</li>`).join('');
+
+  // Retake button
   document.getElementById('retake-quiz-btn').addEventListener('click', () => {
     currentQuestionIndex = 0;
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+
+    // Hide results, show questions again
+    resultsContainer.style.display = 'none';
+    document.getElementById('quiz-question').style.display = 'block';
+    document.getElementById('quiz-options').style.display = 'block';
+    document.getElementById('quiz-progress').style.display = 'block';
+
     showQuestion(currentQuestionIndex);
   });
 }
+
 
   function openQuiz() {
     if (quizModal) {
