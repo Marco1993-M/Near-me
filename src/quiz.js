@@ -125,16 +125,17 @@ export function initTasteProfile() {
       });
     }
 
-    function openQuiz() {
-      currentQuestionIndex = 0;
-      userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
-      quizModal.classList.remove('active');
-      showQuestion(currentQuestionIndex);
-    }
+function openQuiz() {
+  currentQuestionIndex = 0;
+  userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+  quizModal.classList.add('active'); // ✅ show modal
+  showQuestion(currentQuestionIndex);
+}
 
-    function closeQuiz() {
-      quizModal.classList.add('active');
-    }
+function closeQuiz() {
+  quizModal.classList.remove('active'); // ✅ hide modal
+}
+
 
     if(openButton) openButton.addEventListener('click', openQuiz);
     if(closeButton) closeButton.addEventListener('click', closeQuiz);
