@@ -2,76 +2,62 @@ import supabase from './supabase.js';
 
 export function initTasteProfile() {
   const quizData = [
-    {
-      question: "Which flavor notes do you usually enjoy in coffee?",
-      options: [
-        { text: "Sweet (honey, caramel)", scores: { sweet: 2 } },
-        { text: "Fruity (berries, citrus)", scores: { fruity: 2 } },
-        { text: "Nutty/Cocoa (chocolate, almond)", scores: { nutty: 2 } }
-      ],
+    { question: "Do you prefer coffee sweet, sour, or bitter?", options: [
+        { text: "Sweet", scores: { sweet: 2 } },
+        { text: "Sour / bright", scores: { acidity: 2 } },
+        { text: "Bitter / strong", scores: { body: 2 } }
+      ]
     },
-    {
-      question: "Do you like floral notes?",
-      options: [
-        { text: "Yes, I love floral notes", scores: { floral: 2 } },
-        { text: "No, I prefer other notes", scores: {} }
-      ],
+    { question: "Do you enjoy fruity, floral, nutty, or chocolate notes?", options: [
+        { text: "Fruity", scores: { fruity: 2 } },
+        { text: "Floral", scores: { floral: 2 } },
+        { text: "Nutty / chocolate", scores: { nutty: 2 } }
+      ]
     },
-    {
-      question: "How sweet do you like your coffee?",
-      options: [
-        { text: "Very sweet", scores: { sweet: 2 } },
-        { text: "Somewhat sweet", scores: { sweet: 1 } },
-        { text: "Not very sweet", scores: {} }
-      ],
+    { question: "Do you like spicy or caramel notes?", options: [
+        { text: "Spicy", scores: { spicy: 2 } },
+        { text: "Caramel / sweet", scores: { sweet: 1 } },
+        { text: "No preference", scores: {} }
+      ]
     },
-    {
-      question: "Do you enjoy spicy notes?",
-      options: [
-        { text: "Yes, I like spices", scores: { spicy: 2 } },
-        { text: "No", scores: {} }
-      ],
+    { question: "Do you prefer coffee light-bodied or full-bodied?", options: [
+        { text: "Light", scores: { body: 1 } },
+        { text: "Full", scores: { body: 2 } }
+      ]
     },
-    {
-      question: "Which nutty/cocoa flavor do you prefer?",
-      options: [
-        { text: "Chocolate", scores: { nutty: 1 } },
-        { text: "Almond", scores: { nutty: 1 } },
-        { text: "Hazelnut", scores: { nutty: 1 } }
-      ],
+    { question: "How do you usually drink coffee?", options: [
+        { text: "Black", scores: { intensity: 2 } },
+        { text: "With milk", scores: { sweetness: 1 } },
+        { text: "With sugar", scores: { sweetness: 2 } }
+      ]
     },
+    { question: "Do you like coffee acidic or mellow?", options: [
+        { text: "Acidic / bright", scores: { acidity: 2 } },
+        { text: "Mellow / smooth", scores: { body: 2 } }
+      ]
+    },
+    { question: "Which finish do you prefer?", options: [
+        { text: "Clean & crisp", scores: { acidity: 1 } },
+        { text: "Long & chocolatey", scores: { nutty: 1 } }
+      ]
+    },
+    { question: "Choose a preferred aroma", options: [
+        { text: "Fruity", scores: { fruity: 1 } },
+        { text: "Floral", scores: { floral: 1 } },
+        { text: "Nutty / Cocoa", scores: { nutty: 1 } }
+      ]
+    }
   ];
 
-  const flavorProfiles = [
-    {
-      name: "The Sweet Tooth",
-      description: "Indulgent, caramel & honey notes.",
-      bean: "Brazilian Santos"
-    },
-    {
-      name: "The Floral Fan",
-      description: "Delicate, jasmine & rose notes.",
-      bean: "Kenyan AA"
-    },
-    {
-      name: "The Fruity Lover",
-      description: "Bright, citrusy and berry notes.",
-      bean: "Ethiopian Yirgacheffe"
-    },
-    {
-      name: "The Nutty Delight",
-      description: "Rich, chocolatey and almond flavors.",
-      bean: "Colombian Supremo"
-    },
-    {
-      name: "The Spice Route",
-      description: "Warm, cinnamon & nutmeg notes.",
-      bean: "Sumatran Mandheling"
-    },
+  const tasteProfiles = [
+    { name: "Bright & Fruity Adventurer", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
+    { name: "Sweet & Smooth Lover", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
+    { name: "Rich & Nutty Explorer", description: "Prefers chocolatey, nutty, and full-bodied coffees.", beans: ["Colombian Supremo", "Guatemalan Antigua"] },
+    { name: "Spicy & Complex Taster", description: "Enjoys cinnamon, nutmeg, and warming spices.", beans: ["Sumatran Mandheling", "Indian Monsooned Malabar"] },
+    { name: "Balanced & Elegant", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
   ];
 
   const quizModal = document.getElementById('quiz-modal');
-  const quizContainer = document.querySelector('.quiz-container');
   const quizQuestion = document.getElementById('quiz-question');
   const quizOptions = document.getElementById('quiz-options');
   const progressBar = document.getElementById('quiz-progress');
@@ -79,14 +65,13 @@ export function initTasteProfile() {
   const openButton = document.getElementById('taste-profile-btn');
 
   let currentQuestionIndex = 0;
-  let userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
+  let userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
 
   function showQuestion(index) {
     const q = quizData[index];
     quizQuestion.textContent = q.question;
     quizOptions.innerHTML = '';
 
-    // update progress
     if(progressBar) progressBar.textContent = `Question ${index + 1} of ${quizData.length}`;
 
     q.options.forEach(opt => {
@@ -94,12 +79,9 @@ export function initTasteProfile() {
       btn.className = 'quiz-option';
       btn.textContent = opt.text;
       btn.addEventListener('click', () => {
-        // add scores
         for (const [key, val] of Object.entries(opt.scores)) {
           userScores[key] += val;
         }
-
-        // next question or show results
         if (currentQuestionIndex < quizData.length - 1) {
           currentQuestionIndex++;
           showQuestion(currentQuestionIndex);
@@ -112,42 +94,43 @@ export function initTasteProfile() {
   }
 
   function displayResults() {
-    // determine top flavor
-    const topFlavor = Object.keys(userScores).reduce((a, b) => userScores[a] > userScores[b] ? a : b);
+    // determine top matching profile by comparing dominant scores
     let profile;
-    switch(topFlavor) {
-      case 'sweet': profile = flavorProfiles[0]; break;
-      case 'floral': profile = flavorProfiles[1]; break;
-      case 'fruity': profile = flavorProfiles[2]; break;
-      case 'nutty': profile = flavorProfiles[3]; break;
-      case 'spicy': profile = flavorProfiles[4]; break;
-      default: profile = flavorProfiles[2];
+    if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
+      profile = tasteProfiles[0]; // Bright & Fruity Adventurer
+    } else if(userScores.sweet > userScores.nutty){
+      profile = tasteProfiles[1]; // Sweet & Smooth Lover
+    } else if(userScores.nutty > 0){
+      profile = tasteProfiles[2]; // Rich & Nutty Explorer
+    } else if(userScores.spicy > 0){
+      profile = tasteProfiles[3]; // Spicy & Complex
+    } else {
+      profile = tasteProfiles[4]; // Balanced & Elegant
     }
 
-    quizQuestion.textContent = `Your Taste Profile: ${profile.name}`;
+    quizQuestion.textContent = `Your Coffee Profile: ${profile.name}`;
     quizOptions.innerHTML = `
       <p>${profile.description}</p>
-      <p>Recommended Coffee Bean: <strong>${profile.bean}</strong></p>
+      <p>Recommended Beans:</p>
+      <ul>${profile.beans.map(bean => `<li>${bean}</li>`).join('')}</ul>
       <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
     `;
 
     document.getElementById('retake-quiz-btn').addEventListener('click', () => {
       currentQuestionIndex = 0;
-      userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
+      userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
       showQuestion(currentQuestionIndex);
     });
   }
 
   function openQuiz() {
     currentQuestionIndex = 0;
-    userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
-    quizModal.classList.add('active');
+    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
     quizModal.classList.remove('hidden');
     showQuestion(currentQuestionIndex);
   }
 
   function closeQuiz() {
-    quizModal.classList.remove('active');
     quizModal.classList.add('hidden');
   }
 
