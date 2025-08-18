@@ -3,176 +3,144 @@ import supabase from './supabase.js';
 export function initTasteProfile() {
   const quizData = [
     {
-      question: "Which of the following flavor notes do you prefer in your coffee?",
-      options: ["Sweet (e.g. honey, caramelized)", "Fruity (e.g. berries, citrus)", "Nutty/Cocoa (e.g. chocolate, almond)"],
+      question: "Which flavor notes do you usually enjoy in coffee?",
+      options: [
+        { text: "Sweet (honey, caramel)", scores: { sweet: 2 } },
+        { text: "Fruity (berries, citrus)", scores: { fruity: 2 } },
+        { text: "Nutty/Cocoa (chocolate, almond)", scores: { nutty: 2 } }
+      ],
     },
     {
-      question: "Do you like floral notes in your coffee?",
-      options: ["Yes, I love floral notes (e.g. chamomile, jasmine)", "No, I prefer other flavor notes"],
+      question: "Do you like floral notes?",
+      options: [
+        { text: "Yes, I love floral notes", scores: { floral: 2 } },
+        { text: "No, I prefer other notes", scores: {} }
+      ],
     },
     {
       question: "How sweet do you like your coffee?",
-      options: ["Very sweet (e.g. caramelized, maple syrup)", "Somewhat sweet (e.g. honey)", "Not very sweet"],
+      options: [
+        { text: "Very sweet", scores: { sweet: 2 } },
+        { text: "Somewhat sweet", scores: { sweet: 1 } },
+        { text: "Not very sweet", scores: {} }
+      ],
     },
     {
-      question: "Do you like spices in your coffee?",
-      options: ["Yes, I like spices (e.g. cinnamon, nutmeg)", "No, I prefer other flavor notes"],
+      question: "Do you enjoy spicy notes?",
+      options: [
+        { text: "Yes, I like spices", scores: { spicy: 2 } },
+        { text: "No", scores: {} }
+      ],
     },
     {
-      question: "Which of the following nutty/cocoa flavors do you prefer in your coffee?",
-      options: ["Chocolate", "Almond", "Hazelnut"],
+      question: "Which nutty/cocoa flavor do you prefer?",
+      options: [
+        { text: "Chocolate", scores: { nutty: 1 } },
+        { text: "Almond", scores: { nutty: 1 } },
+        { text: "Hazelnut", scores: { nutty: 1 } }
+      ],
     },
   ];
 
-  const tasteProfiles = [
+  const flavorProfiles = [
     {
       name: "The Sweet Tooth",
-      description: "A sweet and indulgent coffee with notes of honey and caramelized sugar.",
-      matches: (answers) => answers[0] === 0 && answers[2] === 0,
-      recommendedBean: "Brazilian Santos",
+      description: "Indulgent, caramel & honey notes.",
+      bean: "Brazilian Santos"
     },
     {
       name: "The Floral Fan",
-      description: "A delicate and floral coffee with notes of jasmine and rose.",
-      matches: (answers) => answers[1] === 0,
-      recommendedBean: "Kenyan AA",
+      description: "Delicate, jasmine & rose notes.",
+      bean: "Kenyan AA"
     },
     {
       name: "The Fruity Lover",
-      description: "A bright and fruity coffee with notes of berries and citrus.",
-      matches: (answers) => answers[0] === 1,
-      recommendedBean: "Ethiopian Yirgacheffe",
+      description: "Bright, citrusy and berry notes.",
+      bean: "Ethiopian Yirgacheffe"
     },
     {
       name: "The Nutty Delight",
-      description: "A rich and nutty coffee with notes of chocolate and almond.",
-      matches: (answers) => answers[0] === 2 && answers[4] === 0,
-      recommendedBean: "Colombian Supremo",
+      description: "Rich, chocolatey and almond flavors.",
+      bean: "Colombian Supremo"
     },
     {
       name: "The Spice Route",
-      description: "A warm and spicy coffee with notes of cinnamon and nutmeg.",
-      matches: (answers) => answers[3] === 0,
-      recommendedBean: "Sumatran Mandheling",
+      description: "Warm, cinnamon & nutmeg notes.",
+      bean: "Sumatran Mandheling"
     },
   ];
 
   const quizModal = document.getElementById('quiz-modal');
+  const quizContainer = document.querySelector('.quiz-container');
   const quizQuestion = document.getElementById('quiz-question');
   const quizOptions = document.getElementById('quiz-options');
-  const nextButton = document.getElementById('quiz-next-btn');
+  const progressBar = document.getElementById('quiz-progress');
   const closeButton = document.getElementById('quiz-close-btn');
   const openButton = document.getElementById('taste-profile-btn');
 
   let currentQuestionIndex = 0;
-  const userAnswers = [];
-
-  function clearOptions() {
-    quizOptions.innerHTML = '';
-  }
+  let userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
 
   function showQuestion(index) {
     const q = quizData[index];
     quizQuestion.textContent = q.question;
-    clearOptions();
+    quizOptions.innerHTML = '';
 
-    q.options.forEach((option, i) => {
+    // update progress
+    if(progressBar) progressBar.textContent = `Question ${index + 1} of ${quizData.length}`;
+
+    q.options.forEach(opt => {
       const btn = document.createElement('button');
       btn.className = 'quiz-option';
-      btn.textContent = option;
-      btn.type = 'button';
+      btn.textContent = opt.text;
       btn.addEventListener('click', () => {
-        userAnswers[index] = i; // save answer
+        // add scores
+        for (const [key, val] of Object.entries(opt.scores)) {
+          userScores[key] += val;
+        }
+
+        // next question or show results
         if (currentQuestionIndex < quizData.length - 1) {
           currentQuestionIndex++;
           showQuestion(currentQuestionIndex);
         } else {
-          const profile = determineProfile(userAnswers);
-          saveTasteProfileToSupabase(profile.name, userAnswers);
-          displayResults(profile);
+          displayResults();
         }
       });
       quizOptions.appendChild(btn);
     });
   }
 
-  function determineProfile(answers) {
-    for (const profile of tasteProfiles) {
-      if (profile.matches(answers)) return profile;
+  function displayResults() {
+    // determine top flavor
+    const topFlavor = Object.keys(userScores).reduce((a, b) => userScores[a] > userScores[b] ? a : b);
+    let profile;
+    switch(topFlavor) {
+      case 'sweet': profile = flavorProfiles[0]; break;
+      case 'floral': profile = flavorProfiles[1]; break;
+      case 'fruity': profile = flavorProfiles[2]; break;
+      case 'nutty': profile = flavorProfiles[3]; break;
+      case 'spicy': profile = flavorProfiles[4]; break;
+      default: profile = flavorProfiles[2];
     }
-    return tasteProfiles[tasteProfiles.length - 1];
-  }
 
-  async function saveTasteProfileToSupabase(profileName, answers) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: existingProfile } = await supabase
-      .from('user_taste_profiles')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (existingProfile.length > 0) {
-      await supabase
-        .from('user_taste_profiles')
-        .update({
-          profile_name: profileName,
-          answers: answers,
-          updated_at: new Date(),
-        })
-        .eq('user_id', user.id);
-    } else {
-      await supabase
-        .from('user_taste_profiles')
-        .insert({
-          user_id: user.id,
-          profile_name: profileName,
-          answers: answers,
-        });
-    }
-  }
-
-  function recommendCoffee(answers) {
-    const sweetness = answers[2];
-    const flavorNotes = answers[0];
-    const spice = answers[3];
-
-    if (sweetness === 0 && flavorNotes === 0) {
-      return "Nicaragua Matagalpa - smooth, rich, and sweet with chocolate flavors and nutty notes";
-    } else if (flavorNotes === 1) {
-      return "Ethiopia Yirgacheffe - bright floral aroma and smooth body with sweet, fragrant flavors";
-    } else if (spice === 0) {
-      return "Sumatra Mandheling - heavy, complex, and syrupy with low acidity and earthy notes";
-    } else if (flavorNotes === 2 && answers[4] === 0) {
-      return "Colombia Hacienda Guayabal - smooth and balanced with notes of chocolate and caramel";
-    } else {
-      return "Guatemala Antigua - well-balanced cup with smoky flavor and chocolaty aroma";
-    }
-  }
-
-  function displayResults(profile) {
-    quizQuestion.textContent = `Your taste profile: ${profile.name}`;
+    quizQuestion.textContent = `Your Taste Profile: ${profile.name}`;
     quizOptions.innerHTML = `
-      <p>Your profile: ${profile.name}</p>
-      <p>We recommend a ${recommendCoffee(userAnswers)} coffee for you!</p>
-      <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
+      <p>${profile.description}</p>
+      <p>Recommended Coffee Bean: <strong>${profile.bean}</strong></p>
+      <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
     `;
 
-    const retakeQuizBtn = document.getElementById('retake-quiz-btn');
-    retakeQuizBtn.addEventListener('click', () => {
+    document.getElementById('retake-quiz-btn').addEventListener('click', () => {
       currentQuestionIndex = 0;
-      userAnswers.length = 0;
-      nextButton.style.display = 'inline-block';
+      userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
       showQuestion(currentQuestionIndex);
     });
-
-    nextButton.style.display = 'none';
   }
 
   function openQuiz() {
     currentQuestionIndex = 0;
-    userAnswers.length = 0;
-    nextButton.style.display = 'inline-block';
+    userScores = { sweet: 0, fruity: 0, nutty: 0, floral: 0, spicy: 0 };
     quizModal.classList.add('active');
     quizModal.classList.remove('hidden');
     showQuestion(currentQuestionIndex);
@@ -183,39 +151,6 @@ export function initTasteProfile() {
     quizModal.classList.add('hidden');
   }
 
-  async function showExistingProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      openQuiz();
-      return;
-    }
-
-    const { data: existingProfile } = await supabase
-      .from('user_taste_profiles')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (existingProfile.length > 0) {
-      const profile = existingProfile[0];
-      quizQuestion.textContent = `Your taste profile: ${profile.profile_name}`;
-      quizOptions.innerHTML = `
-        <p>Your profile: ${profile.profile_name}</p>
-        <p>We recommend a ${recommendCoffee(profile.answers)} coffee for you!</p>
-        <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
-      `;
-
-      const retakeQuizBtn = document.getElementById('retake-quiz-btn');
-      retakeQuizBtn.addEventListener('click', openQuiz);
-
-      nextButton.style.display = 'none';
-      quizModal.classList.add('active');
-      quizModal.classList.remove('hidden');
-    } else {
-      openQuiz();
-    }
-  }
-
-  // Event listeners
-  openButton.addEventListener('click', showExistingProfile);
+  openButton.addEventListener('click', openQuiz);
   closeButton.addEventListener('click', closeQuiz);
 }
