@@ -128,7 +128,7 @@ export function initTasteProfile() {
   }
 
   function displayResults() {
-  // Determine profile
+  // Determine profile (example logic)
   let profile;
   if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
     profile = tasteProfiles[0];
@@ -148,32 +148,33 @@ export function initTasteProfile() {
     if (val > 0) flavorSummary.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${val}`);
   }
 
-  // Hide questions
-  document.getElementById('quiz-question').style.display = 'none';
-  document.getElementById('quiz-options').style.display = 'none';
-  document.getElementById('quiz-progress').style.display = 'none';
+  // Hide question section and progress bar
+  document.getElementById('quiz-question').classList.add('hidden');
+  document.getElementById('quiz-options').classList.add('hidden');
+  document.getElementById('quiz-progress').classList.add('hidden');
 
-  // Show results container
+  // Show results
   const resultsContainer = document.getElementById('quiz-results');
-  resultsContainer.style.display = 'block';
+  resultsContainer.classList.remove('hidden');
+
   document.getElementById('quiz-results-heading').textContent = profile.name;
   document.getElementById('quiz-results-description').textContent = profile.description;
   document.getElementById('quiz-results-flavors').textContent = `Your preferred flavors & characteristics: ${flavorSummary.join(', ')}`;
   document.getElementById('quiz-results-beans').innerHTML = profile.beans.map(bean => `<li>${bean}</li>`).join('');
 
   // Retake button
-  document.getElementById('retake-quiz-btn').addEventListener('click', () => {
+  document.getElementById('retake-quiz-btn').onclick = () => {
     currentQuestionIndex = 0;
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
 
-    // Hide results, show questions again
-    resultsContainer.style.display = 'none';
-    document.getElementById('quiz-question').style.display = 'block';
-    document.getElementById('quiz-options').style.display = 'block';
-    document.getElementById('quiz-progress').style.display = 'block';
+    // Hide results, show questions and progress bar
+    resultsContainer.classList.add('hidden');
+    document.getElementById('quiz-question').classList.remove('hidden');
+    document.getElementById('quiz-options').classList.remove('hidden');
+    document.getElementById('quiz-progress').classList.remove('hidden');
 
     showQuestion(currentQuestionIndex);
-  });
+  };
 }
 
 
