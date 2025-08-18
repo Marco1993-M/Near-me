@@ -1,4 +1,6 @@
 import supabase from './supabase.js';
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
 
 export function initTasteProfile() {
   const quizData = [
@@ -27,8 +29,8 @@ export function initTasteProfile() {
     },
     { question: "How do you usually drink coffee?", options: [
         { text: "Black", scores: { intensity: 2 } },
-        { text: "With milk", scores: { sweetness: 1 } },
-        { text: "With sugar", scores: { sweetness: 2 } }
+        { text: "With milk", scores: { sweet: 1 } },
+        { text: "With sugar", scores: { sweet: 2 } }
       ]
     },
     { question: "Do you like coffee acidic or mellow?", options: [
@@ -63,6 +65,7 @@ export function initTasteProfile() {
   const progressBar = document.getElementById('quiz-progress');
   const closeButton = document.getElementById('quiz-close-btn');
   const openButton = document.getElementById('taste-profile-btn');
+  const flavorWheelCanvas = document.getElementById('flavor-wheel');
 
   let currentQuestionIndex = 0;
   let userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
@@ -94,18 +97,17 @@ export function initTasteProfile() {
   }
 
   function displayResults() {
-    // determine top matching profile by comparing dominant scores
     let profile;
     if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-      profile = tasteProfiles[0]; // Bright & Fruity Adventurer
+      profile = tasteProfiles[0];
     } else if(userScores.sweet > userScores.nutty){
-      profile = tasteProfiles[1]; // Sweet & Smooth Lover
+      profile = tasteProfiles[1];
     } else if(userScores.nutty > 0){
-      profile = tasteProfiles[2]; // Rich & Nutty Explorer
+      profile = tasteProfiles[2];
     } else if(userScores.spicy > 0){
-      profile = tasteProfiles[3]; // Spicy & Complex
+      profile = tasteProfiles[3];
     } else {
-      profile = tasteProfiles[4]; // Balanced & Elegant
+      profile = tasteProfiles[4];
     }
 
     quizQuestion.textContent = `Your Coffee Profile: ${profile.name}`;
@@ -119,7 +121,32 @@ export function initTasteProfile() {
     document.getElementById('retake-quiz-btn').addEventListener('click', () => {
       currentQuestionIndex = 0;
       userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+      flavorWheelCanvas.style.display = 'none';
       showQuestion(currentQuestionIndex);
+    });
+
+    // Show flavor wheel
+    flavorWheelCanvas.style.display = 'block';
+    new Chart(flavorWheelCanvas, {
+      type: 'radar',
+      data: {
+        labels: ['Sweet', 'Acidity', 'Body', 'Nutty', 'Fruity', 'Floral', 'Spicy', 'Intensity'],
+        datasets: [{
+          label: 'Your Flavor Profile',
+          data: [
+            userScores.sweet, userScores.acidity, userScores.body,
+            userScores.nutty, userScores.fruity, userScores.floral,
+            userScores.spicy, userScores.intensity
+          ],
+          backgroundColor: 'rgba(199, 244, 211, 0.3)',
+          borderColor: '#c7f4d3',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        scales: { r: { beginAtZero: true, max: 4 } },
+        plugins: { legend: { display: false } }
+      }
     });
   }
 
@@ -127,6 +154,7 @@ export function initTasteProfile() {
     currentQuestionIndex = 0;
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
     quizModal.classList.remove('hidden');
+    flavorWheelCanvas.style.display = 'none';
     showQuestion(currentQuestionIndex);
   }
 
@@ -134,6 +162,9 @@ export function initTasteProfile() {
     quizModal.classList.add('hidden');
   }
 
-  openButton.addEventListener('click', openQuiz);
-  closeButton.addEventListener('click', closeQuiz);
+  // ✅ Attach event listeners AFTER DOM exists
+  document.addEventListener('DOMContentLoaded', () => {
+    openButton.addEventListener('click', openQuiz);
+    closeButton.addEventListener('click', closeQuiz);
+  });
 }
