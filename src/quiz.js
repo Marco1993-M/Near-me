@@ -128,16 +128,41 @@ export function initTasteProfile() {
   }
 
   function displayResults() {
-    quizQuestion.textContent = 'Your Coffee Taste Profile';
-    quizOptions.innerHTML = '';
-    const matchedProfile = tasteProfiles.find(profile => {
-      return Object.keys(profile.criteria).every(key => userScores[key] >= profile.criteria[key]);
-    }) || { name: 'Balanced Coffee Drinker' };
-    const resultDiv = document.createElement('div');
-    resultDiv.textContent = matchedProfile.name;
-    resultDiv.className = 'quiz-result';
-    quizOptions.appendChild(resultDiv);
+  // Determine profile
+  let profile;
+  if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
+    profile = tasteProfiles[0];
+  } else if(userScores.sweet > userScores.nutty){
+    profile = tasteProfiles[1];
+  } else if(userScores.nutty > 0){
+    profile = tasteProfiles[2];
+  } else if(userScores.spicy > 0){
+    profile = tasteProfiles[3];
+  } else {
+    profile = tasteProfiles[4];
   }
+
+  // Build flavor summary based on scores
+  let flavorSummary = [];
+  for (const [key, val] of Object.entries(userScores)) {
+    if (val > 0) flavorSummary.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${val}`);
+  }
+
+  quizQuestion.textContent = `Your Coffee Profile: ${profile.name}`;
+  quizOptions.innerHTML = `
+    <p>${profile.description}</p>
+    <p><strong>Your preferred flavors & characteristics:</strong> ${flavorSummary.join(', ')}</p>
+    <p><strong>Recommended Beans:</strong></p>
+    <ul>${profile.beans.map(bean => `<li>${bean}</li>`).join('')}</ul>
+    <button id="retake-quiz-btn" class="quiz-option-button">Retake Quiz</button>
+  `;
+
+  document.getElementById('retake-quiz-btn').addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+    showQuestion(currentQuestionIndex);
+  });
+}
 
   function openQuiz() {
     if (quizModal) {
