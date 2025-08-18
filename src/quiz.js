@@ -128,54 +128,83 @@ export function initTasteProfile() {
   }
 
   function displayResults() {
-  // Determine profile (example logic)
-  let profile;
-  if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-    profile = tasteProfiles[0];
-  } else if(userScores.sweet > userScores.nutty){
-    profile = tasteProfiles[1];
-  } else if(userScores.nutty > 0){
-    profile = tasteProfiles[2];
-  } else if(userScores.spicy > 0){
-    profile = tasteProfiles[3];
-  } else {
-    profile = tasteProfiles[4];
+  // Define your taste profiles
+  const tasteProfiles = [
+    {
+      name: "Fruity & Floral",
+      description: "You enjoy bright, aromatic coffees with floral and fruity notes.",
+      beans: ["Ethiopian Yirgacheffe", "Kenyan AA", "Panama Geisha"]
+    },
+    {
+      name: "Sweet & Smooth",
+      description: "You prefer mellow, sweet coffees with chocolatey and nutty tones.",
+      beans: ["Colombian Supremo", "Brazil Santos", "Guatemalan Antigua"]
+    },
+    {
+      name: "Bold & Spicy",
+      description: "You like strong, full-bodied coffees with spicy and earthy flavors.",
+      beans: ["Sumatra Mandheling", "Indian Monsooned Malabar", "Yemen Mocha"]
+    },
+    {
+      name: "Nutty & Balanced",
+      description: "You enjoy balanced coffees with nutty and caramel notes.",
+      beans: ["Costa Rican Tarrazu", "Honduran Marcala", "Nicaraguan Jinotega"]
+    }
+    // Add more profiles as needed
+  ];
+
+  // Determine the profile with the highest score
+  let maxScore = -Infinity;
+  let selectedProfile = tasteProfiles[0]; // default
+  for (let profile of tasteProfiles) {
+    let scoreSum = profile.beans.reduce((sum, bean) => sum + (userScores[bean.toLowerCase()] || 0), 0);
+    if (scoreSum > maxScore) {
+      maxScore = scoreSum;
+      selectedProfile = profile;
+    }
   }
 
-  // Build flavor summary
-  let flavorSummary = [];
-  for (const [key, val] of Object.entries(userScores)) {
-    if (val > 0) flavorSummary.push(`${key.charAt(0).toUpperCase() + key.slice(1)}: ${val}`);
-  }
+  // Build flavor summary string
+  const flavorSummary = Object.entries(userScores)
+    .filter(([key, value]) => value > 0)
+    .map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`)
+    .join(', ');
 
   // Hide question section and progress bar
   document.getElementById('quiz-question').classList.add('hidden');
   document.getElementById('quiz-options').classList.add('hidden');
   document.getElementById('quiz-progress').classList.add('hidden');
 
-  // Show results
-  const resultsContainer = document.getElementById('quiz-results');
-  resultsContainer.classList.remove('hidden');
+  // Show results container
+  const results = document.getElementById('quiz-results');
+  results.classList.remove('hidden');
 
-  document.getElementById('quiz-results-heading').textContent = profile.name;
-  document.getElementById('quiz-results-description').textContent = profile.description;
-  document.getElementById('quiz-results-flavors').textContent = `Your preferred flavors & characteristics: ${flavorSummary.join(', ')}`;
-  document.getElementById('quiz-results-beans').innerHTML = profile.beans.map(bean => `<li>${bean}</li>`).join('');
+  // Populate results
+  document.getElementById('quiz-results-heading').textContent = selectedProfile.name;
+  document.getElementById('quiz-results-description').textContent = selectedProfile.description;
+  document.getElementById('quiz-results-flavors').textContent = `Your flavor profile: ${flavorSummary}`;
+  document.getElementById('quiz-results-beans').innerHTML = selectedProfile.beans.map(bean => `<li>${bean}</li>`).join('');
 
   // Retake button
-  document.getElementById('retake-quiz-btn').onclick = () => {
+  const retakeBtn = document.getElementById('retake-quiz-btn');
+  retakeBtn.onclick = () => {
+    // Reset scores
+    for (let key in userScores) userScores[key] = 0;
     currentQuestionIndex = 0;
-    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
 
-    // Hide results, show questions and progress bar
-    resultsContainer.classList.add('hidden');
+    // Hide results
+    results.classList.add('hidden');
+
+    // Show question section and progress
     document.getElementById('quiz-question').classList.remove('hidden');
     document.getElementById('quiz-options').classList.remove('hidden');
     document.getElementById('quiz-progress').classList.remove('hidden');
 
+    // Reset and show first question
     showQuestion(currentQuestionIndex);
   };
 }
+
 
 
   function openQuiz() {
