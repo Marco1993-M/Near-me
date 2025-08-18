@@ -1,7 +1,5 @@
-// tasteProfile.js
 import supabase from './supabase.js';
 
-// --- Exported function ---
 export function initTasteProfile() {
   const quizData = [
     {
@@ -59,10 +57,6 @@ export function initTasteProfile() {
     },
   ];
 
-  let currentQuestionIndex = 0;
-  const userAnswers = [];
-
-  // --- Elements ---
   const quizModal = document.getElementById('quiz-modal');
   const quizQuestion = document.getElementById('quiz-question');
   const quizOptions = document.getElementById('quiz-options');
@@ -70,14 +64,72 @@ export function initTasteProfile() {
   const closeButton = document.getElementById('quiz-close-btn');
   const openButton = document.getElementById('taste-profile-btn');
 
-  // --- Utility Functions ---
-  function clearOptions() { quizOptions.innerHTML = ''; }
+  let currentQuestionIndex = 0;
+  const userAnswers = [];
+
+  function clearOptions() {
+    quizOptions.innerHTML = '';
+  }
+
+  function showQuestion(index) {
+    const q = quizData[index];
+    quizQuestion.textContent = q.question;
+    clearOptions();
+
+    q.options.forEach((option, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = option;
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        userAnswers[index] = i; // save answer
+        if (currentQuestionIndex < quizData.length - 1) {
+          currentQuestionIndex++;
+          showQuestion(currentQuestionIndex);
+        } else {
+          const profile = determineProfile(userAnswers);
+          saveTasteProfileToSupabase(profile.name, userAnswers);
+          displayResults(profile);
+        }
+      });
+      quizOptions.appendChild(btn);
+    });
+  }
 
   function determineProfile(answers) {
     for (const profile of tasteProfiles) {
       if (profile.matches(answers)) return profile;
     }
     return tasteProfiles[tasteProfiles.length - 1];
+  }
+
+  async function saveTasteProfileToSupabase(profileName, answers) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: existingProfile } = await supabase
+      .from('user_taste_profiles')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (existingProfile.length > 0) {
+      await supabase
+        .from('user_taste_profiles')
+        .update({
+          profile_name: profileName,
+          answers: answers,
+          updated_at: new Date(),
+        })
+        .eq('user_id', user.id);
+    } else {
+      await supabase
+        .from('user_taste_profiles')
+        .insert({
+          user_id: user.id,
+          profile_name: profileName,
+          answers: answers,
+        });
+    }
   }
 
   function recommendCoffee(answers) {
@@ -98,51 +150,6 @@ export function initTasteProfile() {
     }
   }
 
-  async function saveTasteProfileToSupabase(profileName, answers) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return console.warn("User not logged in.");
-
-    const { data: existingProfile } = await supabase
-      .from('user_taste_profiles')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (existingProfile.length > 0) {
-      await supabase.from('user_taste_profiles')
-        .update({ profile_name: profileName, answers, updated_at: new Date() })
-        .eq('user_id', user.id);
-    } else {
-      await supabase.from('user_taste_profiles')
-        .insert({ user_id: user.id, profile_name: profileName, answers });
-    }
-  }
-
-  // --- Quiz Display Functions ---
-  function showQuestion(index) {
-    const q = quizData[index];
-    quizQuestion.textContent = q.question;
-    clearOptions();
-
-    q.options.forEach((option, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'quiz-option';
-      btn.textContent = option;
-      btn.type = 'button';
-      btn.addEventListener('click', () => {
-        userAnswers[index] = i;
-        if (currentQuestionIndex < quizData.length - 1) {
-          currentQuestionIndex++;
-          showQuestion(currentQuestionIndex);
-        } else {
-          const profile = determineProfile(userAnswers);
-          saveTasteProfileToSupabase(profile.name, userAnswers);
-          displayResults(profile);
-        }
-      });
-      quizOptions.appendChild(btn);
-    });
-  }
-
   function displayResults(profile) {
     quizQuestion.textContent = `Your taste profile: ${profile.name}`;
     quizOptions.innerHTML = `
@@ -150,15 +157,15 @@ export function initTasteProfile() {
       <p>We recommend a ${recommendCoffee(userAnswers)} coffee for you!</p>
       <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
     `;
-    const retakeBtn = document.getElementById('retake-quiz-btn');
-    if (retakeBtn) {
-      retakeBtn.addEventListener('click', () => {
-        currentQuestionIndex = 0;
-        userAnswers.length = 0;
-        nextButton.style.display = 'inline-block';
-        showQuestion(currentQuestionIndex);
-      });
-    }
+
+    const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+    retakeQuizBtn.addEventListener('click', () => {
+      currentQuestionIndex = 0;
+      userAnswers.length = 0;
+      nextButton.style.display = 'inline-block';
+      showQuestion(currentQuestionIndex);
+    });
+
     nextButton.style.display = 'none';
   }
 
@@ -166,17 +173,22 @@ export function initTasteProfile() {
     currentQuestionIndex = 0;
     userAnswers.length = 0;
     nextButton.style.display = 'inline-block';
-    if (quizModal) quizModal.classList.add('active');
+    quizModal.classList.add('active');
+    quizModal.classList.remove('hidden');
     showQuestion(currentQuestionIndex);
   }
 
   function closeQuiz() {
-    if (quizModal) quizModal.classList.remove('active');
+    quizModal.classList.remove('active');
+    quizModal.classList.add('hidden');
   }
 
   async function showExistingProfile() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return openQuiz();
+    if (!user) {
+      openQuiz();
+      return;
+    }
 
     const { data: existingProfile } = await supabase
       .from('user_taste_profiles')
@@ -191,29 +203,19 @@ export function initTasteProfile() {
         <p>We recommend a ${recommendCoffee(profile.answers)} coffee for you!</p>
         <button id="retake-quiz-btn" class="quiz-option">Take the quiz again</button>
       `;
-      const retakeBtn = document.getElementById('retake-quiz-btn');
-      if (retakeBtn) retakeBtn.addEventListener('click', openQuiz);
+
+      const retakeQuizBtn = document.getElementById('retake-quiz-btn');
+      retakeQuizBtn.addEventListener('click', openQuiz);
 
       nextButton.style.display = 'none';
-      if (quizModal) quizModal.classList.add('active');
+      quizModal.classList.add('active');
+      quizModal.classList.remove('hidden');
     } else {
       openQuiz();
     }
   }
 
-  // --- Event Listeners ---
-  if (openButton) openButton.addEventListener('click', showExistingProfile);
-  if (closeButton) closeButton.addEventListener('click', closeQuiz);
-
-  // Click outside modal to close
-  if (quizModal) {
-    quizModal.addEventListener('click', (e) => {
-      if (e.target === quizModal) closeQuiz();
-    });
-  }
+  // Event listeners
+  openButton.addEventListener('click', showExistingProfile);
+  closeButton.addEventListener('click', closeQuiz);
 }
-
-// --- Initialize on DOM ready ---
-document.addEventListener('DOMContentLoaded', () => {
-  initTasteProfile();
-});
