@@ -2505,6 +2505,8 @@ dialog#favorites[open] {
   display: flex; /* show modal when active */
 }
 
+
+
 /* Modal Container */
 .quiz-container {
   background: rgba(255, 255, 255, 0.95); /* mostly opaque */
@@ -2527,6 +2529,36 @@ dialog#favorites[open] {
 #quiz-options {
   margin-bottom: 20px;
 }
+
+/* Quiz option buttons */
+.quiz-option-button {
+  display: block;               /* make each button full width */
+  width: 100%;
+  padding: 12px 20px;           /* spacing inside buttons */
+  margin: 8px 0;                /* spacing between buttons */
+  font-size: 16px;
+  font-weight: 500;
+  background-color: #ffffff;    /* white background */
+  border: 2px solid #4CAF50;   /* green border */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+/* Hover effect */
+.quiz-option-button:hover {
+  background-color: #4CAF50;
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Active/selected effect (optional) */
+.quiz-option-button:active {
+  background-color: #45a049;
+  border-color: #45a049;
+}
+
 
 .quiz-option {
   width: 100%;
