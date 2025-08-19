@@ -161,7 +161,7 @@ if (type === 'roaster') {
 
 /* -------------------- Unified Search -------------------- */
 async function performUnifiedSearch(query) {
-  query = query.trim();
+  query = query.trim().toLowerCase();
   if (!query) return { cities: [], shops: [], roasters: [] };
 
   // --- Google Places: shops ---
@@ -179,18 +179,28 @@ async function performUnifiedSearch(query) {
     if (error) throw error;
 
     if (data && data.length > 0) {
-      const q = query.toLowerCase();
-
       // Flatten in case roasters is an array
       const allRoasters = data.flatMap(r =>
         Array.isArray(r.roasters) ? r.roasters : [r.roasters]
       );
 
-      // Deduplicate & filter by search query
-      const uniqueRoasters = [...new Set(allRoasters)];
-      roasterData = uniqueRoasters.filter(r =>
-        r.toLowerCase().includes(q)
-      );
+      // Deduplicate
+      let uniqueRoasters = [...new Set(allRoasters)];
+
+      // Partial word matching
+      roasterData = uniqueRoasters.filter(r => {
+        const words = r.toLowerCase().split(/\s+/);
+        return words.some(word => word.includes(query));
+      });
+
+      // Relevance sort: roasters starting with query appear first
+      roasterData.sort((a, b) => {
+        const aq = a.toLowerCase();
+        const bq = b.toLowerCase();
+        if (aq.startsWith(query) && !bq.startsWith(query)) return -1;
+        if (!aq.startsWith(query) && bq.startsWith(query)) return 1;
+        return 0;
+      });
     }
   } catch (err) {
     console.error('Roaster search error:', err);
@@ -200,6 +210,7 @@ async function performUnifiedSearch(query) {
 
   return { cities, shops, roasters: roasterData };
 }
+
 
 
 /* -------------------- Helpers -------------------- */
