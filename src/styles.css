@@ -2623,8 +2623,8 @@ dialog#favorites[open] {
 
 #feedback-btn {
   position: fixed;
-  top: 15rem;  /* distance from top */
-  right: 1.5rem;
+  top: 17rem;  /* distance from top */
+  right: 2.5rem;
   width: 3.5rem;
   height: 3.5rem;       /* distance from right */
   z-index: 9999;
