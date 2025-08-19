@@ -133,22 +133,31 @@ export function initSearch() {
 
 if (type === 'roaster') {
   try {
+    // Get the selected roaster name from the dataset
     const roasterName = li.dataset.roasterName.toLowerCase();
 
-    const { data: roasterShops, error } = await supabase
+    // Fetch all shops from Supabase with a non-null roasters column
+    const { data: allShops, error } = await supabase
       .from('shops')
       .select('*')
       .not('roasters', 'is', null);
 
     if (error) throw error;
 
-    const filteredShops = roasterShops.filter(r =>
-      Array.isArray(r.roasters)
-        ? r.roasters.some(x => x.toLowerCase() === roasterName)
-        : r.roasters.toLowerCase() === roasterName
+    // Filter shops that have the selected roaster
+    const filteredShops = allShops.filter(shop =>
+      Array.isArray(shop.roasters)
+        ? shop.roasters.some(r => r.toLowerCase() === roasterName)
+        : shop.roasters.toLowerCase() === roasterName
     );
 
-    await displayShopsOnMap(filteredShops);
+    // Get the IDs of filtered shops for highlighting
+    const highlightIds = filteredShops.map(s => s.id);
+
+    // Display all shops, highlighting only the filtered ones
+    await displayShopsOnMap(allShops, highlightIds);
+
+    // Hide the dropdown
     searchDropdown.classList.add('hidden');
   } catch (err) {
     console.error('Roaster click failed', err);
@@ -348,33 +357,57 @@ async function getPlaceDetails(placeId) {
   });
 }
 
-// --- Display shops ---
-async function displayShopsOnMap(shops) {
+// --- Display shops with highlighted filtered markers ---
+async function displayShopsOnMap(shops, highlightIds = []) {
   const { map, customIcon } = getMapInstance();
   if (!map) return;
 
+  // Define a highlighted icon
+  const highlightIcon = L.icon({
+    iconUrl: '/marker-highlight.png', // replace with your highlighted marker image
+    iconSize: [35, 45],               // adjust size as needed
+    iconAnchor: [17, 45]
+  });
+
+  // Remove existing markers
   currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
+
+  let firstHighlighted = null;
 
   for (const s of shops) {
     const lat = s.lat;
     const lng = s.lng;
 
-    const marker = L.marker([lat, lng], { icon: customIcon })
-      .addTo(map)
+    const isHighlight = highlightIds.includes(s.id);
+    const marker = L.marker([lat, lng], {
+      icon: isHighlight ? highlightIcon : customIcon,
+      opacity: isHighlight ? 1 : 0.5
+    }).addTo(map)
       .bindPopup(s.name);
 
-    currentMarkers.push(marker);
-
+    // Store shop ID
     marker._shopId = s.id;
+
+    // Open popup for first highlighted shop later
+    if (isHighlight && !firstHighlighted) firstHighlighted = marker;
+
+    // Click event
     marker.on('click', () => showFloatingCard(s));
+
+    currentMarkers.push(marker);
   }
 
-  if (shops.length > 0) {
+  // Zoom / center on first highlighted marker if any
+  if (firstHighlighted) {
+    map.setView(firstHighlighted.getLatLng(), 14);
+    firstHighlighted.openPopup();
+  } else if (shops.length > 0) {
     const first = shops[0];
     map.setView([first.lat, first.lng], 13);
   }
 }
+
 
 // --- Reset map to all shops ---
 async function resetMapToAllShops() {
