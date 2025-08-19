@@ -2623,15 +2623,15 @@ dialog#favorites[open] {
 
 #feedback-btn {
   position: fixed;
-  top: 15rem;          /* distance from top */
-  right: 20px;         /* distance from right */
+  top: 15rem;  /* distance from top */
+  right: 1.5rem;
+  width: 3.5rem;
+  height: 3.5rem        /* distance from right */
   z-index: 9999;
   background-color: #c7f4d3;
   color: white;
   border: 0.5px solid black;
-  border-radius: 50%;   /* makes it circular */
-  width: 60px;          /* fixed width */
-  height: 60px;         /* fixed height (same as width for circle) */
+  border-radius: 50%;   
   display: flex;
   align-items: center;
   justify-content: center;
