@@ -144,14 +144,14 @@ if (type === 'roaster') {
 
     if (error) throw error;
 
-    // Filter shops that have the selected roaster
+    // Filter shops that include the selected roaster
     const filteredShops = allShops.filter(shop =>
       Array.isArray(shop.roasters)
         ? shop.roasters.some(r => r.toLowerCase() === roasterName)
         : shop.roasters.toLowerCase() === roasterName
     );
 
-    // Get the IDs of filtered shops for highlighting
+    // Collect IDs of filtered shops for highlighting
     const highlightIds = filteredShops.map(s => s.id);
 
     // Display all shops, highlighting only the filtered ones
@@ -164,6 +164,7 @@ if (type === 'roaster') {
   }
   return;
 }
+
 
   });
 }
@@ -357,17 +358,10 @@ async function getPlaceDetails(placeId) {
   });
 }
 
-// --- Display shops with highlighted filtered markers ---
+// --- Display shops with highlighted markers ---
 async function displayShopsOnMap(shops, highlightIds = []) {
-  const { map, customIcon } = getMapInstance();
+  const { map } = getMapInstance();
   if (!map) return;
-
-  // Define a highlighted icon
-  const highlightIcon = L.icon({
-    iconUrl: '/marker-highlight.png', // replace with your highlighted marker image
-    iconSize: [35, 45],               // adjust size as needed
-    iconAnchor: [17, 45]
-  });
 
   // Remove existing markers
   currentMarkers.forEach(marker => map.removeLayer(marker));
@@ -378,27 +372,25 @@ async function displayShopsOnMap(shops, highlightIds = []) {
   for (const s of shops) {
     const lat = s.lat;
     const lng = s.lng;
-
     const isHighlight = highlightIds.includes(s.id);
+
     const marker = L.marker([lat, lng], {
-      icon: isHighlight ? highlightIcon : customIcon,
-      opacity: isHighlight ? 1 : 0.5
+      icon: isHighlight ? customRoasterPngIcon : customPngIcon,
+      opacity: isHighlight ? 1 : 0.5 // optional dimming for non-highlighted
     }).addTo(map)
       .bindPopup(s.name);
 
-    // Store shop ID
     marker._shopId = s.id;
 
-    // Open popup for first highlighted shop later
+    // Open popup later for first highlighted shop
     if (isHighlight && !firstHighlighted) firstHighlighted = marker;
 
-    // Click event
     marker.on('click', () => showFloatingCard(s));
 
     currentMarkers.push(marker);
   }
 
-  // Zoom / center on first highlighted marker if any
+  // Center map and open popup for first highlighted marker if exists
   if (firstHighlighted) {
     map.setView(firstHighlighted.getLatLng(), 14);
     firstHighlighted.openPopup();
@@ -407,6 +399,7 @@ async function displayShopsOnMap(shops, highlightIds = []) {
     map.setView([first.lat, first.lng], 13);
   }
 }
+
 
 
 // --- Reset map to all shops ---
