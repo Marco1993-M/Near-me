@@ -111,7 +111,7 @@ export function initTasteProfile() {
     quizQuestion.textContent = `${profile.name}`;
     quizOptions.innerHTML = `
       <p>${profile.description}</p>
-      <p>Recommended Beans:</p>
+      <p>We can recommend these beans</p>
       <ul>${profile.beans.map(bean => `<li>${bean}</li>`).join('')}</ul>
       <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
     `;
