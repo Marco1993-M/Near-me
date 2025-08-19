@@ -2623,24 +2623,22 @@ dialog#favorites[open] {
 
 #feedback-btn {
   position: fixed;
-  top: 17rem;  /* distance from top */
-  right: 2.5rem;
-  width: 3.5rem;
-  height: 3.5rem;       /* distance from right */
-  z-index: 9999;
-  background-color: #c7f4d3;
-  color: white;
-  border: 0.5px solid black;
-  border-radius: 50%;   
+  top: calc(11rem + 4rem); /* 11rem of taste-profile + 0.5rem gap + 3.5rem height */
+  right: 1.5rem;           /* same right alignment */
+  width: 3.5rem;           /* same size as taste-profile */
+  height: 3.5rem;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* match style */
+  border: none;
+  border-radius: 50%;      /* circular */
+  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* neumorphic style */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  z-index: 1000;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
-  padding: 0;           /* remove padding to avoid stretching */
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
+
 
 
 #feedback-btn:hover {
