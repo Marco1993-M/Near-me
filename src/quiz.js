@@ -50,11 +50,11 @@ export function initTasteProfile() {
   ];
 
   const tasteProfiles = [
-    { name: "Bright & Fruity Adventurer", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
-    { name: "Sweet & Smooth Lover", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
-    { name: "Rich & Nutty Explorer", description: "Prefers chocolatey, nutty, and full-bodied coffees.", beans: ["Colombian Supremo", "Guatemalan Antigua"] },
-    { name: "Spicy & Complex Taster", description: "Enjoys cinnamon, nutmeg, and warming spices.", beans: ["Sumatran Mandheling", "Indian Monsooned Malabar"] },
-    { name: "Balanced & Elegant", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
+    { name: "🍒Bright & Fruity Adventurer🍒", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
+    { name: "🍯Sweet & Smooth Lover🍯", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
+    { name: "🍫Rich & Nutty Explorer🍫", description: "Prefers chocolatey, nutty, and full-bodied coffees.", beans: ["Colombian Supremo", "Guatemalan Antigua"] },
+    { name: "🌰Spicy & Complex Taster🌰", description: "Enjoys cinnamon, nutmeg, and warming spices.", beans: ["Sumatran Mandheling", "Indian Monsooned Malabar"] },
+    { name: "⚖️Balanced & Elegant⚖️", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
   ];
 
   const quizModal = document.getElementById('quiz-modal');
@@ -108,7 +108,7 @@ export function initTasteProfile() {
       profile = tasteProfiles[4]; // Balanced & Elegant
     }
 
-    quizQuestion.textContent = `Your Coffee Profile: ${profile.name}`;
+    quizQuestion.textContent = `${profile.name}`;
     quizOptions.innerHTML = `
       <p>${profile.description}</p>
       <p>Recommended Beans:</p>
