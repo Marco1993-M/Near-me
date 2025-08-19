@@ -2457,145 +2457,133 @@ dialog#favorites[open] {
 }
 
 /* Floating Button */
+/* Floating Button */
 #taste-profile-btn {
   position: fixed;
   top: 11rem;
   right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* subtle gradient */
-  border: none;
+  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
+  border: none; /* Remove solid border */
   border-radius: 50%;
-  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* neumorphic */
+  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic raised effect */
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   transition: box-shadow 0.2s ease;
-  cursor: pointer;
 }
 
 #taste-profile-btn:hover {
-  background: #f0f0f0;
+    background: #f0f0f0;
 }
 
 #taste-profile-btn img {
-  width: 60%;
-  height: 60%;
+    width: 60%;
+    height: 60%;
 }
 
-/* Quiz Modal */
+
+/* Style the quiz modal */
+/* Style the quiz modal */
 #quiz-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  display: none; /* hidden by default */
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(5px) saturate(180%);
+   backdrop-filter: blur(5px) saturate(180%);
   -webkit-backdrop-filter: blur(5px) saturate(180%);
   z-index: 1009;
-  animation: fadeIn 0.2s ease-in-out;
 }
 
-#quiz-modal.active {
-  display: flex; /* show modal when active */
-}
-
-
-
-/* Modal Container */
 .quiz-container {
-  background: rgba(255, 255, 255, 0.95); /* mostly opaque */
+  background: rgba(255, 255, 255, 0.2);
   padding: 20px;
   border-radius: 16px;
+  border: 0.5px solid black;
   box-shadow: 0 0 1px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   width: 80%;
   max-width: 500px;
-  color: #000;
 }
 
-/* Quiz Text */
 #quiz-question {
   font-size: 24px;
   margin-bottom: 20px;
-  color: #333;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
 #quiz-options {
   margin-bottom: 20px;
 }
 
-/* Quiz option buttons */
-.quiz-option-button {
-  display: block;               /* make each button full width */
-  width: 100%;
-  padding: 12px 20px;           /* spacing inside buttons */
-  margin: 8px 0;                /* spacing between buttons */
-  font-size: 16px;
-  font-weight: 500;
-  background-color: #ffffff;    /* white background */
-  border: 2px solid #4CAF50;   /* green border */
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
-}
-
-/* Hover effect */
-.quiz-option-button:hover {
-  background-color: #4CAF50;
-  color: #ffffff;
-  transform: translateY(-2px);
-}
-
-/* Active/selected effect (optional) */
-.quiz-option-button:active {
-  background-color: #45a049;
-  border-color: #45a049;
-}
-
-
 .quiz-option {
   width: 100%;
   padding: 10px;
   margin-bottom: 10px;
-  border: none;
+  border: 0.5px solid #7f7f7f;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
   cursor: pointer;
-  color: #333;
+  color: #fff;
 }
 
 .quiz-option:hover {
   background: rgba(255, 255, 255, 0.5);
 }
 
-#quiz-next-btn,
-#quiz-close-btn {
+#quiz-next-btn, #quiz-close-btn {
   padding: 10px 20px;
-  border: none;
+  border: 0.5px solid #000000;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
-  color: #333;
+  color: #fff;
   cursor: pointer;
 }
 
-#quiz-next-btn:hover,
-#quiz-close-btn:hover {
+#quiz-next-btn:hover, #quiz-close-btn:hover {
   background: rgba(255, 255, 255, 0.5);
 }
 
-.quiz-option,
-#quiz-next-btn,
-#quiz-close-btn {
+.quiz-option, #quiz-next-btn, #quiz-close-btn {
   transition: background 0.2s ease-in-out;
+}
+
+#quiz-modal {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.profile-name {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.hidden {
+  display: none;
 }
 
 /* Fade In Animation */
