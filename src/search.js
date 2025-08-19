@@ -2,6 +2,8 @@ import { getMapInstance } from './map.js';
 import { showFloatingCard } from './shops.js';
 import { getOrCreateShop } from './db.js';
 import supabase from './supabase.js';
+import { customPngIcon, customRoasterPngIcon } from './map.js';
+
 
 let searchInput;
 let searchDropdown;
