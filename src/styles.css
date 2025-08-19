@@ -1757,7 +1757,7 @@ body, html {
   height: clamp(60vh, 60vh, 60vh);
   padding: 0;
   border-radius: 12px 12px 0 0;
-  border: 0.5px solid rgb(0, 0, 0);
+  border: 0.5px solid black;
   background: white;
   box-shadow:
     0 8px 32px rgba(31, 38, 135, 0.2),
