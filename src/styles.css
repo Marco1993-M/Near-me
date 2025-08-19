@@ -2546,9 +2546,8 @@ dialog#favorites[open] {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Buttons */
-#quiz-next-btn,
-#quiz-close-btn {
+/* Keep next button styled */
+#quiz-next-btn {
   padding: 10px 20px;
   border: 0.5px solid #000;
   border-radius: 10px;
@@ -2559,10 +2558,25 @@ dialog#favorites[open] {
   transition: background 0.2s ease-in-out;
 }
 
-#quiz-next-btn:hover,
-#quiz-close-btn:hover {
+#quiz-next-btn:hover {
   background: rgba(0, 0, 0, 0.05);
 }
+
+/* Make close button clean (no box) */
+#quiz-close-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #000;
+  cursor: pointer;
+  font-size: 16px; /* adjust size */
+  transition: opacity 0.2s ease-in-out;
+}
+
+#quiz-close-btn:hover {
+  opacity: 0.6; /* subtle hover effect */
+}
+
 
 /* Fade animation */
 @keyframes fadeIn {
