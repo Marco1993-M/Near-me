@@ -2552,7 +2552,7 @@ dialog#favorites[open] {
   padding: 10px 20px;
   border: 0.5px solid #000;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.7);
+  background: none;
   backdrop-filter: blur(2px);
   color: #000;
   cursor: pointer;
