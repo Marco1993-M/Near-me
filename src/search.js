@@ -131,30 +131,31 @@ export function initSearch() {
       return;
     }
 
-    if (type === 'roaster') {
-      try {
-        // --- Fetch shops using this specific roaster ---
-        const { data: roasterShops, error } = await supabase
-          .from('shops')
-          .select('*')
-          .not('roasters', 'is', null);
+if (type === 'roaster') {
+  try {
+    const roasterName = li.dataset.roasterName.toLowerCase();
 
-        if (error) throw error;
+    const { data: roasterShops, error } = await supabase
+      .from('shops')
+      .select('*')
+      .not('roasters', 'is', null);
 
-        const roasterName = li.textContent.replace(/\(.*\)/, '').trim().toLowerCase();
+    if (error) throw error;
 
-        const filteredShops = roasterShops.filter(r =>
-          Array.isArray(r.roasters) && r.roasters.some(x => x.toLowerCase() === roasterName)
-        );
+    const filteredShops = roasterShops.filter(r =>
+      Array.isArray(r.roasters)
+        ? r.roasters.some(x => x.toLowerCase() === roasterName)
+        : r.roasters.toLowerCase() === roasterName
+    );
 
-        // Display only filtered markers
-        await displayShopsOnMap(filteredShops);
-        searchDropdown.classList.add('hidden');
-      } catch (err) {
-        console.error('Roaster click failed', err);
-      }
-      return;
-    }
+    await displayShopsOnMap(filteredShops);
+    searchDropdown.classList.add('hidden');
+  } catch (err) {
+    console.error('Roaster click failed', err);
+  }
+  return;
+}
+
   });
 }
 
@@ -172,17 +173,23 @@ async function performUnifiedSearch(query) {
   try {
     const { data, error } = await supabase
       .from('shops')
-      .select('*')
+      .select('roasters')   // only fetch roaster column
       .not('roasters', 'is', null);
 
     if (error) throw error;
 
     if (data && data.length > 0) {
       const q = query.toLowerCase();
-      roasterData = data.filter(r =>
-        (Array.isArray(r.roasters) && r.roasters.some(x => x.toLowerCase().includes(q))) ||
-        (r.name && r.name.toLowerCase().includes(q)) ||
-        (r.city && r.city.toLowerCase().includes(q))
+
+      // Flatten in case roasters is an array
+      const allRoasters = data.flatMap(r =>
+        Array.isArray(r.roasters) ? r.roasters : [r.roasters]
+      );
+
+      // Deduplicate & filter by search query
+      const uniqueRoasters = [...new Set(allRoasters)];
+      roasterData = uniqueRoasters.filter(r =>
+        r.toLowerCase().includes(q)
       );
     }
   } catch (err) {
@@ -193,6 +200,7 @@ async function performUnifiedSearch(query) {
 
   return { cities, shops, roasters: roasterData };
 }
+
 
 /* -------------------- Helpers -------------------- */
 function debounce(func, wait) {
@@ -248,10 +256,10 @@ function renderSearchResults({ cities, shops, roasters }, dropdown) {
     items.forEach(item => {
       const li = document.createElement('li');
       if (type === 'roaster') {
-        li.textContent = `${item.name} (${item.city || ''})`;
-        li.dataset.shopId = item.id;
+        li.textContent = item;                // roaster name only
+        li.dataset.roasterName = item;        // store clean roaster
       } else {
-        li.textContent = item.description;
+        li.textContent = item.description;    // Google Places result
         li.dataset.placeId = item.place_id;
       }
       li.dataset.type = type;
@@ -271,6 +279,7 @@ function renderSearchResults({ cities, shops, roasters }, dropdown) {
     dropdown.classList.add('hidden');
   }
 }
+
 
 // --- City handling ---
 async function tryHandleAsCity(query) {
