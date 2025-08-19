@@ -15,6 +15,14 @@ const customPngIcon = L.divIcon({
   popupAnchor: [0, -32]
 });
 
+const customRoasterPngIcon = L.divIcon({
+  className: 'custom-png-icon',
+  html: `<img src="/roastermarker.png" alt="Marker" />`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32]
+});
+
 // Pulsing icon for user location marker ONLY
 const pulsingUserIcon = L.divIcon({
   className: '',
