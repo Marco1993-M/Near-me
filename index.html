@@ -372,21 +372,39 @@
     </div>
   </dialog>
 
-  <!-- Quiz Modal -->
 <div id="quiz-modal" class="hidden">
   <div class="quiz-container">
-    <h2 id="quiz-question"></h2>
+    <button id="quiz-close-btn" class="modal-close" aria-label="Close">&times;</button>
+
+    <!-- Progress bar -->
+    <div id="quiz-progress" class="quiz-progress"></div>
+
+    <!-- Question -->
+    <div id="quiz-question"></div>
+
+    <!-- Options -->
     <div id="quiz-options"></div>
-    <button id="quiz-next-btn">Next</button>
-    <button id="quiz-close-btn">Close</button>
+
+    <!-- Flavor wheel (radar chart) -->
+    <canvas id="flavor-wheel" width="200" height="200" style="margin-top:16px; display:none;"></canvas>
   </div>
 </div>
 
 <button id="taste-profile-btn" class="floating-btn" aria-label="Take the coffee quiz">
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6" width="24" height="24">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M17.995 3.744v7.5a6 6 0 1 1-12 0v-7.5m-2.25 16.502h16.5" />
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="24" height="24">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M17.995 3.744v7.5a6 6 0 1 1-12 0v-7.5m-2.25 16.502h16.5"/>
   </svg>
 </button>
+
+  <!-- Quiz Results Page -->
+<div id="quiz-results" class="quiz-results hidden">
+  <h2 id="quiz-results-heading" class="quiz-results-heading"></h2>
+  <p id="quiz-results-description" class="quiz-results-description"></p>
+  <p id="quiz-results-flavors" class="quiz-results-flavors"></p>
+  <ul id="quiz-results-beans" class="quiz-results-beans"></ul>
+  <button id="retake-quiz-btn" class="quiz-option-button retake-btn">Retake Quiz</button>
+</div>
+
 
   <button id="install-btn" style="display:none; position: fixed; bottom: 80px; right: 20px; z-index: 1000;">
   Install App

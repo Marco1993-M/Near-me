@@ -1,6 +1,10 @@
 import { getMapInstance } from './map.js';
 import { showFloatingCard } from './shops.js';
 import { getOrCreateShop } from './db.js';
+import supabase from './supabase.js';
+import { customPngIcon, customRoasterPngIcon } from './map.js';
+
+
 
 let searchInput;
 let searchDropdown;
@@ -17,8 +21,9 @@ const CITY_TYPES = new Set([
   'country'
 ]);
 
-export function initSearch(supabase) {
+export function initSearch() {
   console.log('Initializing search...');
+
   if (!google?.maps?.places) {
     console.error('Google Maps API is not loaded');
     searchInput = document.getElementById('search-bar');
@@ -31,6 +36,7 @@ export function initSearch(supabase) {
 
   searchInput = document.getElementById('search-bar');
   searchDropdown = document.getElementById('search-dropdown');
+
   if (!searchInput || !searchDropdown) {
     console.error('Search elements not found');
     return;
@@ -42,28 +48,30 @@ export function initSearch(supabase) {
     return;
   }
 
-  // Debounced input handler
+  // --- Input handler (debounced) ---
   searchInput.addEventListener(
     'input',
     debounce(async (e) => {
       const searchQuery = e.target.value.trim();
       if (!searchQuery) {
+        // Reset map to default state showing all shops
+        await resetMapToAllShops();
         searchDropdown.classList.add('hidden');
         searchDropdown.innerHTML = '';
         return;
       }
 
       try {
-        const { cities, places } = await getPlacePredictionsGrouped(searchQuery);
-        renderSearchResults({ cities, places }, searchDropdown);
+        const { cities, shops, roasters } = await performUnifiedSearch(searchQuery);
+        renderSearchResults({ cities, shops, roasters }, searchDropdown);
       } catch (error) {
-        console.error('Error searching places:', error);
+        console.error('Search error:', error);
         searchDropdown.classList.add('hidden');
       }
     }, 300)
   );
 
-  // Enter key
+  // --- Enter key handler ---
   searchInput.addEventListener('keydown', async (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
@@ -78,9 +86,9 @@ export function initSearch(supabase) {
         return;
       }
 
-      // Not a city → treat as shop text search
-      const results = await performTextSearch(query);
-      await displaySearchResults(results, getMapInstance());
+      const { shops, roasters } = await performUnifiedSearch(query);
+      const combinedResults = [...shops, ...roasters];
+      await displaySearchResults(combinedResults, getMapInstance());
       searchDropdown.classList.add('hidden');
     } catch (error) {
       console.error('Text search error:', error);
@@ -88,12 +96,13 @@ export function initSearch(supabase) {
     }
   });
 
-  // Delegated click listener (city vs shop)
+  // --- Click listener for dropdown ---
   searchDropdown.addEventListener('click', async (e) => {
-    const li = e.target.closest('li[data-place-id]');
+    const li = e.target.closest('li[data-type]');
     if (!li) return;
 
-    const type = li.dataset.type; // "city" or "shop"
+    const type = li.dataset.type;
+    const shopId = li.dataset.shopId;
     const placeId = li.dataset.placeId;
 
     if (type === 'city') {
@@ -107,19 +116,117 @@ export function initSearch(supabase) {
       return;
     }
 
-    // Shop flow
-    try {
-      const place = await getPlaceDetails(placeId);
-      await focusShopOnMap(place);
-      searchDropdown.classList.add('hidden');
-    } catch (error) {
-      console.error('Error getting place details:', error);
+    if (type === 'shop') {
+      try {
+        const place = await getPlaceDetails(placeId);
+        const shop = {
+          name: place.name,
+          formatted_address: place.formatted_address,
+          geometry: place.geometry,
+          address_components: place.address_components,
+          formatted_phone_number: place.formatted_phone_number
+        };
+        await focusShopOnMap(shop);
+        searchDropdown.classList.add('hidden');
+      } catch (err) {
+        console.error('Shop click failed', err);
+      }
+      return;
     }
+
+if (type === 'roaster') {
+  try {
+    // Get the selected roaster name from the dataset
+    const roasterName = li.dataset.roasterName.toLowerCase();
+
+    // Fetch all shops from Supabase with a non-null roasters column
+    const { data: allShops, error } = await supabase
+      .from('shops')
+      .select('*')
+      .not('roasters', 'is', null);
+
+    if (error) throw error;
+
+    // Filter shops that include the selected roaster
+    const filteredShops = allShops.filter(shop =>
+      Array.isArray(shop.roasters)
+        ? shop.roasters.some(r => r.toLowerCase() === roasterName)
+        : shop.roasters.toLowerCase() === roasterName
+    );
+
+    // Collect IDs of filtered shops for highlighting
+    const highlightIds = filteredShops.map(s => s.id);
+
+    // Display all shops, highlighting only the filtered ones
+    await displayShopsOnMap(allShops, highlightIds);
+
+    // Hide the dropdown
+    searchDropdown.classList.add('hidden');
+  } catch (err) {
+    console.error('Roaster click failed', err);
+  }
+  return;
+}
+
+
   });
 }
 
-/* -------------------- Helpers -------------------- */
+/* -------------------- Unified Search -------------------- */
+async function performUnifiedSearch(query) {
+  query = query.trim().toLowerCase();
+  if (!query) return { cities: [], shops: [], roasters: [] };
 
+  // --- Google Places: shops ---
+  const places = await getPlacePredictionsGrouped(query);
+  const shops = Array.isArray(places.places) ? places.places : [];
+
+  // --- Supabase: roasters only ---
+  let roasterData = [];
+  try {
+    const { data, error } = await supabase
+      .from('shops')
+      .select('roasters')   // only fetch roaster column
+      .not('roasters', 'is', null);
+
+    if (error) throw error;
+
+    if (data && data.length > 0) {
+      // Flatten in case roasters is an array
+      const allRoasters = data.flatMap(r =>
+        Array.isArray(r.roasters) ? r.roasters : [r.roasters]
+      );
+
+      // Deduplicate
+      let uniqueRoasters = [...new Set(allRoasters)];
+
+      // Partial word matching
+      roasterData = uniqueRoasters.filter(r => {
+        const words = r.toLowerCase().split(/\s+/);
+        return words.some(word => word.includes(query));
+      });
+
+      // Relevance sort: roasters starting with query appear first
+      roasterData.sort((a, b) => {
+        const aq = a.toLowerCase();
+        const bq = b.toLowerCase();
+        if (aq.startsWith(query) && !bq.startsWith(query)) return -1;
+        if (!aq.startsWith(query) && bq.startsWith(query)) return 1;
+        return 0;
+      });
+    }
+  } catch (err) {
+    console.error('Roaster search error:', err);
+  }
+
+  const cities = Array.isArray(places.cities) ? places.cities : [];
+
+  return { cities, shops, roasters: roasterData };
+}
+
+
+
+/* -------------------- Helpers -------------------- */
 function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -128,143 +235,90 @@ function debounce(func, wait) {
   };
 }
 
-/**
- * Return both city and place predictions.
- */
 async function getPlacePredictionsGrouped(query) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
   const mapInstance = getMapInstance();
   const userLatLng = mapInstance?.map?.getCenter();
-
   const baseNearbyOpts = userLatLng
-    ? {
-        location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng),
-        radius: 50000
-      }
+    ? { location: new google.maps.LatLng(userLatLng.lat, userLatLng.lng), radius: 50000 }
     : {};
 
-  const citiesPromise = new Promise((resolve) => {
+  const citiesPromise = new Promise(resolve =>
     autocompleteService.getPlacePredictions(
-      {
-        input: query,
-        types: ['(cities)'],
-        ...baseNearbyOpts
-      },
-      (predictions, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) resolve(predictions || []);
-        else resolve([]); // swallow to avoid killing UX
-      }
-    );
-  });
+      { input: query, types: ['(cities)'], ...baseNearbyOpts },
+      (predictions, status) => resolve(status === 'OK' ? predictions : [])
+    )
+  );
 
-  const placesPromise = new Promise((resolve) => {
+  const placesPromise = new Promise(resolve =>
     autocompleteService.getPlacePredictions(
-      {
-        input: query,
-        types: ['establishment', 'geocode'],
-        ...baseNearbyOpts
-      },
-      (predictions, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) resolve(predictions || []);
-        else resolve([]);
-      }
-    );
-  });
+      { input: query, types: ['establishment', 'geocode'], ...baseNearbyOpts },
+      (predictions, status) => resolve(status === 'OK' ? predictions : [])
+    )
+  );
 
   const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
-
-  // Deduplicate any overlapping predictions (rare, but safe)
-  const placeIds = new Set();
-  const uniqueCities = [];
-  const uniquePlaces = [];
-
-  cities.forEach((c) => {
-    if (!placeIds.has(c.place_id)) {
-      placeIds.add(c.place_id);
-      uniqueCities.push(c);
-    }
-  });
-
-  places.forEach((p) => {
-    if (!placeIds.has(p.place_id)) {
-      placeIds.add(p.place_id);
-      uniquePlaces.push(p);
-    }
-  });
-
-  return { cities: uniqueCities, places: uniquePlaces };
+  return { cities: cities || [], places: places || [] };
 }
 
-function renderSearchResults({ cities, places }, dropdown) {
+function renderSearchResults({ cities, shops, roasters }, dropdown) {
   dropdown.innerHTML = '';
-
-  const hasCities = cities && cities.length > 0;
-  const hasPlaces = places && places.length > 0;
-
-  if (!hasCities && !hasPlaces) {
-    const li = document.createElement('li');
-    li.textContent = 'No results found';
-    dropdown.appendChild(li);
-    dropdown.classList.remove('hidden');
-    return;
-  }
-
   const fragment = document.createDocumentFragment();
 
-  if (hasCities) {
+  function appendSection(title, items, type) {
+    if (!items || items.length === 0) return;
+
     const header = document.createElement('li');
     header.className = 'search-section-header';
-    header.textContent = 'Cities';
+    header.textContent = title;
+    header.style.borderLeft = '4px solid green';
+    header.style.paddingLeft = '8px';
+    header.style.marginTop = '6px';
+    header.style.marginBottom = '2px';
     fragment.appendChild(header);
 
-    cities.forEach((prediction) => {
+    items.forEach(item => {
       const li = document.createElement('li');
-      li.textContent = prediction.description;
-      li.dataset.placeId = prediction.place_id;
-      li.dataset.type = 'city';
-      li.className = 'search-result search-result-city';
+      if (type === 'roaster') {
+        li.textContent = item;                // roaster name only
+        li.dataset.roasterName = item;        // store clean roaster
+      } else {
+        li.textContent = item.description;    // Google Places result
+        li.dataset.placeId = item.place_id;
+      }
+      li.dataset.type = type;
+      li.className = `search-result search-result-${type}`;
       fragment.appendChild(li);
     });
   }
 
-  if (hasPlaces) {
-    const header = document.createElement('li');
-    header.className = 'search-section-header';
-    header.textContent = 'Shops';
-    fragment.appendChild(header);
+  appendSection('Cities', cities, 'city');
+  appendSection('Shops', shops, 'shop');
+  appendSection('Roasters', roasters, 'roaster');
 
-    places.forEach((prediction) => {
-      const li = document.createElement('li');
-      li.textContent = prediction.description;
-      li.dataset.placeId = prediction.place_id;
-      li.dataset.type = 'shop';
-      li.className = 'search-result search-result-shop';
-      fragment.appendChild(li);
-    });
+  if (fragment.childNodes.length > 0) {
+    dropdown.appendChild(fragment);
+    dropdown.classList.remove('hidden');
+  } else {
+    dropdown.classList.add('hidden');
   }
-
-  dropdown.appendChild(fragment);
-  dropdown.classList.remove('hidden');
 }
 
-/**
- * Called on Enter. If the query looks like a city, handle and return true.
- */
+
+// --- City handling ---
 async function tryHandleAsCity(query) {
   const { cities } = await getPlacePredictionsGrouped(query);
   if (!cities.length) return false;
 
-  // Use the top city result
   try {
     const result = await geocodePlaceId(cities[0].place_id);
-    if (result?.types?.some((t) => CITY_TYPES.has(t))) {
+    if (result?.types?.some(t => CITY_TYPES.has(t))) {
       await centerMapOnCity(result);
       return true;
     }
   } catch (e) {
-    console.warn('Failed to center on city, falling back to shop search.', e);
+    console.warn('Failed to center on city.', e);
   }
-
   return false;
 }
 
@@ -272,11 +326,8 @@ async function geocodePlaceId(placeId) {
   geocoder = geocoder || new google.maps.Geocoder();
   return new Promise((resolve, reject) => {
     geocoder.geocode({ placeId }, (results, status) => {
-      if (status === 'OK' && results && results[0]) {
-        resolve(results[0]);
-      } else {
-        reject(status);
-      }
+      if (status === 'OK' && results && results[0]) resolve(results[0]);
+      else reject(status);
     });
   });
 }
@@ -285,8 +336,7 @@ async function centerMapOnCity(geoResult) {
   const { map } = getMapInstance();
   if (!map || !geoResult) return;
 
-  // Remove any previous markers (optional UX choice)
-  currentMarkers.forEach((m) => map.removeLayer(m));
+  currentMarkers.forEach(m => map.removeLayer(m));
   currentMarkers = [];
 
   const viewport = geoResult.geometry.viewport;
@@ -299,29 +349,77 @@ async function centerMapOnCity(geoResult) {
     const lng = geoResult.geometry.location.lng();
     map.setView([lat, lng], 11);
   }
-
-  // Optional toast:
-  console.log(`Centered on ${geoResult.formatted_address}`);
 }
 
 async function getPlaceDetails(placeId) {
   placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
   return new Promise((resolve, reject) => {
     placesService.getDetails({ placeId }, (place, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK) {
-        resolve(place);
-      } else {
-        reject(status);
-      }
+      if (status === google.maps.places.PlacesServiceStatus.OK) resolve(place);
+      else reject(status);
     });
   });
 }
 
+// --- Display shops with highlighted markers ---
+async function displayShopsOnMap(shops, highlightIds = []) {
+  const { map } = getMapInstance();
+  if (!map) return;
+
+  // Remove existing markers
+  currentMarkers.forEach(marker => map.removeLayer(marker));
+  currentMarkers = [];
+
+  let firstHighlighted = null;
+
+  for (const s of shops) {
+    const lat = s.lat;
+    const lng = s.lng;
+    const isHighlight = highlightIds.includes(s.id);
+
+    const marker = L.marker([lat, lng], {
+      icon: isHighlight ? customRoasterPngIcon : customPngIcon,
+      opacity: isHighlight ? 1 : 0.5 // optional dimming for non-highlighted
+    }).addTo(map)
+      .bindPopup(s.name);
+
+    marker._shopId = s.id;
+
+    // Open popup later for first highlighted shop
+    if (isHighlight && !firstHighlighted) firstHighlighted = marker;
+
+    marker.on('click', () => showFloatingCard(s));
+
+    currentMarkers.push(marker);
+  }
+
+  // Center map and open popup for first highlighted marker if exists
+  if (firstHighlighted) {
+    map.setView(firstHighlighted.getLatLng(), 14);
+    firstHighlighted.openPopup();
+  } else if (shops.length > 0) {
+    const first = shops[0];
+    map.setView([first.lat, first.lng], 13);
+  }
+}
+
+
+
+// --- Reset map to all shops ---
+async function resetMapToAllShops() {
+  const { data: allShops, error } = await supabase.from('shops').select('*');
+  if (error) {
+    console.error('Failed to fetch all shops:', error);
+    return;
+  }
+  await displayShopsOnMap(allShops);
+}
+
+// --- Focus single shop ---
 async function focusShopOnMap(place) {
   const { map, customIcon } = getMapInstance();
   if (!map) return;
 
-  // Clear existing markers
   currentMarkers.forEach(marker => map.removeLayer(marker));
   currentMarkers = [];
 
@@ -336,20 +434,16 @@ async function focusShopOnMap(place) {
   currentMarkers.push(marker);
   map.setView([lat, lng], 15);
 
-  // Prepare shop object
   const shop = {
     name: place.name,
     address: place.formatted_address,
     lat,
     lng,
-    city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
+    city: place.address_components ? extractCityFromAddressComponents(place.address_components) : 'Unknown',
     phone: place.formatted_phone_number || null
   };
 
-  // Ensure shop ID
   shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
-
-  // Show floating card
   await showFloatingCard(shop);
 }
 
@@ -359,70 +453,4 @@ function extractCityFromAddressComponents(components) {
     c.types.includes('locality') || c.types.includes('administrative_area_level_2')
   );
   return cityComponent ? cityComponent.long_name.toLowerCase() : 'Unknown City';
-}
-
-async function performTextSearch(query) {
-  placesService = placesService || new google.maps.places.PlacesService(document.createElement('div'));
-  const mapInstance = getMapInstance();
-  const userLatLng = mapInstance?.map?.getCenter();
-
-  return new Promise((resolve, reject) => {
-    const request = {
-      query: `coffee shop ${query}`,
-      type: 'cafe'
-    };
-
-    if (userLatLng) {
-      request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      request.radius = 50000;
-    }
-
-    placesService.textSearch(request, (results, status) => {
-      if (status === google.maps.places.PlacesServiceStatus.OK) {
-        resolve(results || []);
-      } else {
-        reject(status);
-      }
-    });
-  });
-}
-
-async function displaySearchResults(results, mapInstance) {
-  const map = mapInstance.map;
-  const coffeeIcon = mapInstance.customIcon;
-  currentMarkers.forEach(marker => map.removeLayer(marker));
-  currentMarkers = [];
-
-  for (const place of results) {
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-
-    const marker = L.marker([lat, lng], { icon: coffeeIcon })
-      .addTo(map)
-      .bindPopup(place.name);
-    currentMarkers.push(marker);
-
-    const shop = {
-      name: place.name,
-      address: place.formatted_address,
-      lat,
-      lng,
-      city: extractCityFromAddressComponents(place.address_components) || 'Unknown',
-      phone: place.formatted_phone_number || null
-    };
-
-    shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
-    marker._shopId = shop.id;
-    marker.on('click', () => showFloatingCard(shop));
-  }
-
-  if (results.length > 0) {
-    map.setView(
-      [
-        results[0].geometry.location.lat(),
-        results[0].geometry.location.lng()
-      ],
-      13
-    );
-  }
 }

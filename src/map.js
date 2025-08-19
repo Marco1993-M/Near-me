@@ -7,7 +7,7 @@ console.log(L.Routing);
 let map;
 
 // Default icon for all other markers
-const customPngIcon = L.divIcon({
+export const customPngIcon = L.divIcon({
   className: 'custom-png-icon',
   html: `<img src="/marker.png" alt="Marker" />`,
   iconSize: [32, 32],
@@ -15,8 +15,17 @@ const customPngIcon = L.divIcon({
   popupAnchor: [0, -32]
 });
 
-// Pulsing icon for user location marker ONLY
-const pulsingUserIcon = L.divIcon({
+// Highlighted icon for selected roaster shops
+export const customRoasterPngIcon = L.divIcon({
+  className: 'custom-png-icon',
+  html: `<img src="/roastermarker.png" alt="Marker" />`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32]
+});
+
+// Pulsing icon for user location marker
+export const pulsingUserIcon = L.divIcon({
   className: '',
   html: `
     <div class="user-location-icon">
@@ -28,6 +37,7 @@ const pulsingUserIcon = L.divIcon({
   iconAnchor: [20, 40],
   popupAnchor: [0, -40]
 });
+
 
 let userMarker;
 let userLocation;
