@@ -2487,18 +2487,29 @@ dialog#favorites[open] {
 
 /* Style the quiz modal */
 /* Quiz modal overlay */
+/* Quiz Modal */
 #quiz-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.2); /* same dim background */
+  position: fixed;         /* stay in place */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* center on screen */
+  width: 500px;            /* fixed width */
+  height: 600px;           /* fixed height */
+  background-color: #1a1a1a;
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  padding: 24px;
+  overflow: hidden;        /* hides overflowing content */
   display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1009;
-  animation: fadeIn 0.2s ease-in-out;
+  flex-direction: column;
+}
+
+/* Scrollable content area */
+.quiz-container {
+  flex: 1;
+  overflow-y: auto;        /* allows scrolling if content is too tall */
+  padding-right: 8px;      /* optional: space for scrollbar */
 }
 
 /* Quiz container styled like #cities */
