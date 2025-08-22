@@ -2635,19 +2635,23 @@ dialog#favorites[open] {
   justify-content: center;
   z-index: 1000;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  background: #c7f4d3; /* unique color */
+  background: #c7f4d3;
   cursor: pointer;
   padding: 0;
+  line-height: 0; /* reset to avoid text influence */
+  font-size: 0;   /* reset */
 }
 
 #feedback-btn:hover {
-  background: #b2e8c2; /* slightly darker on hover */
+  background: #b2e8c2;
 }
 
 #feedback-btn svg {
   width: 60%;
   height: 60%;
+  display: block; /* 👈 key fix */
 }
+
 
 
 #feedback-modal {
