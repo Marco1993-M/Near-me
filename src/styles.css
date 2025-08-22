@@ -2615,6 +2615,143 @@ dialog#favorites[open] {
   to { opacity: 1; }
 }
 
+/* Centered profile name */
+.profile-name {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #000;
+}
+
+/* Progress text */
+#quiz-progress-text {
+  text-align: right;
+  font-size: 10px;
+  color: #555;
+  margin-top: 6px;
+  font-weight: 200;
+}
+
+.roaster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 columns of equal width */
+  gap: 0.5rem; /* spacing between cards */
+}
+.roaster-card {
+  text-align: center;
+}
+
+/* Eyebrow text */
+.eyebrow {
+  text-transform: capitalize;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: #999;
+  margin-bottom: 0rem;
+}
+
+/* Bean name */
+.bean-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 0.3rem;
+  margin-bottom: 0.5rem;
+  text-align: Left;
+}
+
+/* Bean profile */
+.bean-profile {
+  font-size: 1rem;
+  color: #595959;
+  text-align: Left;
+  margin-bottom: 1.5rem;
+}
+
+/* Roaster grid: exactly 2 containers per row */
+.roaster-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  justify-items: center;
+  margin-bottom: 0rem;
+  margin-top: 0rem;
+}
+
+/* Each roaster card */
+.roaster-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: Left;
+  color: #000000;
+  transition: transform 0.2s ease;
+}
+
+.roaster-card:hover {
+  transform: translateY(-5px);
+}
+
+.roaster-card img {
+  border-radius: 8px;
+  max-width: 100px;
+  max-height: 100px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+/* Back button aligned left */
+#back-to-results {
+  display: inline-block; /* or block if you want full width */
+  margin: 10px 0 0 0;    /* top 10px, no right, bottom, left 0 */
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  color: #000000;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+
+#back-to-results:hover {
+  background-color: #e0e0e0;
+}
+
+/* Optional text below grid */
+.text-center {
+  text-transform: underline;
+  text-align: center;
+  color: #ccc;
+  margin-bottom: 1rem;
+}
+
+/* Style for the "Don't see your roaster?" text */
+.roaster-footer-text {
+  text-align: left;          /* align text left */
+  color: #000000;            /* black text */
+  font-size: 0.875rem;       /* smaller font */
+  font-weight: 300;          /* light font weight */
+  text-decoration: underline; /* underline text */
+  margin-top: 16px;          /* space above */
+  margin-bottom: 16px;       /* space below */
+}
+
+
+
+.hidden {
+  display: none;
+}
+
+/* Fade In Animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 .body-no-scroll {
   overflow: hidden;
