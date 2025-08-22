@@ -2644,6 +2644,11 @@ dialog#favorites[open] {
   background: #b2e8c2; /* slightly darker on hover */
 }
 
+#feedback-btn svg {
+  width: 60%;
+  height: 60%;
+}
+
 
 #feedback-modal {
   position: fixed;
