@@ -2623,12 +2623,11 @@ dialog#favorites[open] {
 
 #feedback-btn {
   position: fixed;
-  top: 15.5rem;  
+  top: 15.5rem;
   right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* same as others */
-  border: none; /* remove border for consistency */
+  border: none;
   border-radius: 50%;
   box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff;
   display: flex;
@@ -2636,20 +2635,15 @@ dialog#favorites[open] {
   justify-content: center;
   z-index: 1000;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  font-size: 18px;
+  background: #c7f4d3; /* unique color */
   cursor: pointer;
+  padding: 0;
 }
-#feedback-btn {
-  background-color: #c7f4d3; /* then override color */
-}
-
-
-
-
 
 #feedback-btn:hover {
-  transform: scale(1.05);
+  background: #b2e8c2; /* slightly darker on hover */
 }
+
 
 #feedback-modal {
   position: fixed;
