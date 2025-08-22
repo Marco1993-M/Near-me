@@ -102,6 +102,7 @@ export function initTasteProfile() {
 
   // --- Display Results ---
   function displayResults() {
+    if(progressBar) progressBar.textContent = '';
     // Determine profile
     let profile;
     if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
@@ -150,7 +151,7 @@ export function initTasteProfile() {
 function showBeanDetail(slug) {
   const bean = beans.find(b => b.slug === slug);
   if (!bean) return;
-
+if(progressBar) progressBar.textContent = '';
   const userCountry = "South Africa";
   const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
 
