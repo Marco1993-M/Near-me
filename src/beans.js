@@ -1,0 +1,49 @@
+export const beans = [
+     {
+    slug: "ethiopian-yirgacheffe",
+    region: "Ethiopian YirgacheffeX",
+    profile: "Fruity and vibrant",
+    roasters: [
+      { 
+        name: "Blue Bird Roastery", 
+        country: "South Africa", 
+        image: "roasters/bluebird.png", 
+        maxWidth: 100, 
+        maxHeight: 100, 
+        link: "https://www.bluebirdcoffeeroastery.co.za/product/kenya-kamwangi-ab-3/" 
+      },
+    ]
+  },
+  {
+    slug: "kenya-aa",
+    region: "Kenya AA",
+    profile: "Juicy, bright, and citrusy",
+    roasters: [
+           { 
+        name: "Blue Bird Roastery", 
+        country: "South Africa", 
+        image: "roasters/bluebird.png", 
+        maxWidth: 100, 
+        maxHeight: 100, 
+        link: "https://www.bluebirdcoffeeroastery.co.za/product/kenya-kamwangi-ab-3/" 
+      },
+                 { 
+        name: "Blue Bird Roastery", 
+        country: "South Africa", 
+        image: "roasters/bluebird.png", 
+        maxWidth: 100, 
+        maxHeight: 100, 
+        link: "https://www.bluebirdcoffeeroastery.co.za/product/kenya-ruera-natural/" 
+      },
+                 { 
+        name: "Blue Bird Roastery", 
+        country: "South Africa", 
+        image: "roasters/bluebird.png", 
+        maxWidth: 100, 
+        maxHeight: 100, 
+        link: "https://www.bluebirdcoffeeroastery.co.za/product/kenya-ruera-natural/" 
+      },
+
+    ]
+  }
+];
