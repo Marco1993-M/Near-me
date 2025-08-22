@@ -2486,23 +2486,23 @@ dialog#favorites[open] {
 
 
 /* Style the quiz modal */
-/* Quiz modal overlay */
 /* Quiz Modal */
 #quiz-modal {
   position: fixed;         /* stay in place */
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%); /* center on screen */
-  width: 500px;            /* fixed width */
-  height: 600px;           /* fixed height */
-  background-color: #1a1a1a;
-  color: #fff;
+  width: 65%;            /* fixed width */
+  height: 75%;           /* fixed height */
+  background-color: #ffffff;
+  color: #000000;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   padding: 24px;
   overflow: hidden;        /* hides overflowing content */
   display: flex;
   flex-direction: column;
+  z-index: 1001;
 }
 
 /* Scrollable content area */
