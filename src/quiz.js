@@ -203,16 +203,21 @@ export function initTasteProfile() {
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
     quizModal.classList.remove('hidden');
     showQuestion(currentQuestionIndex);
+
+    // Update URL
+    window.history.pushState(null, '', '/coffee-profile');
   }
 
   function closeQuiz() {
     quizModal.classList.add('hidden');
+    // Optional: revert URL
+    window.history.pushState(null, '', '/');
   }
 
   openButton?.addEventListener('click', openQuiz);
   closeButton?.addEventListener('click', closeQuiz);
 
-  // --- Auto-open modal if path matches ---
+  // --- Auto-open modal if URL matches ---
   const urlParams = new URLSearchParams(window.location.search);
   const profileSlug = urlParams.get('profile');
 
