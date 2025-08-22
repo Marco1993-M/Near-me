@@ -123,7 +123,7 @@ export function initTasteProfile() {
     lastProfile = profile;
 
     // Update URL for sharing
-    window.history.replaceState(null, '', `?profile=${profile.slug}`);
+    window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
 
     quizQuestion.textContent = profile.name;
     quizOptions.innerHTML = `
@@ -170,7 +170,7 @@ export function initTasteProfile() {
     const userCountry = "South Africa";
     const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
 
-    quizQuestion.textContent = ''; // remove old question
+    quizQuestion.textContent = '';
     quizOptions.innerHTML = `
       <p class="eyebrow">Find your local stockist</p>
       <h2 class="bean-name">${bean.region}</h2>
@@ -209,14 +209,19 @@ export function initTasteProfile() {
     quizModal.classList.add('hidden');
   }
 
-  openButton.addEventListener('click', openQuiz);
-  closeButton.addEventListener('click', closeQuiz);
+  openButton?.addEventListener('click', openQuiz);
+  closeButton?.addEventListener('click', closeQuiz);
 
-  // --- Open modal on page load if URL has slug ---
+  // --- Auto-open modal if path matches ---
   const urlParams = new URLSearchParams(window.location.search);
   const profileSlug = urlParams.get('profile');
-  if(profileSlug) {
-    openQuiz();
-    displayResults(profileSlug);
+
+  if(window.location.pathname === '/coffee-profile' && quizModal) {
+    quizModal.classList.remove('hidden');
+    if(profileSlug) {
+      displayResults(profileSlug);
+    } else {
+      showQuestion(0);
+    }
   }
 }
