@@ -1,6 +1,8 @@
 import supabase from './supabase.js';
+import { beans } from './beans.js';
 
 export function initTasteProfile() {
+  // --- Quiz Data ---
   const quizData = [
     { question: "Do you prefer coffee sweet, sour, or bitter?", options: [
         { text: "Sweet", scores: { sweet: 2 } },
@@ -49,6 +51,7 @@ export function initTasteProfile() {
     }
   ];
 
+  // --- Taste Profiles ---
   const tasteProfiles = [
     { name: "🍒Bright & Fruity Adventurer🍒", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
     { name: "🍯Sweet & Smooth Lover🍯", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
@@ -57,6 +60,7 @@ export function initTasteProfile() {
     { name: "⚖️Balanced & Elegant⚖️", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
   ];
 
+  // --- DOM Elements ---
   const quizModal = document.getElementById('quiz-modal');
   const quizQuestion = document.getElementById('quiz-question');
   const quizOptions = document.getElementById('quiz-options');
@@ -64,9 +68,12 @@ export function initTasteProfile() {
   const closeButton = document.getElementById('quiz-close-btn');
   const openButton = document.getElementById('taste-profile-btn');
 
+  // --- State ---
   let currentQuestionIndex = 0;
   let userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+  let lastProfile = null;
 
+  // --- Show Question ---
   function showQuestion(index) {
     const q = quizData[index];
     quizQuestion.textContent = q.question;
@@ -93,26 +100,35 @@ export function initTasteProfile() {
     });
   }
 
+  // --- Display Results ---
   function displayResults() {
-    // determine top matching profile by comparing dominant scores
+    // Determine profile
     let profile;
     if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-      profile = tasteProfiles[0]; // Bright & Fruity Adventurer
+      profile = tasteProfiles[0];
     } else if(userScores.sweet > userScores.nutty){
-      profile = tasteProfiles[1]; // Sweet & Smooth Lover
+      profile = tasteProfiles[1];
     } else if(userScores.nutty > 0){
-      profile = tasteProfiles[2]; // Rich & Nutty Explorer
+      profile = tasteProfiles[2];
     } else if(userScores.spicy > 0){
-      profile = tasteProfiles[3]; // Spicy & Complex
+      profile = tasteProfiles[3];
     } else {
-      profile = tasteProfiles[4]; // Balanced & Elegant
+      profile = tasteProfiles[4];
     }
+    lastProfile = profile;
 
-    quizQuestion.textContent = `${profile.name}`;
+    quizQuestion.textContent = profile.name;
     quizOptions.innerHTML = `
       <p>${profile.description}</p>
       <p>We can recommend these beans</p>
-      <ul>${profile.beans.map(bean => `<li>${bean}</li>`).join('')}</ul>
+      <ul>
+        ${profile.beans.map(beanName => {
+          const bean = beans.find(b => b.region === beanName);
+          return bean
+            ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
+            : `<li>${beanName}</li>`;
+        }).join('')}
+      </ul>
       <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
     `;
 
@@ -121,8 +137,62 @@ export function initTasteProfile() {
       userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
       showQuestion(currentQuestionIndex);
     });
+
+    document.querySelectorAll('.quiz-bean-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const slug = e.target.dataset.slug;
+        showBeanDetail(slug);
+      });
+    });
   }
 
+function showBeanDetail(slug) {
+  const bean = beans.find(b => b.slug === slug);
+  if (!bean) return;
+
+  const userCountry = "South Africa";
+  const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
+
+  const beanContainer = document.getElementById('quiz-options'); 
+  const quizQuestion = document.getElementById('quiz-question'); 
+  quizQuestion.textContent = ''; // remove old quiz question
+
+beanContainer.innerHTML = `
+  <p class="eyebrow">Find your local stockist</p>
+  <h2 class="bean-name">${bean.region}</h2>
+  <p class="bean-profile">${bean.profile}</p>
+
+  <div class="roaster-grid">
+    ${filteredRoasters.map(r => `
+      <div class="roaster-card">
+        ${r.link 
+          ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
+               <img src="${r.image}" alt="${r.name}" />
+             </a>` 
+          : `<img src="${r.image}" alt="${r.name}" />`
+        }
+      </div>
+    `).join('')}
+  </div>
+
+  <p class="roaster-footer-text">Don’t see your roaster?</p>
+  <button id="back-to-results">⬅ Back to Results</button>
+`;
+
+
+  document.getElementById('back-to-results').addEventListener('click', () => {
+    beanContainer.innerHTML = ''; 
+    displayResults();
+  });
+}
+
+
+
+
+
+
+  // --- Modal Controls ---
   function openQuiz() {
     currentQuestionIndex = 0;
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
