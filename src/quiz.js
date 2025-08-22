@@ -51,13 +51,13 @@ export function initTasteProfile() {
     }
   ];
 
-  // --- Taste Profiles ---
+  // --- Taste Profiles with slugs ---
   const tasteProfiles = [
-    { name: "🍒Bright & Fruity Adventurer🍒", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
-    { name: "🍯Sweet & Smooth Lover🍯", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
-    { name: "🍫Rich & Nutty Explorer🍫", description: "Prefers chocolatey, nutty, and full-bodied coffees.", beans: ["Colombian Supremo", "Guatemalan Antigua"] },
-    { name: "🌰Spicy & Complex Taster🌰", description: "Enjoys cinnamon, nutmeg, and warming spices.", beans: ["Sumatran Mandheling", "Indian Monsooned Malabar"] },
-    { name: "⚖️Balanced & Elegant⚖️", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
+    { slug: 'bright-fruity', name: "🍒Bright & Fruity Adventurer🍒", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
+    { slug: 'sweet-smooth', name: "🍯Sweet & Smooth Lover🍯", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
+    { slug: 'rich-nutty', name: "🍫Rich & Nutty Explorer🍫", description: "Prefers chocolatey, nutty, and full-bodied coffees.", beans: ["Colombian Supremo", "Guatemalan Antigua"] },
+    { slug: 'spicy-complex', name: "🌰Spicy & Complex Taster🌰", description: "Enjoys cinnamon, nutmeg, and warming spices.", beans: ["Sumatran Mandheling", "Indian Monsooned Malabar"] },
+    { slug: 'balanced-elegant', name: "⚖️Balanced & Elegant⚖️", description: "Seeks harmony across flavor, body, and acidity.", beans: ["Panama Geisha", "Honduras SHG"] }
   ];
 
   // --- DOM Elements ---
@@ -101,22 +101,29 @@ export function initTasteProfile() {
   }
 
   // --- Display Results ---
-  function displayResults() {
-    if(progressBar) progressBar.textContent = '';
-    // Determine profile
+  function displayResults(profileSlug = null) {
     let profile;
-    if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-      profile = tasteProfiles[0];
-    } else if(userScores.sweet > userScores.nutty){
-      profile = tasteProfiles[1];
-    } else if(userScores.nutty > 0){
-      profile = tasteProfiles[2];
-    } else if(userScores.spicy > 0){
-      profile = tasteProfiles[3];
+
+    if(profileSlug) {
+      profile = tasteProfiles.find(p => p.slug === profileSlug);
     } else {
-      profile = tasteProfiles[4];
+      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
+        profile = tasteProfiles[0];
+      } else if(userScores.sweet > userScores.nutty){
+        profile = tasteProfiles[1];
+      } else if(userScores.nutty > 0){
+        profile = tasteProfiles[2];
+      } else if(userScores.spicy > 0){
+        profile = tasteProfiles[3];
+      } else {
+        profile = tasteProfiles[4];
+      }
     }
+
     lastProfile = profile;
+
+    // Update URL for sharing
+    window.history.replaceState(null, '', `?profile=${profile.slug}`);
 
     quizQuestion.textContent = profile.name;
     quizOptions.innerHTML = `
@@ -131,12 +138,19 @@ export function initTasteProfile() {
         }).join('')}
       </ul>
       <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
+      <button id="share-quiz-btn" class="quiz-option">Share this result</button>
     `;
 
     document.getElementById('retake-quiz-btn').addEventListener('click', () => {
       currentQuestionIndex = 0;
       userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
       showQuestion(currentQuestionIndex);
+    });
+
+    document.getElementById('share-quiz-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href)
+        .then(() => alert("Link copied to clipboard!"))
+        .catch(() => alert("Failed to copy link."));
     });
 
     document.querySelectorAll('.quiz-bean-link').forEach(link => {
@@ -148,50 +162,40 @@ export function initTasteProfile() {
     });
   }
 
-function showBeanDetail(slug) {
-  const bean = beans.find(b => b.slug === slug);
-  if (!bean) return;
-if(progressBar) progressBar.textContent = '';
-  const userCountry = "South Africa";
-  const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
+  // --- Show Bean Detail ---
+  function showBeanDetail(slug) {
+    const bean = beans.find(b => b.slug === slug);
+    if (!bean) return;
 
-  const beanContainer = document.getElementById('quiz-options'); 
-  const quizQuestion = document.getElementById('quiz-question'); 
-  quizQuestion.textContent = ''; // remove old quiz question
+    const userCountry = "South Africa";
+    const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
 
-beanContainer.innerHTML = `
-  <p class="eyebrow">Find your local stockist</p>
-  <h2 class="bean-name">${bean.region}</h2>
-  <p class="bean-profile">${bean.profile}</p>
-
-  <div class="roaster-grid">
-    ${filteredRoasters.map(r => `
-      <div class="roaster-card">
-        ${r.link 
-          ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
-               <img src="${r.image}" alt="${r.name}" />
-             </a>` 
-          : `<img src="${r.image}" alt="${r.name}" />`
-        }
+    quizQuestion.textContent = ''; // remove old question
+    quizOptions.innerHTML = `
+      <p class="eyebrow">Find your local stockist</p>
+      <h2 class="bean-name">${bean.region}</h2>
+      <p class="bean-profile">${bean.profile}</p>
+      <div class="roaster-grid">
+        ${filteredRoasters.map(r => `
+          <div class="roaster-card">
+            ${r.link 
+              ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
+                   <img src="${r.image}" alt="${r.name}" />
+                 </a>` 
+              : `<img src="${r.image}" alt="${r.name}" />`
+            }
+          </div>
+        `).join('')}
       </div>
-    `).join('')}
-  </div>
+      <p class="roaster-footer-text">Don’t see your roaster?</p>
+      <button id="back-to-results">⬅ Back to Results</button>
+    `;
 
-  <p class="roaster-footer-text">Don’t see your roaster?</p>
-  <button id="back-to-results">⬅ Back to Results</button>
-`;
-
-
-  document.getElementById('back-to-results').addEventListener('click', () => {
-    beanContainer.innerHTML = ''; 
-    displayResults();
-  });
-}
-
-
-
-
-
+    document.getElementById('back-to-results').addEventListener('click', () => {
+      quizOptions.innerHTML = '';
+      displayResults(lastProfile.slug);
+    });
+  }
 
   // --- Modal Controls ---
   function openQuiz() {
@@ -207,4 +211,12 @@ beanContainer.innerHTML = `
 
   openButton.addEventListener('click', openQuiz);
   closeButton.addEventListener('click', closeQuiz);
+
+  // --- Open modal on page load if URL has slug ---
+  const urlParams = new URLSearchParams(window.location.search);
+  const profileSlug = urlParams.get('profile');
+  if(profileSlug) {
+    openQuiz();
+    displayResults(profileSlug);
+  }
 }
