@@ -2495,8 +2495,6 @@ dialog#favorites[open] {
 
 /* ------------------------- */
 /* Quiz Modal Itself */
-/* ------------------------- */
-/* Modal fade & scale */
 #quiz-modal {
   position: fixed;
   top: 50%;
@@ -2507,7 +2505,7 @@ dialog#favorites[open] {
   background-color: #ffffff;
   color: #000000;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -2522,10 +2520,10 @@ dialog#favorites[open] {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Question text */
+/* Question Text */
 #quiz-question {
   font-size: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 24px; /* Space between question and options */
   color: #000;
   opacity: 0;
   transform: translateY(-10px);
@@ -2537,7 +2535,15 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
-/* Options buttons */
+/* Options Container */
+#quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Vertical spacing between buttons */
+  margin-bottom: 20px;
+}
+
+/* Option Buttons */
 .quiz-option {
   width: 100%;
   padding: 10px;
@@ -2564,11 +2570,27 @@ dialog#favorites[open] {
 .quiz-option.enter-4 { transition-delay: 0.20s; }
 .quiz-option.enter-5 { transition-delay: 0.25s; }
 
-/* Hover effect */
+/* Hover Effect */
 .quiz-option:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.02);
 }
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  #quiz-modal {
+    padding: 16px 12px;
+  }
+  #quiz-question {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  .quiz-option {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
+
 
 
 /* ------------------------- */
