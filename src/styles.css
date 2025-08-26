@@ -2505,7 +2505,7 @@ dialog#favorites[open] {
   background-color: #ffffff;
   color: #000000;
   border-radius: 12px;
-   border: 1px solid #000000;
+  border: 0.5px solid #000000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   padding: 24px;
   display: flex;
@@ -2785,7 +2785,7 @@ dialog#favorites[open] {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #000000; /* accent color border */
+  border: 0.5px solid #000000; /* accent color border */
   background: #ffffff; /* white background */
   color: #000000;
   font-size: 1rem;
