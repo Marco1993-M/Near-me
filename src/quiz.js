@@ -100,127 +100,150 @@ export function initTasteProfile() {
     });
   }
 
-// --- Display Results ---
-function displayResults(profileSlug = null) {
-  if (progressBar) progressBar.textContent = '';
-  let profile;
+  // --- Show Tooltip ---
+  function showTooltip(msg) {
+    let tooltip = document.getElementById('share-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'share-tooltip';
+      tooltip.className = 'tooltip hidden';
+      document.body.appendChild(tooltip);
+    }
+    tooltip.textContent = msg;
+    tooltip.classList.remove('hidden');
+    setTimeout(() => tooltip.classList.add('hidden'), 2000);
+  }
 
-  if(profileSlug) {
-    profile = tasteProfiles.find(p => p.slug === profileSlug);
-  } else {
-    if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-      profile = tasteProfiles[0];
-    } else if(userScores.sweet > userScores.nutty){
-      profile = tasteProfiles[1];
-    } else if(userScores.nutty > 0){
-      profile = tasteProfiles[2];
-    } else if(userScores.spicy > 0){
-      profile = tasteProfiles[3];
-    } else {
-      profile = tasteProfiles[4];
+  // --- Share Function ---
+  async function shareProfile(profile) {
+    const shareText = `I got the "${profile.name}" coffee profile! Recommended beans: ${profile.beans.join(', ')}`;
+    const shareData = { title: profile.name, text: shareText, url: window.location.href };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        showTooltip('Link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Share failed:', err);
+      showTooltip('Sharing failed.');
     }
   }
 
-  lastProfile = profile;
+  // --- Display Results ---
+  function displayResults(profileSlug = null) {
+    if (progressBar) progressBar.textContent = '';
 
-  // Update URL for sharing
-  window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
+    let profile;
+    if(profileSlug) {
+      profile = tasteProfiles.find(p => p.slug === profileSlug);
+    } else {
+      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
+        profile = tasteProfiles[0];
+      } else if(userScores.sweet > userScores.nutty){
+        profile = tasteProfiles[1];
+      } else if(userScores.nutty > 0){
+        profile = tasteProfiles[2];
+      } else if(userScores.spicy > 0){
+        profile = tasteProfiles[3];
+      } else {
+        profile = tasteProfiles[4];
+      }
+    }
 
-  // Clear quizOptions completely to avoid leftover eyebrow text
-  quizOptions.innerHTML = '';
-  quizQuestion.textContent = profile.name;
-  quizQuestion.classList.remove('eyebrow');
+    lastProfile = profile;
 
-  quizOptions.innerHTML = `
-    <p>${profile.description}</p>
-    <p>We can recommend these beans</p>
-    <ul>
-      ${profile.beans.map(beanName => {
-        const bean = beans.find(b => b.region === beanName);
-        return bean
-          ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
-          : `<li>${beanName}</li>`;
-      }).join('')}
-    </ul>
-    <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
-    <button id="share-quiz-btn" class="quiz-option">Share this result</button>
-  `;
+    // Update URL for sharing
+    window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
 
-  document.getElementById('retake-quiz-btn').addEventListener('click', () => {
-    currentQuestionIndex = 0;
-    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
-    showQuestion(currentQuestionIndex);
-  });
-
-  document.getElementById('share-quiz-btn').addEventListener('click', () => {
-    navigator.clipboard.writeText(window.location.href)
-      .then(() => alert("Link copied to clipboard!"))
-      .catch(() => alert("Failed to copy link."));
-  });
-
-  document.querySelectorAll('.quiz-bean-link').forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      const slug = e.target.dataset.slug;
-      showBeanDetail(slug);
-    });
-  });
-}
-
-// --- Show Bean Detail ---
-function showBeanDetail(slug) {
-  if (progressBar) progressBar.textContent = '';
-  const bean = beans.find(b => b.slug === slug);
-  if (!bean) return;
-
-  const userCountry = "South Africa";
-  const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
-
-  // Take up to 4 real roasters
-  const limitedRoasters = filteredRoasters.slice(0, 4);
-
-  // Fill placeholders if less than 4
-  const roastersWithPlaceholders = [
-    ...limitedRoasters,
-    ...Array(Math.max(0, 4 - limitedRoasters.length)).fill({ placeholder: true })
-  ];
-
-  // Clear quizOptions to avoid leftover content
-  quizOptions.innerHTML = '';
-  quizQuestion.textContent = ''; // remove question text
-  quizQuestion.classList.add('eyebrow'); // only add eyebrow here
-
-  quizOptions.innerHTML = `
-    <p class="eyebrow">Find your local stockist</p>
-    <h2 class="bean-name">${bean.region}</h2>
-    <p class="bean-profile">${bean.profile}</p>
-    <div class="roaster-grid">
-      ${roastersWithPlaceholders.map(r => `
-        <div class="roaster-card ${r.placeholder ? 'roaster-placeholder' : ''}">
-          ${r.placeholder
-            ? `<img src="/roasters/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
-            : (r.link 
-                ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
-                     <img src="${r.image}" alt="${r.name}" />
-                   </a>`
-                : `<img src="${r.image}" alt="${r.name}" />`
-              )
-          }
-        </div>
-      `).join('')}
-    </div>
-    <p class="roaster-footer-text">Don’t see your roaster?</p>
-    <button id="back-to-results">⬅ Back to Results</button>
-  `;
-
-  document.getElementById('back-to-results').addEventListener('click', () => {
     quizOptions.innerHTML = '';
-    quizQuestion.classList.remove('eyebrow'); // remove eyebrow when returning
-    displayResults(lastProfile.slug);
-  });
-}
+    quizQuestion.textContent = profile.name;
+    quizQuestion.classList.remove('eyebrow');
 
+    quizOptions.innerHTML = `
+      <p>${profile.description}</p>
+      <p>We can recommend these beans</p>
+      <ul>
+        ${profile.beans.map(beanName => {
+          const bean = beans.find(b => b.region === beanName);
+          return bean
+            ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
+            : `<li>${beanName}</li>`;
+        }).join('')}
+      </ul>
+      <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
+      <button id="share-quiz-btn" class="quiz-option">Share this result</button>
+    `;
 
+    document.getElementById('retake-quiz-btn').addEventListener('click', () => {
+      currentQuestionIndex = 0;
+      userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+      showQuestion(currentQuestionIndex);
+    });
+
+    document.getElementById('share-quiz-btn').addEventListener('click', () => {
+      if(lastProfile) shareProfile(lastProfile);
+    });
+
+    document.querySelectorAll('.quiz-bean-link').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        const slug = e.target.dataset.slug;
+        showBeanDetail(slug);
+      });
+    });
+  }
+
+  // --- Show Bean Detail ---
+  function showBeanDetail(slug) {
+    if (progressBar) progressBar.textContent = '';
+    const bean = beans.find(b => b.slug === slug);
+    if (!bean) return;
+
+    const userCountry = "South Africa";
+    const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
+
+    const limitedRoasters = filteredRoasters.slice(0, 4);
+    const roastersWithPlaceholders = [
+      ...limitedRoasters,
+      ...Array(Math.max(0, 4 - limitedRoasters.length)).fill({ placeholder: true })
+    ];
+
+    quizOptions.innerHTML = '';
+    quizQuestion.textContent = '';
+    quizQuestion.classList.add('eyebrow');
+
+    quizOptions.innerHTML = `
+      <p class="eyebrow">Find your local stockist</p>
+      <h2 class="bean-name">${bean.region}</h2>
+      <p class="bean-profile">${bean.profile}</p>
+      <div class="roaster-grid">
+        ${roastersWithPlaceholders.map(r => `
+          <div class="roaster-card ${r.placeholder ? 'roaster-placeholder' : ''}">
+            ${r.placeholder
+              ? `<img src="/roasters/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
+              : (r.link 
+                  ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
+                       <img src="${r.image}" alt="${r.name}" />
+                     </a>`
+                  : `<img src="${r.image}" alt="${r.name}" />`
+                )
+            }
+          </div>
+        `).join('')}
+      </div>
+      <p class="roaster-footer-text">Don’t see your roaster?</p>
+      <button id="back-to-results">⬅ Back to Results</button>
+    `;
+
+    document.getElementById('back-to-results').addEventListener('click', () => {
+      quizOptions.innerHTML = '';
+      quizQuestion.classList.remove('eyebrow');
+      displayResults(lastProfile.slug);
+    });
+  }
 
   // --- Modal Controls ---
   function openQuiz() {
@@ -229,13 +252,11 @@ function showBeanDetail(slug) {
     quizModal.classList.remove('hidden');
     showQuestion(currentQuestionIndex);
 
-    // Update URL
     window.history.pushState(null, '', '/coffee-profile');
   }
 
   function closeQuiz() {
     quizModal.classList.add('hidden');
-    // Optional: revert URL
     window.history.pushState(null, '', '/');
   }
 
