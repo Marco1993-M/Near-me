@@ -100,69 +100,72 @@ export function initTasteProfile() {
     });
   }
 
-  // --- Display Results ---
-  function displayResults(profileSlug = null) {
-    let profile;
+// --- Display Results ---
+function displayResults(profileSlug = null) {
+  let profile;
 
-    if(profileSlug) {
-      profile = tasteProfiles.find(p => p.slug === profileSlug);
+  if(profileSlug) {
+    profile = tasteProfiles.find(p => p.slug === profileSlug);
+  } else {
+    if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
+      profile = tasteProfiles[0];
+    } else if(userScores.sweet > userScores.nutty){
+      profile = tasteProfiles[1];
+    } else if(userScores.nutty > 0){
+      profile = tasteProfiles[2];
+    } else if(userScores.spicy > 0){
+      profile = tasteProfiles[3];
     } else {
-      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-        profile = tasteProfiles[0];
-      } else if(userScores.sweet > userScores.nutty){
-        profile = tasteProfiles[1];
-      } else if(userScores.nutty > 0){
-        profile = tasteProfiles[2];
-      } else if(userScores.spicy > 0){
-        profile = tasteProfiles[3];
-      } else {
-        profile = tasteProfiles[4];
-      }
+      profile = tasteProfiles[4];
     }
-
-    lastProfile = profile;
-
-    // Update URL for sharing
-    window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
-
-    quizQuestion.textContent = profile.name;
-    quizOptions.innerHTML = `
-      <p>${profile.description}</p>
-      <p>We can recommend these beans</p>
-      <ul>
-        ${profile.beans.map(beanName => {
-          const bean = beans.find(b => b.region === beanName);
-          return bean
-            ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
-            : `<li>${beanName}</li>`;
-        }).join('')}
-      </ul>
-      <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
-      <button id="share-quiz-btn" class="quiz-option">Share this result</button>
-    `;
-
-    document.getElementById('retake-quiz-btn').addEventListener('click', () => {
-      currentQuestionIndex = 0;
-      userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
-      showQuestion(currentQuestionIndex);
-    });
-
-    document.getElementById('share-quiz-btn').addEventListener('click', () => {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert("Link copied to clipboard!"))
-        .catch(() => alert("Failed to copy link."));
-    });
-
-    document.querySelectorAll('.quiz-bean-link').forEach(link => {
-      link.addEventListener('click', e => {
-        e.preventDefault();
-        const slug = e.target.dataset.slug;
-        showBeanDetail(slug);
-      });
-    });
   }
 
-  // --- Show Bean Detail ---
+  lastProfile = profile;
+
+  // Update URL for sharing
+  window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
+
+  // Clear eyebrow class on quizQuestion
+  quizQuestion.classList.remove('eyebrow');
+  quizQuestion.textContent = profile.name;
+
+  quizOptions.innerHTML = `
+    <p>${profile.description}</p>
+    <p>We can recommend these beans</p>
+    <ul>
+      ${profile.beans.map(beanName => {
+        const bean = beans.find(b => b.region === beanName);
+        return bean
+          ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
+          : `<li>${beanName}</li>`;
+      }).join('')}
+    </ul>
+    <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
+    <button id="share-quiz-btn" class="quiz-option">Share this result</button>
+  `;
+
+  document.getElementById('retake-quiz-btn').addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+    showQuestion(currentQuestionIndex);
+  });
+
+  document.getElementById('share-quiz-btn').addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => alert("Link copied to clipboard!"))
+      .catch(() => alert("Failed to copy link."));
+  });
+
+  document.querySelectorAll('.quiz-bean-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const slug = e.target.dataset.slug;
+      showBeanDetail(slug);
+    });
+  });
+}
+
+// --- Show Bean Detail ---
 function showBeanDetail(slug) {
   const bean = beans.find(b => b.slug === slug);
   if (!bean) return;
@@ -179,7 +182,10 @@ function showBeanDetail(slug) {
     ...Array(Math.max(0, 4 - limitedRoasters.length)).fill({ placeholder: true })
   ];
 
+  // Add eyebrow ONLY for this page
   quizQuestion.textContent = '';
+  quizQuestion.classList.add('eyebrow');
+
   quizOptions.innerHTML = `
     <p class="eyebrow">Find your local stockist</p>
     <h2 class="bean-name">${bean.region}</h2>
@@ -187,16 +193,15 @@ function showBeanDetail(slug) {
     <div class="roaster-grid">
       ${roastersWithPlaceholders.map(r => `
         <div class="roaster-card ${r.placeholder ? 'roaster-placeholder' : ''}">
-${r.placeholder
-  ? `<img src="/roasters/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
-  : (r.link 
-      ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
-           <img src="${r.image}" alt="${r.name}" />
-         </a>`
-      : `<img src="${r.image}" alt="${r.name}" />`
-    )
-}
-
+          ${r.placeholder
+            ? `<img src="/roasters/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
+            : (r.link 
+                ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
+                     <img src="${r.image}" alt="${r.name}" />
+                   </a>`
+                : `<img src="${r.image}" alt="${r.name}" />`
+              )
+          }
         </div>
       `).join('')}
     </div>
@@ -206,9 +211,11 @@ ${r.placeholder
 
   document.getElementById('back-to-results').addEventListener('click', () => {
     quizOptions.innerHTML = '';
+    quizQuestion.classList.remove('eyebrow'); // remove eyebrow when returning
     displayResults(lastProfile.slug);
   });
 }
+
 
 
   // --- Modal Controls ---
