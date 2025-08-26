@@ -102,6 +102,7 @@ export function initTasteProfile() {
 
 // --- Display Results ---
 function displayResults(profileSlug = null) {
+  if (progressBar) progressBar.textContent = '';
   let profile;
 
   if(profileSlug) {
@@ -168,6 +169,7 @@ function displayResults(profileSlug = null) {
 
 // --- Show Bean Detail ---
 function showBeanDetail(slug) {
+  if (progressBar) progressBar.textContent = '';
   const bean = beans.find(b => b.slug === slug);
   if (!bean) return;
 
