@@ -2489,7 +2489,7 @@ dialog#favorites[open] {
 /* Quiz modal overlay */
 #quiz-modal {
   position: fixed;
-  top: 5%; /* closer to top */
+  top: 35%; /* closer to top */
   left: 50%;
   transform: translateX(-50%) scale(0.95);
   width: 90%;
