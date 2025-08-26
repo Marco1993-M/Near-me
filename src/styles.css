@@ -2485,29 +2485,6 @@ dialog#favorites[open] {
 }
 
 
-/* Quiz modal overlay */
-/* Quiz modal overlay wrapper */
-#quiz-modal-wrapper {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.4); /* dim background */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-#quiz-modal-wrapper.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 /* Quiz modal itself */
 #quiz-modal {
   background-color: #ffffff;
