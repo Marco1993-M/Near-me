@@ -2780,7 +2780,7 @@ dialog#favorites[open] {
 
 /* Retake Quiz - outlined button */
 #retake-quiz-btn {
-  padding: 6px 24px;
+  padding: 12px 24px;
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
