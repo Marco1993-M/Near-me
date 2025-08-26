@@ -2496,6 +2496,7 @@ dialog#favorites[open] {
 /* ------------------------- */
 /* Quiz Modal Itself */
 /* ------------------------- */
+/* Modal fade & scale */
 #quiz-modal {
   position: fixed;
   top: 50%;
@@ -2521,9 +2522,7 @@ dialog#favorites[open] {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* ------------------------- */
-/* Question Text */
-/* ------------------------- */
+/* Question text */
 #quiz-question {
   font-size: 24px;
   margin-bottom: 20px;
@@ -2538,17 +2537,7 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
-/* ------------------------- */
-/* Quiz Options Container */
-/* ------------------------- */
-#quiz-options {
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Quiz Option Buttons */
+/* Options buttons */
 .quiz-option {
   width: 100%;
   padding: 10px;
@@ -2568,10 +2557,19 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
+/* Sequential animation delay (JS-controlled) */
+.quiz-option.enter-1 { transition-delay: 0.05s; }
+.quiz-option.enter-2 { transition-delay: 0.10s; }
+.quiz-option.enter-3 { transition-delay: 0.15s; }
+.quiz-option.enter-4 { transition-delay: 0.20s; }
+.quiz-option.enter-5 { transition-delay: 0.25s; }
+
+/* Hover effect */
 .quiz-option:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.02);
 }
+
 
 /* ------------------------- */
 /* Close Button */
