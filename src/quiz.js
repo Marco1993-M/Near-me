@@ -51,7 +51,7 @@ export function initTasteProfile() {
     }
   ];
 
-  // --- Taste Profiles with slugs ---
+  // --- Taste Profiles ---
   const tasteProfiles = [
     { slug: 'bright-fruity', name: "🍒Bright & Fruity Adventurer🍒", description: "Loves citrus and berry notes, lively and vibrant.", beans: ["Ethiopian Yirgacheffe", "Kenya AA"] },
     { slug: 'sweet-smooth', name: "🍯Sweet & Smooth Lover🍯", description: "Enjoys caramel, honey, and gentle flavors.", beans: ["Brazilian Santos", "Costa Rican Tarrazu"] },
@@ -76,15 +76,26 @@ export function initTasteProfile() {
   // --- Show Question ---
   function showQuestion(index) {
     const q = quizData[index];
-    quizQuestion.textContent = q.question;
     quizOptions.innerHTML = '';
+    quizQuestion.textContent = q.question;
 
+    // Animate question
+    quizQuestion.classList.remove('enter');
+    setTimeout(() => quizQuestion.classList.add('enter'), 50);
+
+    // Update progress
     if(progressBar) progressBar.textContent = `Question ${index + 1} of ${quizData.length}`;
 
-    q.options.forEach(opt => {
+    // Render options with fade-in
+    q.options.forEach((opt, i) => {
       const btn = document.createElement('button');
       btn.className = 'quiz-option';
       btn.textContent = opt.text;
+      quizOptions.appendChild(btn);
+
+      // Animate option with stagger
+      setTimeout(() => btn.classList.add('enter'), i * 100);
+
       btn.addEventListener('click', () => {
         for (const [key, val] of Object.entries(opt.scores)) {
           userScores[key] += val;
@@ -96,71 +107,31 @@ export function initTasteProfile() {
           displayResults();
         }
       });
-      quizOptions.appendChild(btn);
     });
-  }
-
-  // --- Show Tooltip ---
-  function showTooltip(msg) {
-    let tooltip = document.getElementById('share-tooltip');
-    if (!tooltip) {
-      tooltip = document.createElement('div');
-      tooltip.id = 'share-tooltip';
-      tooltip.className = 'tooltip hidden';
-      document.body.appendChild(tooltip);
-    }
-    tooltip.textContent = msg;
-    tooltip.classList.remove('hidden');
-    setTimeout(() => tooltip.classList.add('hidden'), 2000);
-  }
-
-  // --- Share Function ---
-  async function shareProfile(profile) {
-    const shareText = `I got the "${profile.name}" coffee profile! Recommended beans: ${profile.beans.join(', ')}`;
-    const shareData = { title: profile.name, text: shareText, url: window.location.href };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        showTooltip('Link copied to clipboard!');
-      }
-    } catch (err) {
-      console.error('Share failed:', err);
-      showTooltip('Sharing failed.');
-    }
   }
 
   // --- Display Results ---
   function displayResults(profileSlug = null) {
-    if (progressBar) progressBar.textContent = '';
-
+    if(progressBar) progressBar.textContent = '';
     let profile;
-    if(profileSlug) {
-      profile = tasteProfiles.find(p => p.slug === profileSlug);
-    } else {
-      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy){
-        profile = tasteProfiles[0];
-      } else if(userScores.sweet > userScores.nutty){
-        profile = tasteProfiles[1];
-      } else if(userScores.nutty > 0){
-        profile = tasteProfiles[2];
-      } else if(userScores.spicy > 0){
-        profile = tasteProfiles[3];
-      } else {
-        profile = tasteProfiles[4];
-      }
+    if(profileSlug) profile = tasteProfiles.find(p => p.slug === profileSlug);
+    else {
+      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy) profile = tasteProfiles[0];
+      else if(userScores.sweet > userScores.nutty) profile = tasteProfiles[1];
+      else if(userScores.nutty > 0) profile = tasteProfiles[2];
+      else if(userScores.spicy > 0) profile = tasteProfiles[3];
+      else profile = tasteProfiles[4];
     }
-
     lastProfile = profile;
 
-    // Update URL for sharing
+    // Update URL
     window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
 
+    // Clear and display
     quizOptions.innerHTML = '';
     quizQuestion.textContent = profile.name;
     quizQuestion.classList.remove('eyebrow');
+    setTimeout(() => quizQuestion.classList.add('enter'), 50);
 
     quizOptions.innerHTML = `
       <p>${profile.description}</p>
@@ -177,34 +148,49 @@ export function initTasteProfile() {
       <button id="share-quiz-btn" class="quiz-option">Share this result</button>
     `;
 
+    // Animate result buttons
+    const buttons = quizOptions.querySelectorAll('.quiz-option');
+    buttons.forEach((btn, i) => setTimeout(() => btn.classList.add('enter'), i * 100));
+
+    // Retake
     document.getElementById('retake-quiz-btn').addEventListener('click', () => {
       currentQuestionIndex = 0;
       userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
       showQuestion(currentQuestionIndex);
     });
 
-    document.getElementById('share-quiz-btn').addEventListener('click', () => {
-      if(lastProfile) shareProfile(lastProfile);
+    // Share
+    document.getElementById('share-quiz-btn').addEventListener('click', async () => {
+      const shareText = `I got the "${profile.name}" coffee profile! Recommended beans: ${profile.beans.join(', ')}`;
+      const shareData = { title: profile.name, text: shareText, url: window.location.href };
+      try {
+        if(navigator.share) await navigator.share(shareData);
+        else {
+          await navigator.clipboard.writeText(window.location.href);
+          showTooltip('Link copied to clipboard!');
+        }
+      } catch(err) {
+        console.error('Share failed:', err);
+        showTooltip('Sharing failed.');
+      }
     });
 
     document.querySelectorAll('.quiz-bean-link').forEach(link => {
       link.addEventListener('click', e => {
         e.preventDefault();
-        const slug = e.target.dataset.slug;
-        showBeanDetail(slug);
+        showBeanDetail(e.target.dataset.slug);
       });
     });
   }
 
   // --- Show Bean Detail ---
   function showBeanDetail(slug) {
-    if (progressBar) progressBar.textContent = '';
+    if(progressBar) progressBar.textContent = '';
     const bean = beans.find(b => b.slug === slug);
-    if (!bean) return;
+    if(!bean) return;
 
     const userCountry = "South Africa";
     const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
-
     const limitedRoasters = filteredRoasters.slice(0, 4);
     const roastersWithPlaceholders = [
       ...limitedRoasters,
@@ -238,6 +224,10 @@ export function initTasteProfile() {
       <button id="back-to-results">⬅ Back to Results</button>
     `;
 
+    // Animate cards
+    const cards = quizOptions.querySelectorAll('.roaster-card');
+    cards.forEach((card, i) => setTimeout(() => card.classList.add('visible'), i * 100));
+
     document.getElementById('back-to-results').addEventListener('click', () => {
       quizOptions.innerHTML = '';
       quizQuestion.classList.remove('eyebrow');
@@ -250,13 +240,14 @@ export function initTasteProfile() {
     currentQuestionIndex = 0;
     userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
     quizModal.classList.remove('hidden');
+    setTimeout(() => quizModal.classList.add('visible'), 10);
     showQuestion(currentQuestionIndex);
-
     window.history.pushState(null, '', '/coffee-profile');
   }
 
   function closeQuiz() {
-    quizModal.classList.add('hidden');
+    quizModal.classList.remove('visible');
+    setTimeout(() => quizModal.classList.add('hidden'), 250);
     window.history.pushState(null, '', '/');
   }
 
@@ -269,10 +260,8 @@ export function initTasteProfile() {
 
   if(window.location.pathname === '/coffee-profile' && quizModal) {
     quizModal.classList.remove('hidden');
-    if(profileSlug) {
-      displayResults(profileSlug);
-    } else {
-      showQuestion(0);
-    }
+    setTimeout(() => quizModal.classList.add('visible'), 10);
+    if(profileSlug) displayResults(profileSlug);
+    else showQuestion(0);
   }
 }
