@@ -2769,6 +2769,74 @@ dialog#favorites[open] {
   display: none;
 }
 
+/* Container for action buttons */
+.results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-start;
+}
+
+/* Retake Quiz - outlined button */
+#retake-quiz-btn {
+  padding: 6px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #000000; /* accent color border */
+  background: #ffffff; /* white background */
+  color: #000000;
+  font-size: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+#retake-quiz-btn:hover {
+  background: #646464;
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#retake-quiz-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Share Profile - filled button */
+#share-quiz-btn {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 0.5px solid #000000; /* black border */
+  background: #c7f5d3; /* accent color */
+  color: #000000;
+  font-size: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#share-quiz-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  background: #c7f5d3; /* hover color */
+}
+
+#share-quiz-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .results-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
 
 #feedback-btn {
   position: fixed;
