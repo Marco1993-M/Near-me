@@ -307,7 +307,6 @@ function showQuestion(index) {
           </div>
         `).join('')}
       </div>
-      <p class="roaster-footer-text">Don’t see your roaster?</p>
       <button id="back-to-results">⬅ Back to Results</button>
     `;
 
