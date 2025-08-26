@@ -2717,6 +2717,41 @@ dialog#favorites[open] {
   margin-bottom: 16px;       /* space below */
 }
 
+/* Profile name - results page */
+.profile-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: #000;
+  text-align: center;
+  margin-bottom: 16px;
+  /* Remove absolute positioning for better responsiveness */
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .profile-name {
+    font-size: 22px;       /* Slightly smaller on small screens */
+    margin-bottom: 12px;
+    padding: 0 10px;       /* Add some horizontal padding */
+  }
+}
+
+/* Optional: add fade-in animation for results title */
+.profile-name {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.profile-name.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 
 
 .hidden {
