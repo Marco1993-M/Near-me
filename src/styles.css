@@ -2486,29 +2486,31 @@ dialog#favorites[open] {
 
 
 /* Quiz modal overlay */
+/* Quiz modal overlay */
 #quiz-modal {
   position: fixed;
-  top: 50%;
+  top: 5%; /* closer to top */
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
+  transform: translateX(-50%) scale(0.95);
   width: 90%;
   max-width: 500px;
   background-color: #ffffff;
   color: #000000;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  padding: 24px;
+  padding: 24px 16px; /* more horizontal padding for mobile */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   z-index: 1001;
   opacity: 0;
   transition: opacity 0.25s ease, transform 0.25s ease;
+  overflow-y: auto; /* handle tall content */
 }
 
 #quiz-modal.visible {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateX(-50%) scale(1);
 }
 
 /* Question text */
@@ -2574,8 +2576,6 @@ dialog#favorites[open] {
   opacity: 0.6;
 }
 
-
-
 /* Progress text */
 #quiz-progress {
   text-align: left;
@@ -2591,78 +2591,58 @@ dialog#favorites[open] {
   to { opacity: 1; }
 }
 
-/* Centered profile name */
+/* Profile name - results page */
 .profile-name {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 24px;
+  font-size: 28px;
   font-weight: bold;
   color: #000;
+  text-align: left; 
+  margin: 0;
+  padding: 0 0 8px 0;
+  position: relative;
+  top: 0;
+  transform: translateY(10px);
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-/* Progress text */
-#quiz-progress-text {
-  text-align: right;
-  font-size: 10px;
-  color: #555;
-  margin-top: 6px;
-  font-weight: 200;
+.profile-name.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.roaster-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns of equal width */
-  gap: 0.5rem; /* spacing between cards */
-}
-.roaster-card {
-  text-align: center;
-}
-
-/* Eyebrow text */
-.eyebrow {
-  text-transform: capitalize;
-  font-size: 0.875rem;
-  letter-spacing: 1px;
-  color: #999;
-  margin-bottom: 0rem;
-}
-
-/* Bean name */
+/* Bean profile text */
 .bean-name {
   font-size: 1.75rem;
   font-weight: 700;
   color: #000000;
-  margin-top: 0.3rem;
-  margin-bottom: 0.5rem;
-  text-align: Left;
+  margin: 0.3rem 0 0.5rem 0;
+  text-align: left;
+  word-wrap: break-word;
 }
 
-/* Bean profile */
 .bean-profile {
   font-size: 1rem;
   color: #595959;
-  text-align: Left;
-  margin-bottom: 1.5rem;
+  text-align: left;
+  margin-bottom: 1rem;
+  word-wrap: break-word;
 }
 
-/* Roaster grid: exactly 2 containers per row */
+/* Roaster grid */
 .roaster-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
+  gap: 4px;
   justify-items: center;
-  margin-bottom: 0rem;
-  margin-top: 0rem;
+  margin: 0 0 12px 0;
 }
 
-/* Each roaster card */
 .roaster-card {
   background: #ffffff;
   border-radius: 8px;
   padding: 12px;
-  text-align: Left;
+  text-align: left;
   color: #000000;
   transition: transform 0.2s ease;
 }
@@ -2679,10 +2659,10 @@ dialog#favorites[open] {
   margin-bottom: 8px;
 }
 
-/* Back button aligned left */
+/* Back button */
 #back-to-results {
-  display: inline-block; /* or block if you want full width */
-  margin: 10px 0 0 0;    /* top 10px, no right, bottom, left 0 */
+  display: inline-block;
+  margin: 10px 0 0 0;
   padding: 10px 20px;
   background-color: #ffffff;
   border: none;
@@ -2693,61 +2673,52 @@ dialog#favorites[open] {
   transition: background-color 0.2s ease;
 }
 
-
 #back-to-results:hover {
   background-color: #e0e0e0;
 }
 
-/* Optional text below grid */
-.text-center {
-  text-transform: underline;
-  text-align: center;
-  color: #ccc;
-  margin-bottom: 1rem;
+/* Eyebrow text */
+.eyebrow {
+  text-transform: capitalize;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+  color: #999;
+  margin-bottom: 0.5rem;
 }
 
-/* Style for the "Don't see your roaster?" text */
+/* Roaster footer text */
 .roaster-footer-text {
-  text-align: left;          /* align text left */
-  color: #000000;            /* black text */
-  font-size: 0.875rem;       /* smaller font */
-  font-weight: 300;          /* light font weight */
-  text-decoration: underline; /* underline text */
-  margin-top: 16px;          /* space above */
-  margin-bottom: 16px;       /* space below */
-}
-
-/* Profile name - results page */
-.profile-name {
-  font-size: 28px;
-  font-weight: bold;
-  color: #000;
-  text-align: left;        /* Left-aligned */
-  margin: 0;               /* Remove default margins */
-  padding: 0 0 8px 0;      /* Add small bottom padding */
-  position: relative;      /* Keep relative for flow */
-  top: 0;                  /* Top of modal content */
-  transform: none;         /* Remove previous translate */
+  text-align: left;
+  color: #000000;
+  font-size: 0.875rem;
+  font-weight: 300;
+  text-decoration: underline;
+  margin: 16px 0;
 }
 
 /* Mobile adjustments */
 @media (max-width: 480px) {
+  #quiz-modal {
+    top: 5%;
+    padding: 16px 12px;
+  }
   .profile-name {
-    font-size: 22px;       /* Slightly smaller on small screens */
+    font-size: 22px;
     padding: 0 0 6px 0;
   }
-}
-
-/* Optional fade-in animation */
-.profile-name {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.profile-name.visible {
-  opacity: 1;
-  transform: translateY(0);
+  .bean-name {
+    font-size: 1.4rem;
+  }
+  .bean-profile {
+    font-size: 0.9rem;
+  }
+  .roaster-card img {
+    max-width: 80px;
+    max-height: 80px;
+  }
+  .quiz-option {
+    font-size: 14px;
+  }
 }
 
 
