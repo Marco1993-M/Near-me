@@ -188,7 +188,7 @@ function showBeanDetail(slug) {
       ${roastersWithPlaceholders.map(r => `
         <div class="roaster-card ${r.placeholder ? 'roaster-placeholder' : ''}">
 ${r.placeholder
-  ? `<img src="/images/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
+  ? `<img src="/roasters/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
   : (r.link 
       ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
            <img src="${r.image}" alt="${r.name}" />
