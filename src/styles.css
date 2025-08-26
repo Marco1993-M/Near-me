@@ -2722,25 +2722,23 @@ dialog#favorites[open] {
   font-size: 28px;
   font-weight: bold;
   color: #000;
-  text-align: center;
-  margin-bottom: 16px;
-  /* Remove absolute positioning for better responsiveness */
-  position: relative;
-  top: auto;
-  left: auto;
-  transform: none;
+  text-align: left;        /* Left-aligned */
+  margin: 0;               /* Remove default margins */
+  padding: 0 0 8px 0;      /* Add small bottom padding */
+  position: relative;      /* Keep relative for flow */
+  top: 0;                  /* Top of modal content */
+  transform: none;         /* Remove previous translate */
 }
 
 /* Mobile adjustments */
 @media (max-width: 480px) {
   .profile-name {
     font-size: 22px;       /* Slightly smaller on small screens */
-    margin-bottom: 12px;
-    padding: 0 10px;       /* Add some horizontal padding */
+    padding: 0 0 6px 0;
   }
 }
 
-/* Optional: add fade-in animation for results title */
+/* Optional fade-in animation */
 .profile-name {
   opacity: 0;
   transform: translateY(10px);
@@ -2751,6 +2749,7 @@ dialog#favorites[open] {
   opacity: 1;
   transform: translateY(0);
 }
+
 
 
 
