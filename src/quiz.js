@@ -110,78 +110,162 @@ export function initTasteProfile() {
     });
   }
 
-  // --- Display Results ---
-  function displayResults(profileSlug = null) {
-    if(progressBar) progressBar.textContent = '';
-    let profile;
-    if(profileSlug) profile = tasteProfiles.find(p => p.slug === profileSlug);
-    else {
-      if(userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy) profile = tasteProfiles[0];
-      else if(userScores.sweet > userScores.nutty) profile = tasteProfiles[1];
-      else if(userScores.nutty > 0) profile = tasteProfiles[2];
-      else if(userScores.spicy > 0) profile = tasteProfiles[3];
-      else profile = tasteProfiles[4];
+ function displayResults(profileSlug = null) {
+  if (progressBar) progressBar.textContent = '';
+  let profile;
+
+  if (profileSlug) {
+    profile = tasteProfiles.find(p => p.slug === profileSlug);
+  } else {
+    if (userScores.fruity + userScores.floral > userScores.nutty + userScores.spicy) {
+      profile = tasteProfiles[0];
+    } else if (userScores.sweet > userScores.nutty) {
+      profile = tasteProfiles[1];
+    } else if (userScores.nutty > 0) {
+      profile = tasteProfiles[2];
+    } else if (userScores.spicy > 0) {
+      profile = tasteProfiles[3];
+    } else {
+      profile = tasteProfiles[4];
     }
-    lastProfile = profile;
+  }
 
-    // Update URL
-    window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
+  lastProfile = profile;
 
-    // Clear and display
-    quizOptions.innerHTML = '';
-    quizQuestion.textContent = profile.name;
-    quizQuestion.classList.remove('eyebrow');
-    setTimeout(() => quizQuestion.classList.add('enter'), 50);
+  // Update URL
+  window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
 
-    quizOptions.innerHTML = `
-      <p>${profile.description}</p>
-      <p>We can recommend these beans</p>
-      <ul>
-        ${profile.beans.map(beanName => {
-          const bean = beans.find(b => b.region === beanName);
-          return bean
-            ? `<li><a href="#" class="quiz-bean-link" data-slug="${bean.slug}">${bean.region}</a></li>`
-            : `<li>${beanName}</li>`;
-        }).join('')}
-      </ul>
-      <button id="retake-quiz-btn" class="quiz-option">Retake Quiz</button>
-      <button id="share-quiz-btn" class="quiz-option">Share this result</button>
-    `;
+  // Clear quiz options
+  quizOptions.innerHTML = '';
+  quizQuestion.textContent = '';
+  quizQuestion.classList.remove('eyebrow');
 
-    // Animate result buttons
-    const buttons = quizOptions.querySelectorAll('.quiz-option');
-    buttons.forEach((btn, i) => setTimeout(() => btn.classList.add('enter'), i * 100));
+  const resultsContainer = document.createElement('div');
+  resultsContainer.className = 'results-container';
+  quizOptions.appendChild(resultsContainer);
 
-    // Retake
-    document.getElementById('retake-quiz-btn').addEventListener('click', () => {
-      currentQuestionIndex = 0;
-      userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
-      showQuestion(currentQuestionIndex);
-    });
+  // Profile Name
+  const profileNameEl = document.createElement('h1');
+  profileNameEl.className = 'profile-name';
+  profileNameEl.textContent = profile.name;
+  profileNameEl.style.opacity = 0;
+  profileNameEl.style.transform = 'translateY(10px)';
+  resultsContainer.appendChild(profileNameEl);
 
-    // Share
-    document.getElementById('share-quiz-btn').addEventListener('click', async () => {
-      const shareText = `I got the "${profile.name}" coffee profile! Recommended beans: ${profile.beans.join(', ')}`;
-      const shareData = { title: profile.name, text: shareText, url: window.location.href };
-      try {
-        if(navigator.share) await navigator.share(shareData);
-        else {
-          await navigator.clipboard.writeText(window.location.href);
-          showTooltip('Link copied to clipboard!');
-        }
-      } catch(err) {
-        console.error('Share failed:', err);
-        showTooltip('Sharing failed.');
-      }
-    });
+  // Description
+  const descriptionEl = document.createElement('p');
+  descriptionEl.className = 'profile-description';
+  descriptionEl.textContent = profile.description;
+  descriptionEl.style.opacity = 0;
+  descriptionEl.style.transform = 'translateY(10px)';
+  resultsContainer.appendChild(descriptionEl);
 
-    document.querySelectorAll('.quiz-bean-link').forEach(link => {
+  // Beans Heading
+  const beansHeading = document.createElement('h2');
+  beansHeading.className = 'beans-heading';
+  beansHeading.textContent = 'Recommended Beans';
+  beansHeading.style.opacity = 0;
+  beansHeading.style.transform = 'translateY(10px)';
+  resultsContainer.appendChild(beansHeading);
+
+  // Beans List
+  const beansList = document.createElement('ul');
+  beansList.className = 'beans-list';
+  beansList.style.opacity = 0;
+  beansList.style.transform = 'translateY(10px)';
+
+  profile.beans.forEach((beanName, i) => {
+    const bean = beans.find(b => b.region === beanName);
+    const beanItem = document.createElement('li');
+    beanItem.className = 'bean-card';
+    beanItem.style.opacity = 0;
+    beanItem.style.transform = 'translateY(10px)';
+
+    if (bean) {
+      const link = document.createElement('a');
+      link.href = `/beans/${bean.slug}`; // Link to bean/roaster page
+      link.textContent = bean.region;
+      link.className = 'quiz-bean-link';
       link.addEventListener('click', e => {
         e.preventDefault();
-        showBeanDetail(e.target.dataset.slug);
+        showBeanDetail(bean.slug);
       });
-    });
-  }
+      beanItem.appendChild(link);
+    } else {
+      beanItem.textContent = beanName;
+    }
+
+    beansList.appendChild(beanItem);
+  });
+
+  resultsContainer.appendChild(beansList);
+
+  // Action Buttons
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'results-actions';
+  actionsDiv.style.opacity = 0;
+  actionsDiv.style.transform = 'translateY(10px)';
+
+  const retakeBtn = document.createElement('button');
+  retakeBtn.id = 'retake-quiz-btn';
+  retakeBtn.className = 'action-btn';
+  retakeBtn.textContent = 'Retake Quiz';
+  actionsDiv.appendChild(retakeBtn);
+
+  const shareBtn = document.createElement('button');
+  shareBtn.id = 'share-quiz-btn';
+  shareBtn.className = 'action-btn';
+  shareBtn.textContent = 'Share Profile';
+  actionsDiv.appendChild(shareBtn);
+
+  resultsContainer.appendChild(actionsDiv);
+
+  // --- Animate sections sequentially ---
+  const fadeIn = (el, delay = 0) => {
+    setTimeout(() => {
+      el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+      el.style.opacity = 1;
+      el.style.transform = 'translateY(0)';
+    }, delay);
+  };
+
+  fadeIn(profileNameEl, 100);
+  fadeIn(descriptionEl, 400);
+  fadeIn(beansHeading, 700);
+  fadeIn(beansList, 1000);
+
+  // Stagger individual beans
+  beansList.querySelectorAll('.bean-card').forEach((beanEl, i) => {
+    fadeIn(beanEl, 1200 + i * 150);
+  });
+
+  fadeIn(actionsDiv, 1500 + profile.beans.length * 150);
+
+  // --- Button functionality ---
+  retakeBtn.addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
+    showQuestion(currentQuestionIndex);
+  });
+
+  shareBtn.addEventListener('click', async () => {
+    const shareText = `I got the "${profile.name}" coffee profile! Recommended beans: ${profile.beans.join(', ')}`;
+    const shareData = { title: profile.name, text: shareText, url: window.location.href };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Share failed:', err);
+      alert('Sharing failed.');
+    }
+  });
+}
+
 
   // --- Show Bean Detail ---
   function showBeanDetail(slug) {
