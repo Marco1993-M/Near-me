@@ -2485,8 +2485,17 @@ dialog#favorites[open] {
 }
 
 
-/* Quiz modal itself */
-/* Quiz modal overlay */
+/* ------------------------- */
+/* Quiz Modal Overlay & Body Lock */
+/* ------------------------- */
+.body-no-scroll {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ------------------------- */
+/* Quiz Modal Itself */
+/* ------------------------- */
 #quiz-modal {
   position: fixed;
   top: 50%;
@@ -2512,7 +2521,9 @@ dialog#favorites[open] {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* Question text */
+/* ------------------------- */
+/* Question Text */
+/* ------------------------- */
 #quiz-question {
   font-size: 24px;
   margin-bottom: 20px;
@@ -2527,7 +2538,9 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
-/* Options container */
+/* ------------------------- */
+/* Quiz Options Container */
+/* ------------------------- */
 #quiz-options {
   margin-bottom: 20px;
   display: flex;
@@ -2535,7 +2548,7 @@ dialog#favorites[open] {
   gap: 10px;
 }
 
-/* Options buttons */
+/* Quiz Option Buttons */
 .quiz-option {
   width: 100%;
   padding: 10px;
@@ -2560,7 +2573,9 @@ dialog#favorites[open] {
   transform: scale(1.02);
 }
 
-/* Close button */
+/* ------------------------- */
+/* Close Button */
+/* ------------------------- */
 #quiz-close-btn {
   border: none;
   background: none;
@@ -2575,7 +2590,9 @@ dialog#favorites[open] {
   opacity: 0.6;
 }
 
-/* Progress text */
+/* ------------------------- */
+/* Progress Text */
+/* ------------------------- */
 #quiz-progress {
   text-align: left;
   font-size: 10px;
@@ -2584,24 +2601,18 @@ dialog#favorites[open] {
   font-weight: 200;
 }
 
-/* Fade In Animation */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Profile name - results page */
+/* ------------------------- */
+/* Profile Name - Results Page */
+/* ------------------------- */
 .profile-name {
   font-size: 28px;
   font-weight: bold;
   color: #000;
-  text-align: left; 
+  text-align: left;
   margin: 0;
-  padding: 0 0 8px 0;
-  position: relative;
-  top: 0;
-  transform: translateY(10px);
+  padding-bottom: 8px;
   opacity: 0;
+  transform: translateY(10px);
   transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
@@ -2610,7 +2621,9 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
-/* Bean profile text */
+/* ------------------------- */
+/* Bean Name & Profile */
+/* ------------------------- */
 .bean-name {
   font-size: 1.75rem;
   font-weight: 700;
@@ -2628,7 +2641,9 @@ dialog#favorites[open] {
   word-wrap: break-word;
 }
 
-/* Roaster grid */
+/* ------------------------- */
+/* Roaster Grid */
+/* ------------------------- */
 .roaster-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -2658,7 +2673,9 @@ dialog#favorites[open] {
   margin-bottom: 8px;
 }
 
-/* Back button */
+/* ------------------------- */
+/* Back Button */
+/* ------------------------- */
 #back-to-results {
   display: inline-block;
   margin: 10px 0 0 0;
@@ -2676,7 +2693,9 @@ dialog#favorites[open] {
   background-color: #e0e0e0;
 }
 
-/* Eyebrow text */
+/* ------------------------- */
+/* Eyebrow Text */
+/* ------------------------- */
 .eyebrow {
   text-transform: capitalize;
   font-size: 0.875rem;
@@ -2685,7 +2704,9 @@ dialog#favorites[open] {
   margin-bottom: 0.5rem;
 }
 
-/* Roaster footer text */
+/* ------------------------- */
+/* Roaster Footer Text */
+/* ------------------------- */
 .roaster-footer-text {
   text-align: left;
   color: #000000;
@@ -2695,15 +2716,16 @@ dialog#favorites[open] {
   margin: 16px 0;
 }
 
-/* Mobile adjustments */
+/* ------------------------- */
+/* Mobile Adjustments */
+/* ------------------------- */
 @media (max-width: 480px) {
   #quiz-modal {
-    top: 5%;
     padding: 16px 12px;
   }
   .profile-name {
     font-size: 22px;
-    padding: 0 0 6px 0;
+    padding-bottom: 6px;
   }
   .bean-name {
     font-size: 1.4rem;
@@ -2720,23 +2742,13 @@ dialog#favorites[open] {
   }
 }
 
-
-
-
+/* ------------------------- */
+/* Hidden Utility Class */
+/* ------------------------- */
 .hidden {
   display: none;
 }
 
-/* Fade In Animation */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.body-no-scroll {
-  overflow: hidden;
-  height: 100vh;
-}
 
 #feedback-btn {
   position: fixed;
