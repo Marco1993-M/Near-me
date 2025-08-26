@@ -125,9 +125,10 @@ function displayResults(profileSlug = null) {
   // Update URL for sharing
   window.history.replaceState(null, '', `/coffee-profile?profile=${profile.slug}`);
 
-  // Clear eyebrow class on quizQuestion
-  quizQuestion.classList.remove('eyebrow');
+  // Clear quizOptions completely to avoid leftover eyebrow text
+  quizOptions.innerHTML = '';
   quizQuestion.textContent = profile.name;
+  quizQuestion.classList.remove('eyebrow');
 
   quizOptions.innerHTML = `
     <p>${profile.description}</p>
@@ -182,9 +183,10 @@ function showBeanDetail(slug) {
     ...Array(Math.max(0, 4 - limitedRoasters.length)).fill({ placeholder: true })
   ];
 
-  // Add eyebrow ONLY for this page
-  quizQuestion.textContent = '';
-  quizQuestion.classList.add('eyebrow');
+  // Clear quizOptions to avoid leftover content
+  quizOptions.innerHTML = '';
+  quizQuestion.textContent = ''; // remove question text
+  quizQuestion.classList.add('eyebrow'); // only add eyebrow here
 
   quizOptions.innerHTML = `
     <p class="eyebrow">Find your local stockist</p>
