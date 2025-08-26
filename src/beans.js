@@ -1,16 +1,16 @@
 export const beans = [
      {
     slug: "ethiopian-yirgacheffe",
-    region: "Ethiopian YirgacheffeX",
+    region: "Ethiopian Yirgacheffe",
     profile: "Fruity and vibrant",
     roasters: [
       { 
-        name: "Blue Bird Roastery", 
+        name: "Sorcery Coffee Roasters", 
         country: "South Africa", 
-        image: "roasters/bluebird.png", 
+        image: "roasters/sorcery.png", 
         maxWidth: 100, 
         maxHeight: 100, 
-        link: "https://www.bluebirdcoffeeroastery.co.za/product/kenya-kamwangi-ab-3/" 
+        link: "https://sorcerycoffee.co.za/products/ethiopia-yirgacheffe" 
       },
     ]
   },
