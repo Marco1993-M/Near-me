@@ -73,42 +73,45 @@ export function initTasteProfile() {
   let userScores = { sweet: 0, acidity: 0, body: 0, nutty: 0, fruity: 0, floral: 0, spicy: 0, intensity: 0 };
   let lastProfile = null;
 
-  // --- Show Question ---
-  function showQuestion(index) {
-    const q = quizData[index];
-    quizOptions.innerHTML = '';
-    quizQuestion.textContent = q.question;
+// --- Show Question ---
+function showQuestion(index) {
+  const q = quizData[index];
+  quizOptions.innerHTML = '';
+  quizQuestion.textContent = q.question;
 
-    // Animate question
-    quizQuestion.classList.remove('enter');
-    setTimeout(() => quizQuestion.classList.add('enter'), 50);
+  // Animate question
+  quizQuestion.classList.remove('enter');
+  setTimeout(() => quizQuestion.classList.add('enter'), 50);
 
-    // Update progress
-    if(progressBar) progressBar.textContent = `Question ${index + 1} of ${quizData.length}`;
+  // Update progress
+  if(progressBar) progressBar.textContent = `Question ${index + 1} of ${quizData.length}`;
 
-    // Render options with fade-in
-    q.options.forEach((opt, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'quiz-option';
-      btn.textContent = opt.text;
-      quizOptions.appendChild(btn);
+  // Render options with fade-in and stagger
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-option';
+    btn.textContent = opt.text;
+    quizOptions.appendChild(btn);
 
-      // Animate option with stagger
-      setTimeout(() => btn.classList.add('enter'), i * 100);
+    // Animate option with staggered delay
+    setTimeout(() => btn.classList.add('enter', `enter-${i+1}`), i * 100);
 
-      btn.addEventListener('click', () => {
-        for (const [key, val] of Object.entries(opt.scores)) {
-          userScores[key] += val;
-        }
-        if (currentQuestionIndex < quizData.length - 1) {
-          currentQuestionIndex++;
-          showQuestion(currentQuestionIndex);
-        } else {
-          displayResults();
-        }
-      });
+    btn.addEventListener('click', () => {
+      // Add scores
+      for (const [key, val] of Object.entries(opt.scores)) {
+        userScores[key] += val;
+      }
+
+      // Move to next question or show results
+      if (currentQuestionIndex < quizData.length - 1) {
+        currentQuestionIndex++;
+        showQuestion(currentQuestionIndex);
+      } else {
+        displayResults();
+      }
     });
-  }
+  });
+}
 
  function displayResults(profileSlug = null) {
   if (progressBar) progressBar.textContent = '';
