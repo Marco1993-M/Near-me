@@ -163,39 +163,53 @@ export function initTasteProfile() {
   }
 
   // --- Show Bean Detail ---
-  function showBeanDetail(slug) {
-    const bean = beans.find(b => b.slug === slug);
-    if (!bean) return;
+function showBeanDetail(slug) {
+  const bean = beans.find(b => b.slug === slug);
+  if (!bean) return;
 
-    const userCountry = "South Africa";
-    const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
+  const userCountry = "South Africa";
+  const filteredRoasters = bean.roasters.filter(r => r.country === userCountry);
 
-    quizQuestion.textContent = '';
-    quizOptions.innerHTML = `
-      <p class="eyebrow">Find your local stockist</p>
-      <h2 class="bean-name">${bean.region}</h2>
-      <p class="bean-profile">${bean.profile}</p>
-      <div class="roaster-grid">
-        ${filteredRoasters.map(r => `
-          <div class="roaster-card">
-            ${r.link 
-              ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
-                   <img src="${r.image}" alt="${r.name}" />
-                 </a>` 
-              : `<img src="${r.image}" alt="${r.name}" />`
-            }
-          </div>
-        `).join('')}
-      </div>
-      <p class="roaster-footer-text">Don’t see your roaster?</p>
-      <button id="back-to-results">⬅ Back to Results</button>
-    `;
+  // Take up to 4 real roasters
+  const limitedRoasters = filteredRoasters.slice(0, 4);
 
-    document.getElementById('back-to-results').addEventListener('click', () => {
-      quizOptions.innerHTML = '';
-      displayResults(lastProfile.slug);
-    });
-  }
+  // Fill placeholders if less than 4
+  const roastersWithPlaceholders = [
+    ...limitedRoasters,
+    ...Array(Math.max(0, 4 - limitedRoasters.length)).fill({ placeholder: true })
+  ];
+
+  quizQuestion.textContent = '';
+  quizOptions.innerHTML = `
+    <p class="eyebrow">Find your local stockist</p>
+    <h2 class="bean-name">${bean.region}</h2>
+    <p class="bean-profile">${bean.profile}</p>
+    <div class="roaster-grid">
+      ${roastersWithPlaceholders.map(r => `
+        <div class="roaster-card ${r.placeholder ? 'roaster-placeholder' : ''}">
+${r.placeholder
+  ? `<img src="/images/placeholder-roaster.png" alt="Placeholder roaster" class="placeholder-img" />`
+  : (r.link 
+      ? `<a href="${r.link}" target="_blank" rel="noopener noreferrer">
+           <img src="${r.image}" alt="${r.name}" />
+         </a>`
+      : `<img src="${r.image}" alt="${r.name}" />`
+    )
+}
+
+        </div>
+      `).join('')}
+    </div>
+    <p class="roaster-footer-text">Don’t see your roaster?</p>
+    <button id="back-to-results">⬅ Back to Results</button>
+  `;
+
+  document.getElementById('back-to-results').addEventListener('click', () => {
+    quizOptions.innerHTML = '';
+    displayResults(lastProfile.slug);
+  });
+}
+
 
   // --- Modal Controls ---
   function openQuiz() {
