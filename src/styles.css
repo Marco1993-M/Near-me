@@ -2497,34 +2497,33 @@ dialog#favorites[open] {
 }
 
 /* ------------------------- */
-/* Quiz Modal Itself */
 #quiz-modal {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
-  width: 90%;
-  max-width: 500px;
+  bottom: -100%; /* start off-screen */
+  left: 0;
+  width: 100%;
+  height: 60vh;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   color: #000000;
-  border-radius: 12px;
+  border-radius: 12px 12px 0 0; /* rounded top only */
   border: 0.5px solid #000000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  padding: 24px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+  padding: 32px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   z-index: 1001;
   opacity: 0;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: bottom 0.35s ease, opacity 0.35s ease;
 }
 
 #quiz-modal.visible {
+  bottom: 0; /* slides up into place */
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
 }
+
 
 /* Question Text */
 #quiz-question {
