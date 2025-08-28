@@ -2469,7 +2469,9 @@ dialog#favorites[open] {
   right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: none; /* Remove solid border */
   border-radius: 50%;
   box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic raised effect */
