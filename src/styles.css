@@ -450,11 +450,7 @@ body, html {
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 0.5px solid black;
-  box-shadow:
-    5px 5px 10px rgba(209, 209, 209, 0.5),
-    -5px -5px 10px rgba(255, 255, 255, 0.6),
-    inset 3px 3px 6px rgba(209, 209, 209, 0.4),
-    inset -3px -3px 6px rgba(255, 255, 255, 0.4);
+  box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic raised effect */
   display: flex;
   justify-content: space-around;
   z-index: 1001;
