@@ -2497,6 +2497,7 @@ dialog#favorites[open] {
 }
 
 /* ------------------------- */
+/* Quiz Modal Itself */
 #quiz-modal {
   position: fixed;
   bottom: -100%; /* start off-screen */
@@ -2525,10 +2526,10 @@ dialog#favorites[open] {
 }
 
 
-/* Question Text */
+/* Question text */
 #quiz-question {
   font-size: 24px;
-  margin-bottom: 24px; /* Space between question and options */
+  margin-bottom: 20px;
   color: #000;
   opacity: 0;
   transform: translateY(-10px);
@@ -2540,15 +2541,7 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
-/* Options Container */
-#quiz-options {
-  display: flex;
-  flex-direction: column;
-  gap: 16px; /* Vertical spacing between buttons */
-  margin-bottom: 20px;
-}
-
-/* Option Buttons */
+/* Options buttons */
 .quiz-option {
   width: 100%;
   padding: 10px;
@@ -2575,28 +2568,11 @@ dialog#favorites[open] {
 .quiz-option.enter-4 { transition-delay: 0.20s; }
 .quiz-option.enter-5 { transition-delay: 0.25s; }
 
-/* Hover Effect */
+/* Hover effect */
 .quiz-option:hover {
   background: rgba(0, 0, 0, 0.05);
   transform: scale(1.02);
 }
-
-/* Mobile adjustments */
-@media (max-width: 480px) {
-  #quiz-modal {
-    padding: 16px 12px;
-  }
-  #quiz-question {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-  .quiz-option {
-    font-size: 14px;
-    padding: 8px;
-  }
-}
-
-
 
 /* ------------------------- */
 /* Close Button */
@@ -2650,35 +2626,21 @@ dialog#favorites[open] {
 /* Bean Name & Profile */
 /* ------------------------- */
 .bean-name {
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem); /* scales between 20px–28px */
+  font-size: 1.75rem;
   font-weight: 700;
   color: #000000;
   margin: 0.3rem 0 0.5rem 0;
   text-align: left;
   word-wrap: break-word;
-  line-height: 1; /* tighter line spacing */
 }
 
 .bean-profile {
-  font-size: clamp(0.9rem, 2vw, 1rem); /* scales between 14px–16px */
+  font-size: 1rem;
   color: #595959;
   text-align: left;
   margin-bottom: 1rem;
   word-wrap: break-word;
-  line-height: 1; /* no extra spacing between lines */
 }
-
-/* Still keep responsive font sizing if needed */
-@media (max-width: 480px) {
-  .bean-name {
-    font-size: 1.3rem; /* ~21px */
-  }
-  .bean-profile {
-    font-size: 0.95rem; /* ~15px */
-  }
-}
-
-
 
 /* ------------------------- */
 /* Roaster Grid */
@@ -2803,7 +2765,7 @@ dialog#favorites[open] {
   border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  border: 0.5px solid #000000; /* accent color border */
+  border: 1px solid #000000; /* accent color border */
   background: #ffffff; /* white background */
   color: #000000;
   font-size: 1rem;
@@ -2855,6 +2817,49 @@ dialog#favorites[open] {
     gap: 10px;
   }
 }
+
+/* Parent container for the bean selections */
+.bean-selection {
+  display: flex;            /* arrange side by side */
+  gap: 20px;                /* adjust spacing here */
+  margin-top: 16px;
+  flex-wrap: wrap;          /* wrap on smaller screens */
+  justify-content: flex-start; 
+}
+
+/* Individual clickable squares */
+.bean-option {
+  width: 40px;
+  height: 40px;
+  background-color: #ffffff00;
+  border: 2px solid #333;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bean-option:hover {
+  background-color: #f0f0f0;
+  border-color: #555;
+}
+
+.bean-option.selected {
+  background-color: #333;
+  color: #fff;
+}
+
+
+
+/* Mobile tweak */
+@media (max-width: 480px) {
+  .bean-selection {
+    justify-content: center;
+  }
+}
+
 
 
 #feedback-btn {
