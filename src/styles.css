@@ -2976,4 +2976,87 @@ dialog#favorites[open] {
   }
 }
 
+#shop-popup {
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* Vertically align text and button */
+  justify-content: flex-start; /* Keep text and button close */
+  gap: 12px; /* Space between text and button */
+  position: absolute;
+  bottom: 8.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  border-radius: 28px 28px 0 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 12px 20px;
+  border-radius: 9999px;
+  width: auto; /* Let content determine width */
+  max-width: 90vw; /* Responsive max width */
+  min-width: 0; /* Prevent overflow */
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  white-space: nowrap; /* Prevent wrapping */
+  box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+#shop-popup.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#shop-popup-text {
+  display: flex;
+  align-items: center; /* Ensure spans are vertically aligned */
+  gap: 6px;
+  flex-shrink: 1; /* Allow text to shrink */
+  min-width: 0; /* Enable truncation */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px; /* Consistent text size */
+}
+
+#shop-popup-review {
+  flex-shrink: 0; /* Prevent button from shrinking */
+  padding: 8px 16px;
+  cursor: pointer;
+  background-color: #8de4af;
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 16px; /* Match text size */
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+#shop-popup-review:hover {
+  background-color: #518465;
+}
+
+/* Ensure no global styles interfere */
+#shop-popup, #shop-popup-text, #shop-popup-review {
+  display: inline-flex; /* Fallback for inline behavior */
+  vertical-align: middle; /* Align vertically if flex fails */
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  #shop-popup {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  #shop-popup-text {
+    font-size: 14px;
+    max-width: 70%; /* Limit text width on small screens */
+  }
+  #shop-popup-review {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+}
 
