@@ -2656,6 +2656,7 @@ dialog#favorites[open] {
   margin: 0.3rem 0 0.5rem 0;
   text-align: left;
   word-wrap: break-word;
+  line-height: 1; /* tighter line spacing */
 }
 
 .bean-profile {
@@ -2664,18 +2665,10 @@ dialog#favorites[open] {
   text-align: left;
   margin-bottom: 1rem;
   word-wrap: break-word;
+  line-height: 1; /* no extra spacing between lines */
 }
 
-/* Extra tweaks for smaller screens */
-@media (max-width: 768px) {
-  .bean-name {
-    text-align: center;
-  }
-  .bean-profile {
-    text-align: center;
-  }
-}
-
+/* Still keep responsive font sizing if needed */
 @media (max-width: 480px) {
   .bean-name {
     font-size: 1.3rem; /* ~21px */
@@ -2684,6 +2677,7 @@ dialog#favorites[open] {
     font-size: 0.95rem; /* ~15px */
   }
 }
+
 
 
 /* ------------------------- */
