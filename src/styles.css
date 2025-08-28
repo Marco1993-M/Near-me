@@ -2553,6 +2553,7 @@ dialog#favorites[open] {
   color: #000;
   opacity: 0;
   transform: translateY(10px);
+  gap: 10px;
   transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease-in-out;
 }
 
