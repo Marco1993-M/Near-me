@@ -252,8 +252,9 @@ body, html {
   border-radius: 9999px;
   font-size: 1.1rem;
   width: 100%; /* Maintain responsiveness */
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
-  box-shadow: inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Inset for pressed look */
+   background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   z-index: 1001;
   color: #333; /* Darker text for readability */
   transition: box-shadow 0.2s ease;
@@ -353,7 +354,9 @@ body, html {
   right: 1.5rem;
   width: 3.5rem;
   height: 3.5rem;
-  background: linear-gradient(145deg, #e0e0e0, #ffffff); /* Subtle gradient for depth */
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: none; /* Remove solid border */
   border-radius: 50%;
   box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic raised effect */
@@ -441,9 +444,9 @@ body, html {
   max-width: 400px;
   padding: 1rem;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 0.5px solid black;
   box-shadow:
     5px 5px 10px rgba(209, 209, 209, 0.5),
