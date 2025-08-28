@@ -2541,6 +2541,12 @@ dialog#favorites[open] {
   transform: translateY(0);
 }
 
+#quiz-options {
+  display: flex;           /* make it a flex container */
+  flex-direction: column;  /* stack buttons vertically */
+  gap: 10px;               /* space between buttons */
+}
+
 /* Options buttons */
 .quiz-option {
   width: 100%;
