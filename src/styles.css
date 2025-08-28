@@ -2729,7 +2729,7 @@ dialog#favorites[open] {
 /* ------------------------- */
 @media (max-width: 480px) {
   #quiz-modal {
-    padding: 16px 5px;
+    padding: 8px 8px;
   }
   .profile-name {
     font-size: 22px;
