@@ -226,6 +226,7 @@ body, html {
 #auth-banner.hidden {
   display: none !important;
 }
+
 /* Search container */
 #search-container {
   position: fixed;
@@ -238,7 +239,9 @@ body, html {
   align-items: center;
   gap: 0.5rem;
   z-index: 1001; /* Ensure it's above #map */
-  background: #e0e0e0; /* Neumorphic base color */
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff; /* Neumorphic shadow */
   border-radius: 9999px; /* Match search bar's rounded shape */
   padding: 0.05rem; /* Slight padding to frame the input */
@@ -248,19 +251,17 @@ body, html {
 #search-bar {
   flex: 1;
   padding: 1.25rem;
-  border: none; /* Remove solid border */
+  border: 0.5px solid black; /* Remove solid border */
   border-radius: 9999px;
   font-size: 1.1rem;
   width: 100%; /* Maintain responsiveness */
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  box-shadow: inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff; /* Inset for pressed look */
   z-index: 1001;
-  color: #333; /* Darker text for readability */
+  color: #000000; /* Darker text for readability */
   transition: box-shadow 0.2s ease;
 }
-
 #search-bar:hover {
   box-shadow: inset 2px 2px 4px #d1d1d1, inset -2px -2px 4px #ffffff; /* Subtle hover effect */
 }
