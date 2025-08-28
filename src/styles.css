@@ -2688,7 +2688,7 @@ dialog#favorites[open] {
   display: inline-block;
   margin: 10px 0 0 0;
   padding: 10px 20px;
-  background-color: #ffffff;
+  background-color: none;
   border: none;
   border-radius: 8px;
   color: #000000;
