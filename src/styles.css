@@ -2650,7 +2650,7 @@ dialog#favorites[open] {
 /* Bean Name & Profile */
 /* ------------------------- */
 .bean-name {
-  font-size: 1.75rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem); /* scales between 20px–28px */
   font-weight: 700;
   color: #000000;
   margin: 0.3rem 0 0.5rem 0;
@@ -2659,12 +2659,32 @@ dialog#favorites[open] {
 }
 
 .bean-profile {
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 2vw, 1rem); /* scales between 14px–16px */
   color: #595959;
   text-align: left;
   margin-bottom: 1rem;
   word-wrap: break-word;
 }
+
+/* Extra tweaks for smaller screens */
+@media (max-width: 768px) {
+  .bean-name {
+    text-align: center;
+  }
+  .bean-profile {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .bean-name {
+    font-size: 1.3rem; /* ~21px */
+  }
+  .bean-profile {
+    font-size: 0.95rem; /* ~15px */
+  }
+}
+
 
 /* ------------------------- */
 /* Roaster Grid */
