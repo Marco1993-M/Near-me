@@ -3149,3 +3149,14 @@ dialog#favorites[open] {
   background: #e74c3c;
 }
 
+/* 📱 Mobile adjustments */
+@media (max-width: 480px) {
+  #toast {
+    top: auto;
+    top: 6.5rem; /* move toast to bottom for mobile UX */
+    font-size: 14px;
+    padding: 10px 16px;
+    white-space: normal; /* allow wrapping instead of cutting */
+    text-align: center;
+    justify-content: center;
+  }
