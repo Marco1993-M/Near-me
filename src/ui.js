@@ -58,6 +58,12 @@ const toastMessages = {
     "Hey there ☕ Ready to explore some amazing coffee?",
     "Let’s find your next favorite spot! 🔎",
     "Good to see you! 🌟 Start searching or leave a review."
+  ],
+  search: [
+    "Nice choice! 👌",
+    "You’re not alone – 200+ others love this café too ☕️",
+    "Trending pick! 🔥 Added to your favorites.",
+    "Looking good! Check out what’s nearby."
   ]
 };
 
