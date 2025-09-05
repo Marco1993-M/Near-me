@@ -62,7 +62,7 @@ const toastMessages = {
   search: [
     "Nice choice! 👌",
     "You’re not alone – 200+ others love this café too ☕️",
-    "Trending pick! 🔥 Added to your favorites.",
+    "Trending pick! 🔥",
     "Looking good! Check out what’s nearby."
   ]
 };
