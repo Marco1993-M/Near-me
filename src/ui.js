@@ -17,8 +17,29 @@ export function hideModal(modalId) {
   // code to hide a modal...
 }
 
-export function showToast(message) {
-  // code to display a toast notification...
+export function showToast(message, type = 'info', duration = 6000) {
+  // Check if a container exists, if not create one
+  let toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    document.body.appendChild(toast);
+  }
+
+  // Apply base + type classes
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  // Force reflow so animation restarts if called multiple times
+  void toast.offsetWidth;
+
+  // Show it
+  toast.classList.add('show');
+
+  // Auto-hide after duration
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, duration);
 }
 
 export function showLoadingIndicator() {
