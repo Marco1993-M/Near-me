@@ -30,5 +30,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.addEventListener('load', () => {
-  showToast("👋 Welcome! Search for cafés nearby or leave a review!", "info", 8000);
+  showToast({ category: "pageLoad", type: "info", duration: 8000 });
 });
+
