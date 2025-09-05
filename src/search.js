@@ -3,6 +3,7 @@ import { showFloatingCard } from './shops.js';
 import { getOrCreateShop } from './db.js';
 import supabase from './supabase.js';
 import { customPngIcon, customRoasterPngIcon } from './map.js';
+import { showToast } from './ui.js';
 
 let searchInput;
 let searchDropdown;
@@ -428,6 +429,9 @@ async function focusShopOnMap(place) {
 
   shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
   await showFloatingCard(shop);
+
+    // **SHOW TOAST FOR SEARCH RESULT**
+  showToast({ category: "search", type: "info", duration: 5000 });
 }
 
 function extractCityFromAddressComponents(components) {
