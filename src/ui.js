@@ -17,30 +17,72 @@ export function hideModal(modalId) {
   // code to hide a modal...
 }
 
-export function showToast(message, type = 'info', duration = 6000) {
-  // Check if a container exists, if not create one
-  let toast = document.getElementById('toast');
+const toastMessages = {
+  favorites: [
+    "You’re not alone – 200+ others love this café too ☕️",
+    "Nice choice 👌 Added to your favorites.",
+    "Trending pick! 🔥 Just saved for you.",
+    "Favorited 💛 Ready to plan your coffee crawl?",
+    "Saved ✅ – check your favorites anytime."
+  ],
+  reviews: [
+    "Your voice matters 📝 Thanks for sharing!",
+    "Review posted 🌟 You’re helping others discover great coffee.",
+    "Cheers ☕ Your feedback makes cafés better.",
+    "Nice one! 👏 Review submitted successfully."
+  ],
+  explore: [
+    "Searching nearby... 🔍 hidden gems await!",
+    "Adventure time 🚶 Discover cafés around you.",
+    "Explore mode on ✨ Let’s find your next favorite spot.",
+    "Ready for a coffee crawl? 🗺️"
+  ],
+  success: [
+    "Done ✅ That worked perfectly!",
+    "All good 👍 Task completed.",
+    "Smooth as espresso ☕ Success!"
+  ],
+  error: [
+    "Oops 😅 Something went wrong.",
+    "Error 🚨 Please try again.",
+    "We spilled the coffee... ☕ Retry?",
+    "Hmm 🤔 that didn’t work."
+  ],
+  info: [
+    "Heads up 💡",
+    "FYI 📢",
+    "Did you know? 🤓"
+  ],
+  pageLoad: [
+    "Welcome! 👋 Discover cafés nearby or check your favorites.",
+    "Hey there ☕ Ready to explore some amazing coffee?",
+    "Let’s find your next favorite spot! 🔎",
+    "Good to see you! 🌟 Start searching or leave a review."
+  ]
+};
+
+export function showToast({ message = null, category = "info", type = "info", duration = 3000 } = {}) {
+  let toast = document.getElementById("toast");
+
   if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'toast';
+    toast = document.createElement("div");
+    toast.id = "toast";
     document.body.appendChild(toast);
   }
 
-  // Apply base + type classes
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
+  const pool = toastMessages[category] || toastMessages.info;
+  const finalMessage = message || pool[Math.floor(Math.random() * pool.length)];
 
-  // Force reflow so animation restarts if called multiple times
-  void toast.offsetWidth;
+  toast.className = `show ${type}`;
+  toast.textContent = finalMessage;
 
-  // Show it
-  toast.classList.add('show');
-
-  // Auto-hide after duration
-  setTimeout(() => {
-    toast.classList.remove('show');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.className = toast.className.replace("show", "");
   }, duration);
 }
+
+
 
 export function showLoadingIndicator() {
   // code to show a loading indicator...
