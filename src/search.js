@@ -65,64 +65,32 @@ export function initSearch() {
   );
 
   // --- Enter key handler ---
-  searchInput.addEventListener('keydown', async (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-
-    const query = searchInput.value.trim();
-    if (!query) return;
-
-    try {
-      const handledCity = await tryHandleAsCity(query);
-      if (handledCity) {
-        searchDropdown.classList.add('hidden');
-        return;
-      }
-
-      const { shops, roasters } = await performUnifiedSearch(query);
-      const combinedResults = [...shops, ...roasters];
-      await displayShopsOnMap(combinedResults);
-      searchDropdown.classList.add('hidden');
-    } catch (err) {
-      console.error('Enter key search failed', err);
-      searchDropdown.classList.add('hidden');
-    }
-  });
-
-  // --- Dropdown click ---
-searchDropdown.addEventListener('click', async (e) => {
+  searchDropdown.addEventListener('click', async (e) => {
   const li = e.target.closest('li[data-type]');
   if (!li) return;
-
-  console.log('Clicked item:', li); // debug
 
   const type = li.dataset.type;
   const placeId = li.dataset.placeId;
   const roasterName = li.dataset.roasterName;
 
-  if (type === 'city') {
-    if (!placeId) return console.warn('City missing placeId');
-    try {
+  // **Hide dropdown immediately**
+  searchDropdown.classList.add('hidden');
+
+  try {
+    if (type === 'city') {
+      if (!placeId) return console.warn('City missing placeId');
       const geo = await geocodePlaceId(placeId);
       await centerMapOnCity(geo);
-    } catch (err) {
-      console.error('City click failed', err);
     }
-  }
 
-  if (type === 'shop') {
-    if (!placeId) return console.warn('Shop missing placeId');
-    try {
+    if (type === 'shop') {
+      if (!placeId) return console.warn('Shop missing placeId');
       const place = await getPlaceDetails(placeId);
       await focusShopOnMap(place);
-    } catch (err) {
-      console.error('Shop click failed', err);
     }
-  }
 
-  if (type === 'roaster') {
-    if (!roasterName) return console.warn('Roaster missing name');
-    try {
+    if (type === 'roaster') {
+      if (!roasterName) return console.warn('Roaster missing name');
       const { data: allShops, error } = await supabase
         .from('shops')
         .select('*')
@@ -138,12 +106,10 @@ searchDropdown.addEventListener('click', async (e) => {
 
       const highlightIds = filteredShops.map(s => s.id);
       await displayShopsOnMap(allShops, highlightIds);
-    } catch (err) {
-      console.error('Roaster click failed', err);
     }
+  } catch (err) {
+    console.error(`${type} click failed`, err);
   }
-
-  searchDropdown.classList.add('hidden');
 });
 
 }
