@@ -66,7 +66,7 @@ const toastMessages = {
     "Let’s find your new favorite spot 🔎",
     "Good to see you 🌟 Coffee adventures await.",
     "These are the good old coffee days. ❤️",
-    "I declare… COFFEE! ☕️📣",
+    "I declare… COFFEE! ☕️",
     "You miss 100% of the shots you don’t take. – Wayne Gretzky – Michael Scott 🏀"
   ],
   search: [
