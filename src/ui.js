@@ -74,7 +74,7 @@ const toastMessages = {
     "Hot pick! 🔥",
     "Looking good 😍 Check out what’s nearby too.",
     "Found it! 🗺️ Your coffee destiny awaits.",
-    "Michael Scott: ‘I’m ready to get hurt again.’ … by falling for another café. ❤️",
+    "I’m ready to get hurt again. 💔☕️",
     "Assistant to the Regional Barista. ☕️"
   ]
 };
