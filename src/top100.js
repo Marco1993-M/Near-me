@@ -32,6 +32,8 @@ function countryCodeToFlagEmoji(code) {
 
 /**
  * Fetches and displays the top 100 coffee shops based on ratings and review count.
+ * This function should be called whenever the top 100 modal needs to be populated/refreshed.
+ */
 export async function displayTop100Shops() {
     const top100Container = document.getElementById('top100-list');
     if (!top100Container) return console.error('Top 100 container not found');
@@ -184,6 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
 
 // Get references to the modal elements and buttons
 const top100Modal = document.getElementById('top100');
