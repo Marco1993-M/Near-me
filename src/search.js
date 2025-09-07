@@ -142,7 +142,7 @@ async function performUnifiedSearch(query, userLocation) {
   return { cities, shops, roasters };
 }
 
-/* -------------------- GOOGLE PLACES PREDICTIONS -------------------- */
+/* -------------------- GOOGLE PLACES PREDICTIONS (ANDROID-SAFE) -------------------- */
 async function getPlacePredictionsGrouped(query, userLocation) {
   autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
 
@@ -150,15 +150,31 @@ async function getPlacePredictionsGrouped(query, userLocation) {
     ? { location: new google.maps.LatLng(userLocation.lat, userLocation.lng), radius: 50000 }
     : {};
 
-  const citiesPromise = new Promise(resolve =>
-    autocompleteService.getPlacePredictions({ input: query, types: ['(cities)'], ...baseOpts }, (predictions, status) => resolve(status === 'OK' ? predictions : []))
-  );
+  function getPredictions(opts) {
+    return new Promise(resolve => {
+      autocompleteService.getPlacePredictions(opts, (predictions, status) => {
+        if (status === 'OK' && predictions) resolve(predictions);
+        else resolve([]);
+      });
+    });
+  }
 
-  const placesPromise = new Promise(resolve =>
-    autocompleteService.getPlacePredictions({ input: query, types: ['establishment'], ...baseOpts }, (predictions, status) => resolve(status === 'OK' ? predictions : []))
-  );
+  // --- Initial requests
+  let cities = await getPredictions({ input: query, types: ['(cities)'], ...baseOpts });
+  let places = await getPredictions({ input: query, types: ['establishment'], ...baseOpts });
 
-  const [cities, places] = await Promise.all([citiesPromise, placesPromise]);
+  // --- Fallback if Android Chrome blocks the typed searches
+  if (!cities.length) {
+    console.warn('No city predictions, falling back to generic search', query);
+    cities = await getPredictions({ input: query, ...baseOpts });
+  }
+
+  if (!places.length) {
+    console.warn('No place predictions, falling back to generic search', query);
+    places = await getPredictions({ input: query, ...baseOpts });
+  }
+
+  console.log('Predictions result', { query, cities, places });
   return { cities: cities || [], places: places || [] };
 }
 
