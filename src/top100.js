@@ -5,7 +5,7 @@ import { getOrCreateShop } from './db.js';
 
 let favorites = [];
 let currentShop = null;
-let processedShops = []; // This will hold the filtered and sorted top 100 shops data
+let processedShops = []; // filtered and sorted top 100 shops
 
 async function init() {
     try {
@@ -15,13 +15,11 @@ async function init() {
     }
 }
 
-// Initialize favorites when the script loads
+// Initialize favorites
 init();
 
 /**
  * Converts a 2-letter country code to its corresponding flag emoji.
- * @param {string} code - The two-letter country code (e.g., "US", "GB").
- * @returns {string} The flag emoji or a generic earth emoji if invalid.
  */
 function countryCodeToFlagEmoji(code) {
     if (!code || typeof code !== 'string' || code.length !== 2) return '🌍';
@@ -31,14 +29,26 @@ function countryCodeToFlagEmoji(code) {
 }
 
 /**
- * Fetches and displays the top 100 coffee shops based on ratings and review count.
- * This function should be called whenever the top 100 modal needs to be populated/refreshed.
+ * Filter processed shops based on UI filter selections
+ */
+function filterTop100Shops(shops) {
+    const city = document.getElementById('top100-city-filter')?.value;
+    const minRating = Number(document.getElementById('top100-rating-filter')?.value || 0);
+
+    return shops.filter(shop => {
+        const matchesCity = city ? shop.city === city : true;
+        const matchesRating = shop.averageRating >= minRating;
+        return matchesCity && matchesRating;
+    });
+}
+
+/**
+ * Fetch and display Top 100 shops
  */
 export async function displayTop100Shops() {
     const top100Container = document.getElementById('top100-list');
     if (!top100Container) return console.error('Top 100 container not found');
 
-    // Show loading
     top100Container.innerHTML = '<p class="top100-modal-loading">Loading shops...</p>';
     top100Container.className = 'top100-bento-grid';
 
@@ -56,57 +66,63 @@ export async function displayTop100Shops() {
                 photos,
                 reviews (rating)
             `)
-            .limit(600); // Fetch all shops (up to 600)
+            .limit(600);
 
         if (error) throw error;
 
-        // Process shops: calculate average ratings
+        // Populate city filter dynamically once
+        const cityFilter = document.getElementById('top100-city-filter');
+        if (cityFilter && cityFilter.options.length <= 1) {
+            const cities = [...new Set(allShops.map(shop => shop.city).filter(Boolean))].sort();
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+        }
+
+        // Process shops: calculate average rating
         processedShops = allShops
             .map(shop => {
                 const reviews = shop.reviews || [];
                 const avgRating = reviews.length
                     ? reviews.reduce((sum, r) => sum + Number(r.rating), 0) / reviews.length
                     : 0;
-                return {
-                    ...shop,
-                    averageRating: avgRating,
-                    reviewCount: reviews.length
-                };
+                return { ...shop, averageRating: avgRating, reviewCount: reviews.length };
             })
-            // No filter — keep shops with 0 reviews
             .sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount);
 
-        if (!processedShops.length) {
-            top100Container.innerHTML = '<p class="top100-modal-loading">No shops available.</p>';
+        const filteredShops = filterTop100Shops(processedShops);
+
+        if (!filteredShops.length) {
+            top100Container.innerHTML = '<p class="top100-modal-loading">No shops match your filters.</p>';
             return;
         }
 
         top100Container.innerHTML = '';
 
-      // Helper: get shop photo
-const getShopPhoto = (shop) => {
-    if (shop.photos && shop.photos.length > 0) {
-        return shop.photos[Math.floor(Math.random() * shop.photos.length)];
-    }
-    // Use app logo as placeholder
-    return '/Logo.png'; // <-- replace with your logo path
-};
+        // Helper: get shop photo
+        const getShopPhoto = (shop) => {
+            if (shop.photos && shop.photos.length > 0) {
+                return shop.photos[Math.floor(Math.random() * shop.photos.length)];
+            }
+            return '/logo.png'; // placeholder
+        };
 
-        processedShops.forEach((shop, index) => {
+        filteredShops.forEach((shop, index) => {
             const isFavorited = favorites.some(fav => String(fav.shop_id) === String(shop.id));
 
-            // Assign random bento size class
+            // Assign random bento size
             let sizeClass = '';
             if (index % 11 === 0) sizeClass = 'big';
             else if (index % 7 === 0) sizeClass = 'wide';
             else if (index % 5 === 0) sizeClass = 'tall';
 
-            const photoUrl = getShopPhoto(shop, index);
-
             const card = document.createElement('div');
             card.className = `top100-card ${sizeClass}`;
             card.innerHTML = `
-                <img src="${photoUrl}" alt="${shop.name}" loading="lazy">
+                <img src="${getShopPhoto(shop)}" alt="${shop.name}" loading="lazy">
                 <div class="top100-card-info">
                     <div>⭐ ${shop.reviewCount ? shop.averageRating.toFixed(1) : 'No ratings yet'} – ${shop.name}</div>
                     <div style="font-size:0.75rem;">${shop.city}</div>
@@ -120,7 +136,7 @@ const getShopPhoto = (shop) => {
                 </button>
             `;
 
-            // Click to show shop details (excluding favorite button)
+            // Click to show shop details
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.favorite-btn')) return;
                 currentShop = { ...shop };
@@ -137,8 +153,7 @@ const getShopPhoto = (shop) => {
     }
 }
 
-
-// Handle favorite button clicks via delegation
+// Favorite button delegation
 document.addEventListener('DOMContentLoaded', () => {
     const top100Container = document.getElementById('top100-list');
     if (!top100Container) return;
@@ -185,42 +200,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error toggling favorite:', err);
         }
     });
+
+    // Filter listeners
+    document.getElementById('top100-city-filter')?.addEventListener('change', displayTop100Shops);
+    document.getElementById('top100-rating-filter')?.addEventListener('change', displayTop100Shops);
 });
 
-
-
-// Get references to the modal elements and buttons
+// Modal open/close logic
 const top100Modal = document.getElementById('top100');
-const openTop100Btn = document.getElementById('top-100-button');
-const closeTop100Btn = document.querySelector('.top100-modal-close-button');
-
-// Add event listener for opening the Top 100 Shops modal
-openTop100Btn?.addEventListener('click', () => {
-    if (top100Modal) { // Ensure modal exists
-        if (!top100Modal.open) { // Check if it's not already open
-            top100Modal.showModal(); // Display the modal
-        }
-        displayTop100Shops(); // Refresh/populate the list every time it's opened
-    } else {
-        console.error("Top 100 modal element not found.");
+document.getElementById('top-100-button')?.addEventListener('click', () => {
+    if (top100Modal && !top100Modal.open) {
+        top100Modal.showModal();
+        displayTop100Shops();
     }
 });
 
-// Add event listener for closing the Top 100 Shops modal
-closeTop100Btn?.addEventListener('click', () => {
+document.querySelector('.top100-modal-close-button')?.addEventListener('click', () => {
     top100Modal?.close();
-});
-
-
-// IMPORTANT: Attach the delegated click listener for favorite buttons ONCE
-// when the DOM is fully loaded. This ensures it persists regardless of
-// content changes within top100-list.
-document.addEventListener('DOMContentLoaded', () => {
-    const top100List = document.getElementById('top100-list');
-    if (top100List) {
-        top100List.addEventListener('click', handleTop100ButtonClick);
-        console.log("Favorite button click listener attached to #top100-list.");
-    } else {
-        console.warn("top100-list element not found on DOMContentLoaded. Favorite button clicks for top 100 shops might not work correctly.");
-    }
 });
