@@ -70,8 +70,8 @@ const toastMessages = {
     "You miss 100% of the shots you don’t take. – Wayne Gretzky – Michael Scott 🏀"
   ],
   search: [
-    "Nice choice 👌 That one’s worth the hype.",
-    "Hot pick! 🔥 Might be your new go-to spot.",
+    "Nice choice 👌",
+    "Hot pick! 🔥",
     "Looking good 😍 Check out what’s nearby too.",
     "Found it! 🗺️ Your coffee destiny awaits.",
     "Michael Scott: ‘I’m ready to get hurt again.’ … by falling for another café. ❤️",
