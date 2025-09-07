@@ -32,22 +32,16 @@ function countryCodeToFlagEmoji(code) {
 
 /**
  * Fetches and displays the top 100 coffee shops based on ratings and review count.
- * This function should be called whenever the top 100 modal needs to be populated/refreshed.
- */
 export async function displayTop100Shops() {
-    console.log('displayTop100Shops function called');
-    const top100List = document.getElementById('top100-list');
-    if (!top100List) {
-        console.error('Top 100 list element not found');
-        return;
-    }
+    const top100Container = document.getElementById('top100-list');
+    if (!top100Container) return console.error('Top 100 container not found');
 
-    // Set initial loading message
-    top100List.innerHTML = '<p class="top100-modal-loading">Loading top shops...</p>';
+    // Show loading
+    top100Container.innerHTML = '<p class="top100-modal-loading">Loading shops...</p>';
+    top100Container.className = 'top100-bento-grid';
 
     try {
-        // Fetch shops and their reviews from Supabase
-        const { data: topShops, error } = await supabase
+        const { data: allShops, error } = await supabase
             .from('shops')
             .select(`
                 id,
@@ -57,161 +51,139 @@ export async function displayTop100Shops() {
                 country_code,
                 lat,
                 lng,
-                reviews (
-                    rating
-                )
+                photos,
+                reviews (rating)
             `)
-            .limit(100); // Limit the initial fetch to 100 shops, then filter/sort
+            .limit(600); // Fetch all shops (up to 600)
 
-        if (error) {
-            console.error('Error fetching top shops:', error);
-            top100List.innerHTML = '<p class="top100-modal-loading">Error loading top shops.</p>';
-            return;
-        }
+        if (error) throw error;
 
-        // Process the fetched data: calculate average ratings, filter, and sort
-        processedShops = topShops
+        // Process shops: calculate average ratings
+        processedShops = allShops
             .map(shop => {
                 const reviews = shop.reviews || [];
-                const averageRating =
-                    reviews.length > 0
-                        ? reviews.reduce((sum, review) => sum + Number(review.rating), 0) / reviews.length
-                        : 0;
+                const avgRating = reviews.length
+                    ? reviews.reduce((sum, r) => sum + Number(r.rating), 0) / reviews.length
+                    : 0;
                 return {
-                    id: shop.id,
-                    name: shop.name,
-                    address: shop.address,
-                    city: shop.city,
-                    country_code: shop.country_code || '',
-                    lat: shop.lat,
-                    lng: shop.lng,
-                    averageRating,
-                    reviewCount: reviews.length,
+                    ...shop,
+                    averageRating: avgRating,
+                    reviewCount: reviews.length
                 };
             })
-            .filter(shop => shop.reviewCount > 0) // Only include shops with at least one review
-            .sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount) // Sort by rating, then review count
-            .slice(0, 100); // Ensure we only display the top 100 after sorting
+            // No filter — keep shops with 0 reviews
+            .sort((a, b) => b.averageRating - a.averageRating || b.reviewCount - a.reviewCount);
 
-        // Display message if no rated shops are found
-        if (processedShops.length === 0) {
-            top100List.innerHTML = '<p class="top100-modal-loading">No rated shops available.</p>';
+        if (!processedShops.length) {
+            top100Container.innerHTML = '<p class="top100-modal-loading">No shops available.</p>';
             return;
         }
 
-        // Set the class for the list and clear previous content
-        top100List.className = 'top100-modal-list';
-        top100List.innerHTML = '';
+        top100Container.innerHTML = '';
 
-        // Iterate through the processed shops and create list items for display
-        processedShops.forEach(shop => {
-            const isFavorited = Array.isArray(favorites) && favorites.some(fav => fav.shop_id === shop.id);
-            const flag = countryCodeToFlagEmoji(shop.country_code);
+      // Helper: get shop photo
+const getShopPhoto = (shop) => {
+    if (shop.photos && shop.photos.length > 0) {
+        return shop.photos[Math.floor(Math.random() * shop.photos.length)];
+    }
+    // Use app logo as placeholder
+    return '/logo.png'; // <-- replace with your logo path
+};
 
-            const li = document.createElement('li');
-            li.className = 'top100-modal-list-item';
-            // Use template literals for cleaner HTML generation
-            li.innerHTML = `
-                <div class="top100-modal-shop-info">
-                    <svg class="top100-modal-star-icon text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 .587l3.668 7.431 8.332 1.151-6.001 5.822 1.417 8.262L12 18.707l-7.416 3.504 1.417-8.262-6.001-5.822 8.332-1.151z"/>
+        processedShops.forEach((shop, index) => {
+            const isFavorited = favorites.some(fav => String(fav.shop_id) === String(shop.id));
+
+            // Assign random bento size class
+            let sizeClass = '';
+            if (index % 11 === 0) sizeClass = 'big';
+            else if (index % 7 === 0) sizeClass = 'wide';
+            else if (index % 5 === 0) sizeClass = 'tall';
+
+            const photoUrl = getShopPhoto(shop, index);
+
+            const card = document.createElement('div');
+            card.className = `top100-card ${sizeClass}`;
+            card.innerHTML = `
+                <img src="${photoUrl}" alt="${shop.name}" loading="lazy">
+                <div class="top100-card-info">
+                    <div>⭐ ${shop.reviewCount ? shop.averageRating.toFixed(1) : 'No ratings yet'} – ${shop.name}</div>
+                    <div style="font-size:0.75rem;">${shop.city}</div>
+                </div>
+                <button class="favorite-btn ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        ${isFavorited 
+                            ? '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>' 
+                            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>'}
                     </svg>
-                    ${flag} ${shop.name} (${shop.averageRating.toFixed(1)}/10)
-                </div>
-                <div class="top100-modal-actions">
-                    <button class="top100-modal-button favorite-shop ${isFavorited ? 'favorited' : ''}" data-shop-id="${shop.id}" aria-label="${isFavorited ? `Remove ${shop.name} from favorites` : `Add ${shop.name} to favorites`}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${isFavorited ? 'text-red-500' : 'text-gray-400'}" fill="currentColor" viewBox="0 0 24 24">
-                            ${isFavorited ? `
-                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                            ` : `
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            `}
-                        </svg>
-                    </button>
-                </div>
+                </button>
             `;
 
-            // Add click listener for showing shop details (excluding the favorite button)
-            li.addEventListener('click', (event) => {
-                if (event.target.closest('.favorite-shop')) return; // Ignore clicks on the favorite button
-                currentShop = { ...shop }; // Set the global currentShop for shop details modal
+            // Click to show shop details (excluding favorite button)
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.favorite-btn')) return;
+                currentShop = { ...shop };
                 showShopDetails(currentShop);
-                document.getElementById('top100')?.close(); // Close the top 100 modal
+                document.getElementById('top100')?.close();
             });
 
-            top100List.appendChild(li);
+            top100Container.appendChild(card);
         });
 
-    } catch (error) {
-        console.error('Error in displayTop100Shops:', error);
-        top100List.innerHTML = '<p class="top100-modal-loading">Error loading top shops.</p>';
+    } catch (err) {
+        console.error('Error loading shops:', err);
+        top100Container.innerHTML = '<p class="top100-modal-loading">Error loading shops.</p>';
     }
 }
 
-/**
- * Handles click events on the top 100 list, specifically for favorite buttons using delegation.
- * This function should ONLY be attached ONCE to the top100-list container.
- * @param {Event} e - The click event object.
- */
-function handleTop100ButtonClick(e) {
-    const target = e.target.closest('.favorite-shop');
-    if (!target) return; // Not a click on a favorite button
-    e.stopPropagation(); // Prevent the click from propagating to the list item's own handler
 
-    const shopId = target.dataset.shopId;
-    if (!shopId) return;
+// Handle favorite button clicks via delegation
+document.addEventListener('DOMContentLoaded', () => {
+    const top100Container = document.getElementById('top100-list');
+    if (!top100Container) return;
+    top100Container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.favorite-btn');
+        if (!btn) return;
+        e.stopPropagation();
 
-    // Find the full shop info from the processedShops array
-    const shopInfo = processedShops.find(shop => String(shop.id) === String(shopId)); // Ensure type comparison
-    if (!shopInfo) return;
+        const shopId = btn.dataset.shopId;
+        if (!shopId) return;
 
-    const svg = target.querySelector('svg');
+        const shopInfo = processedShops.find(s => String(s.id) === String(shopId));
+        if (!shopInfo) return;
 
-    const isAlreadyFavorited = favorites.some(fav => String(fav.shop_id) === String(shopInfo.id));
+        const svg = btn.querySelector('svg');
+        const isAlreadyFavorited = favorites.some(fav => String(fav.shop_id) === String(shopInfo.id));
 
-    // Async IIFE to handle favorite toggle
-    (async () => {
         try {
-            // Get or create the shop in the 'shops' table for consistent shop_id in favorites
             const resolvedShopId = await getOrCreateShop(
                 shopInfo.name,
                 shopInfo.address,
                 shopInfo.city,
                 shopInfo.lat,
                 shopInfo.lng,
-                shopInfo.country_code // Ensure country_code is passed
+                shopInfo.country_code
             );
 
             if (isAlreadyFavorited) {
                 await removeFromFavorites(shopInfo);
-                favorites = favorites.filter(fav => String(fav.shop_id) !== String(resolvedShopId));
-                target.classList.remove('favorited');
-                svg.innerHTML = `
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                `;
-                svg.classList.remove('text-red-500');
-                svg.classList.add('text-gray-400');
-                target.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
-                console.log(`Removed ${shopInfo.name} from favorites`);
+                favorites = favorites.filter(f => String(f.shop_id) !== String(resolvedShopId));
+                btn.classList.remove('favorited');
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>';
+                btn.setAttribute('aria-label', `Add ${shopInfo.name} to favorites`);
             } else {
                 await addToFavorites(shopInfo);
                 favorites.push({ shop_id: resolvedShopId, name: shopInfo.name });
-                target.classList.add('favorited');
-                svg.innerHTML = `
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                `;
-                svg.classList.remove('text-gray-400');
-                svg.classList.add('text-red-500');
-                target.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
-                console.log(`Added ${shopInfo.name} to favorites`);
+                btn.classList.add('favorited');
+                svg.innerHTML = '<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>';
+                btn.setAttribute('aria-label', `Remove ${shopInfo.name} from favorites`);
             }
 
-            updateFavoritesModal(); // Update the separate favorites modal/list
+            updateFavoritesModal();
         } catch (err) {
             console.error('Error toggling favorite:', err);
         }
-    })();
-}
+    });
+});
 
 // Get references to the modal elements and buttons
 const top100Modal = document.getElementById('top100');
