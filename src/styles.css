@@ -1759,7 +1759,7 @@ body, html {
   left: 50%;
   transform: translateX(-50%) translateY(100%);
   width: 100vw;
-  height: clamp(80vh, 80vh, 80vh);
+  height: clamp(100vh, 100vh, 100vh);
   padding: 0;
   border-radius: 12px 12px 0 0;
   border: 1px solid black;
