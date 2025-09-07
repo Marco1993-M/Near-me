@@ -89,7 +89,7 @@ const getShopPhoto = (shop) => {
         return shop.photos[Math.floor(Math.random() * shop.photos.length)];
     }
     // Use app logo as placeholder
-    return '/logo.png'; // <-- replace with your logo path
+    return '/Logo.png'; // <-- replace with your logo path
 };
 
         processedShops.forEach((shop, index) => {
