@@ -19,53 +19,63 @@ export function hideModal(modalId) {
 
 const toastMessages = {
   favorites: [
-    "You’re not alone – 200+ others love this café too ☕️",
-    "Nice choice 👌 Added to your favorites.",
-    "Trending pick! 🔥 Just saved for you.",
-    "Favorited 💛 Ready to plan your coffee crawl?",
-    "Saved ✅ – check your favorites anytime."
+    "You’ve got great taste 👌 That café is now in your faves.",
+    "Barista approved ✅ Saved to your coffee crawl list.",
+    "Trending pick! 🔥 Everyone’s buzzing about this one.",
+    "Saved 💛 Good luck resisting a daily visit now.",
+    "Michael Scott voice: ‘Would I rather be feared or loved?’ Easy — loved. Just like this café. 💕"
   ],
   reviews: [
-    "Your voice matters 📝 Thanks for sharing!",
-    "Review posted 🌟 You’re helping others discover great coffee.",
-    "Cheers ☕ Your feedback makes cafés better.",
-    "Nice one! 👏 Review submitted successfully."
+    "Your voice matters 📝 Thanks for spreading the coffee gospel.",
+    "Review posted 🌟 You’re officially a coffee critic!",
+    "Cheers ☕ You just made cafés better for everyone.",
+    "Nice one 👏 Future coffee explorers salute you.",
+    "Dwight Schrute would be proud: ‘Fact. That review was legendary.’ 🧃"
   ],
   explore: [
-    "Searching nearby... 🔍 hidden gems await!",
-    "Adventure time 🚶 Discover cafés around you.",
-    "Explore mode on ✨ Let’s find your next favorite spot.",
-    "Ready for a coffee crawl? 🗺️"
+    "Searching nearby... 🔍 Hidden gems await!",
+    "Adventure time 🚶 Grab your mug, let’s explore.",
+    "Explore mode on ✨ May the brews be ever in your favor.",
+    "Ready for a coffee crawl? 🗺️",
+    "Joey doesn’t share food... but he’d share this latte. ☕😂"
   ],
   success: [
-    "Done ✅ That worked perfectly!",
-    "All good 👍 Task completed.",
-    "Smooth as espresso ☕ Success!"
+    "Done ✅ Smooth as espresso.",
+    "All good 👍 Another win for Team Coffee.",
+    "Barista magic complete ✨",
+    "Success! 🎉 That went down easier than your first sip.",
+    "Dwight: ‘Identity theft is not a joke, Jim!’ … but success? Totally real. ✅"
   ],
   error: [
     "Oops 😅 Something went wrong.",
-    "Error 🚨 Please try again.",
+    "Error 🚨 Even baristas burn milk sometimes.",
     "We spilled the coffee... ☕ Retry?",
-    "Hmm 🤔 that didn’t work."
+    "Hmm 🤔 That didn’t work — maybe switch to decaf?",
+    "Michael Scott: ‘I am Beyoncé, always.’ But right now… you’re error Beyoncé. 🙃"
   ],
   info: [
     "Heads up 💡",
-    "FYI 📢",
-    "Did you know? 🤓"
+    "FYI 📢 This could change your coffee life.",
+    "Did you know? 🤓 Coffee naps are scientifically legit.",
+    "Pro tip 🛠️ Use favorites to plan your caffeine crawl.",
+    "Barista wisdom: never trust a café without good biscotti. 😉"
   ],
   pageLoad: [
-    "Welcome! 👋 Discover cafés nearby or check your favorites.",
-    "Hey there ☕ Ready to explore some amazing coffee?",
-    "Let’s find your next favorite spot! 🔎",
-    "Good to see you! 🌟 Start searching or leave a review."
+    "Welcome 👋 Ready to sniff out your next caffeine fix?",
+    "Hey there ☕ The beans are hot, the map is yours.",
+    "Let’s find your new favorite spot 🔎",
+    "Good to see you 🌟 Coffee adventures await.",
+    "Andy Bernard: ‘These are the good old coffee days.’ ❤️"
   ],
   search: [
-    "Nice choice! 👌",
-    "You’re not alone – 200+ others love this café too ☕️",
-    "Trending pick! 🔥",
-    "Looking good! Check out what’s nearby."
+    "Nice choice 👌 That one’s worth the hype.",
+    "Hot pick! 🔥 Might be your new go-to spot.",
+    "Looking good 😍 Check out what’s nearby too.",
+    "Found it! 🗺️ Your coffee destiny awaits.",
+    "Michael Scott: ‘I’m ready to get hurt again.’ … by falling for another café. ❤️"
   ]
 };
+
 
 export function showToast({ message = null, category = "info", type = "info", duration = 3000 } = {}) {
   let toast = document.getElementById("toast");
