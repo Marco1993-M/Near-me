@@ -338,22 +338,45 @@
 
 
 
-  <!-- Top 100 modal -->
-  <dialog id="top100" class="modal hidden">
-    <div class="modal-content">
-      <button class="modal-close top100-modal-close-button" aria-label="Close top 100">×</button>
-      <h2 class="top100-modal-heading">Top 100 Coffee Shops</h2>
-      <h3 class="top100-modal-sub-heading">Explore the world’s best coffee — as rated by our community.</h3>
-      <ul id="top100-list" class="top100-modal-list">
-        <li class="top100-modal-list-item">
-          <div class="top100-modal-shop-info"></div>
-          <div class="top100-modal-actions">
-            <button class="top100-modal-button"></button>
-          </div>
-        </li>
-      </ul>
+<!-- Top 100 modal -->
+<dialog id="top100" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close top100-modal-close-button" aria-label="Close top 100">×</button>
+    <h2 class="top100-modal-heading">Explore Coffee Shops</h2>
+    <h3 class="top100-modal-sub-heading">Explore the best coffee rated by our community.</h3>
+
+    <!-- Filters -->
+    <div class="top100-filters" style="margin-bottom:1rem; display:flex; gap:1rem; flex-wrap:wrap;">
+      <label>
+        City:
+        <select id="top100-city-filter">
+          <option value="">All Cities</option>
+        </select>
+      </label>
+     <label>
+  Minimum Rating:
+  <select id="top100-rating-filter">
+    <option value="0">All Ratings</option>
+    <option value="1">1+</option>
+    <option value="2">2+</option>
+    <option value="3">3+</option>
+    <option value="4">4+</option>
+    <option value="5">5+</option>
+    <option value="6">6+</option>
+    <option value="7">7+</option>
+    <option value="8">8+</option>
+    <option value="9">9+</option>
+    <option value="10">10</option>
+  </select>
+</label>
+
     </div>
-  </dialog>
+
+    <ul id="top100-list" class="top100-modal-list">
+      <!-- Shop cards will be appended here dynamically -->
+    </ul>
+  </div>
+</dialog>
 
   <!-- Favorites modal -->
  <dialog id="favorites" class="modal hidden" id="favorite-modal">
