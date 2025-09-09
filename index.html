@@ -379,22 +379,33 @@
   </div>
 </dialog>
 
-  <!-- Favorites modal -->
- <dialog id="favorites" class="modal hidden" id="favorite-modal">
-    <div class="modal-content">
-      <button class="modal-close favorite-modal-close-button" aria-label="Close favorites">×</button>
-      <h2 class="favorite-modal-heading">Favorites</h2>
-      <h2 class="favorite-modal-sub-heading">All your favorites live here.</h2>
-      <ul id="favorites-list" class="favorite-modal-list">
-        <li class="favorite-modal-list-item favorite-item">
-          <div class="favorite-modal-shop-info"></div>
-          <div class="favorite-modal-actions">
-            <button class="favorite-modal-button"></button>
-          </div>
-        </li>
-      </ul>
+
+<!-- Favorites modal -->
+<dialog id="favorites" class="modal hidden">
+  <div class="modal-content">
+    <button class="modal-close favorite-modal-close-button" aria-label="Close favorites">×</button>
+    <h2 class="favorite-modal-heading">Favorites</h2>
+    <h2 class="favorite-modal-sub-heading">All your favorites live here.</h2>
+
+    <!-- Bento-style grid -->
+    <div id="favorites-list" class="favorite-modal-grid">
+      <!-- Each favorite item -->
+      <div class="favorite-modal-item">
+        <img src="shop1.jpg" alt="Shop 1" />
+        <div class="favorite-item-info">
+          <h4>Coffee Corner</h4>
+          <p>Rating: 9/10</p>
+        </div>
+        <div class="favorite-modal-actions">
+          <button class="favorite-modal-button view" aria-label="View shop"></button>
+          <button class="favorite-modal-button remove" aria-label="Remove from favorites"></button>
+        </div>
+      </div>
+
+      <!-- Repeat for other favorite items -->
     </div>
-  </dialog>
+  </div>
+</dialog>
 
 <div id="quiz-modal" class="hidden">
   <div class="quiz-container">
