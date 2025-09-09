@@ -66,7 +66,7 @@ export function initTasteProfile() {
   const quizOptions = document.getElementById('quiz-options');
   const progressBar = document.getElementById('quiz-progress');
   const closeButton = document.getElementById('quiz-close-btn');
-  const openButton = document.getElementById('taste-profile-btn');
+  const openButton = document.getElementById('quiz-button');
 
   // --- State ---
   let currentQuestionIndex = 0;
