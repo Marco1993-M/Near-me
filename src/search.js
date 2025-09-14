@@ -66,52 +66,63 @@ export function initSearch() {
 
   // --- Enter key handler ---
   searchDropdown.addEventListener('click', async (e) => {
-  const li = e.target.closest('li[data-type]');
-  if (!li) return;
+    const li = e.target.closest('li[data-type]');
+    if (!li) return;
 
-  const type = li.dataset.type;
-  const placeId = li.dataset.placeId;
-  const roasterName = li.dataset.roasterName;
+    const type = li.dataset.type;
+    const placeId = li.dataset.placeId;
+    const roasterName = li.dataset.roasterName;
 
-  // **Hide dropdown immediately**
-  searchDropdown.classList.add('hidden');
+    // **Hide dropdown immediately**
+    searchDropdown.classList.add('hidden');
 
-  try {
-    if (type === 'city') {
-      if (!placeId) return console.warn('City missing placeId');
-      const geo = await geocodePlaceId(placeId);
-      await centerMapOnCity(geo);
+    try {
+      if (type === 'city') {
+        if (!placeId) return console.warn('City missing placeId');
+        const geo = await geocodePlaceId(placeId);
+        await centerMapOnCity(geo);
+
+        // --- Update URL slug ---
+        const slug = slugify(li.textContent);
+        history.pushState({}, '', `/cities/${slug}`);
+      }
+
+      if (type === 'shop') {
+        if (!placeId) return console.warn('Shop missing placeId');
+        const place = await getPlaceDetails(placeId);
+        await focusShopOnMap(place);
+
+        // --- Update URL slug ---
+        const slug = slugify(place.name);
+        history.pushState({}, '', `/shops/${slug}`);
+      }
+
+      if (type === 'roaster') {
+        if (!roasterName) return console.warn('Roaster missing name');
+        const { data: allShops, error } = await supabase
+          .from('shops')
+          .select('*')
+          .not('roasters', 'is', null);
+
+        if (error) throw error;
+
+        const filteredShops = allShops.filter(s =>
+          Array.isArray(s.roasters)
+            ? s.roasters.some(r => r.toLowerCase() === roasterName.toLowerCase())
+            : s.roasters.toLowerCase() === roasterName.toLowerCase()
+        );
+
+        const highlightIds = filteredShops.map(s => s.id);
+        await displayShopsOnMap(allShops, highlightIds);
+
+        // --- Update URL slug ---
+        const slug = slugify(roasterName);
+        history.pushState({}, '', `/roasters/${slug}`);
+      }
+    } catch (err) {
+      console.error(`${type} click failed`, err);
     }
-
-    if (type === 'shop') {
-      if (!placeId) return console.warn('Shop missing placeId');
-      const place = await getPlaceDetails(placeId);
-      await focusShopOnMap(place);
-    }
-
-    if (type === 'roaster') {
-      if (!roasterName) return console.warn('Roaster missing name');
-      const { data: allShops, error } = await supabase
-        .from('shops')
-        .select('*')
-        .not('roasters', 'is', null);
-
-      if (error) throw error;
-
-      const filteredShops = allShops.filter(s =>
-        Array.isArray(s.roasters)
-          ? s.roasters.some(r => r.toLowerCase() === roasterName.toLowerCase())
-          : s.roasters.toLowerCase() === roasterName.toLowerCase()
-      );
-
-      const highlightIds = filteredShops.map(s => s.id);
-      await displayShopsOnMap(allShops, highlightIds);
-    }
-  } catch (err) {
-    console.error(`${type} click failed`, err);
-  }
-});
-
+  });
 }
 
 /* -------------------- UNIFIED SEARCH -------------------- */
@@ -274,8 +285,6 @@ function renderSearchResults({ shops, roasters, cities }, dropdown) {
   }
 }
 
-
-
 /* -------------------- UTILITIES -------------------- */
 function debounce(fn, wait) {
   let timeout;
@@ -283,6 +292,16 @@ function debounce(fn, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(() => fn(...args), wait);
   };
+}
+
+function slugify(text) {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, '-and-')
+    .replace(/[\s\W-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /* -------------------- CITY HANDLING -------------------- */
@@ -412,7 +431,7 @@ async function focusShopOnMap(place) {
   shop.id = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
   await showFloatingCard(shop);
 
-    // **SHOW TOAST FOR SEARCH RESULT**
+  // **SHOW TOAST FOR SEARCH RESULT**
   showToast({ category: "search", type: "info", duration: 5000 });
 }
 
