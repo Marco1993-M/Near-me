@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Near Me</title>
+  
+  <!-- Title & Description -->
+  <title>Near Me Café – Discover the Best Coffee Shops Near You</title>
+  <meta name="description" content="Near Me helps you discover the best coffee shops near you. Explore cafes by city, find the Top 100 coffee shops, and take a quiz to discover your coffee taste profile." />
+  <meta name="keywords" content="coffee shops near me, best cafes, top 100 coffee shops, coffee quiz, specialty coffee, find coffee shops" />
 
   <!-- Sentry script -->
   <script
@@ -25,13 +29,33 @@
   <meta name="apple-mobile-web-app-title" content="Near Me" />
   <link rel="manifest" href="/favicon/site.webmanifest" />
 
+  <!-- Open Graph / Facebook -->
+  <meta property="og:title" content="Near Me Café – Find the Best Coffee Shops Near You" />
+  <meta property="og:description" content="Discover top-rated coffee shops by city, explore the Top 100 cafes, and take a quiz to find your unique coffee taste profile." />
+  <meta property="og:image" content="https://www.near-me.cafe/assets/Logo-79ycO1MP.png" />
+  <meta property="og:url" content="https://www.near-me.cafe/" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Near Me Café – Find the Best Coffee Shops Near You" />
+  <meta name="twitter:description" content="Discover top-rated coffee shops by city, explore the Top 100 cafes, and take a quiz to find your unique coffee taste profile." />
+  <meta name="twitter:image" content="https://www.near-me.cafe/assets/Logo-79ycO1MP.png" />
+
+  <!-- Canonical link -->
+  <link rel="canonical" href="https://www.near-me.cafe/" />
+
+  <!-- Language -->
+  <meta http-equiv="Content-Language" content="en-ZA" />
+
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Near Me Cafe",
-    "url": "https://www.near-me.cafe",
+    "name": "Near Me Café",
+    "url": "https://www.near-me.cafe/",
+    "description": "Discover the best coffee shops near you, explore the Top 100 cafes, and take our coffee taste profile quiz.",
     "potentialAction": {
       "@type": "SearchAction",
       "target": "https://www.near-me.cafe/search?q={search_term_string}",
@@ -40,65 +64,65 @@
   }
   </script>
 
- <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "CafeOrCoffeeShop",
-  "name": "Sorcery Coffee",
-  "image": "https://www.near-me.cafe/images/sorcery-coffee.jpg",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "177 Lunnon Rd",
-    "addressLocality": "Hillcrest",
-    "addressRegion": "Gauteng",
-    "postalCode": "0083",
-    "addressCountry": "ZA"
-  },
-  "geo": {
-    "@type": "GeoCoordinates",
-    "latitude": -25.7545,
-    "longitude": 28.2366
-  },
-  "telephone": "+27-12-345-6789",
-  "url": "https://www.near-me.cafe/cafes/sorcery-coffee",
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.8",
-    "reviewCount": "124"
-  },
-  "openingHours": "Mo-Su 07:00-17:00",
-  "hasMap": "https://www.google.com/maps/place/177+Lunnon+Rd,+Hillcrest,+Pretoria",
-  "review": [
-    {
-      "@type": "Review",
-      "author": {
-        "@type": "Person",
-        "name": "Ella Brew"
-      },
-      "datePublished": "2025-07-21",
-      "reviewBody": "Absolutely loved the flat white. Cozy, welcoming and the baristas are top-tier!",
-      "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": "5"
-      }
+  <!-- Existing Cafe Example Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CafeOrCoffeeShop",
+    "name": "Sorcery Coffee",
+    "image": "https://www.near-me.cafe/images/sorcery-coffee.jpg",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "177 Lunnon Rd",
+      "addressLocality": "Hillcrest",
+      "addressRegion": "Gauteng",
+      "postalCode": "0083",
+      "addressCountry": "ZA"
     },
-    {
-      "@type": "Review",
-      "author": {
-        "@type": "Person",
-        "name": "Tom Roast"
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": -25.7545,
+      "longitude": 28.2366
+    },
+    "telephone": "+27-12-345-6789",
+    "url": "https://www.near-me.cafe/cafes/sorcery-coffee",
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "124"
+    },
+    "openingHours": "Mo-Su 07:00-17:00",
+    "hasMap": "https://www.google.com/maps/place/177+Lunnon+Rd,+Hillcrest,+Pretoria",
+    "review": [
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "Ella Brew"
+        },
+        "datePublished": "2025-07-21",
+        "reviewBody": "Absolutely loved the flat white. Cozy, welcoming and the baristas are top-tier!",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "5"
+        }
       },
-      "datePublished": "2025-07-18",
-      "reviewBody": "Excellent pour-over and a great spot to work from. Highly recommended for specialty coffee lovers.",
-      "reviewRating": {
-        "@type": "Rating",
-        "ratingValue": "4"
+      {
+        "@type": "Review",
+        "author": {
+          "@type": "Person",
+          "name": "Tom Roast"
+        },
+        "datePublished": "2025-07-18",
+        "reviewBody": "Excellent pour-over and a great spot to work from. Highly recommended for specialty coffee lovers.",
+        "reviewRating": {
+          "@type": "Rating",
+          "ratingValue": "4"
+        }
       }
-    }
-  ]
-}
-</script>
-
+    ]
+  }
+  </script>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -113,6 +137,7 @@
     gtag('config', 'G-X2Z44FJY9Z');
   </script>
 </head>
+
 
 
 <body>
