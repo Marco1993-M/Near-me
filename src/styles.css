@@ -2293,21 +2293,35 @@ dialog#favorites[open] {
   bottom: -100%; /* start off-screen */
   left: 0;
   width: 100%;
-  height: 85vh;
-  background: rgba(255, 255, 255, 0.8);
+  height: 100%;
+  background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   color: #000000;
   border-radius: 12px 12px 0 0; /* rounded top only */
   border: 0.5px solid #000000;
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
-  padding: 32px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  padding-top: 80px; /* increase top padding to bring content down */
+  padding-right: 32px;
+  padding-bottom: 32px;
+  padding-left: 32px;
   z-index: 1001;
   opacity: 0;
   transition: bottom 0.35s ease, opacity 0.35s ease;
+}
+
+@keyframes slideUpTop100 {
+  0% {
+    transform: translateX(-50%) translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) translateY(0%);
+    opacity: 1;
+  }
 }
 
 #quiz-modal.visible {
@@ -2334,9 +2348,8 @@ dialog#favorites[open] {
 #quiz-options {
   display: flex;           /* make it a flex container */
   flex-direction: column;  /* stack buttons vertically */
-  gap: 5px;               /* space between buttons */
+  gap: 10px;               /* space between buttons */
 }
-
 /* Options buttons */
 .quiz-option {
   width: 100%;
@@ -2349,8 +2362,8 @@ dialog#favorites[open] {
   color: #000;
   opacity: 0;
   transform: translateY(10px);
-  gap: 20px;
   transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease-in-out;
+  pointer-events: auto;
 }
 
 .quiz-option.enter {
@@ -2519,11 +2532,14 @@ dialog#favorites[open] {
 /* ------------------------- */
 @media (max-width: 480px) {
   #quiz-modal {
-    padding: 8px 8px;
+  padding-top: 32px; /* increase top padding to bring content down */
+  padding-right: 32px;
+  padding-bottom: 32px;
+  padding-left: 32px;
   }
   .profile-name {
     font-size: 22px;
-    padding-bottom: 1px;
+    padding-bottom: 6px;
   }
   .bean-name {
     font-size: 1.4rem;
@@ -2539,6 +2555,7 @@ dialog#favorites[open] {
     font-size: 14px;
   }
 }
+
 
 /* ------------------------- */
 /* Hidden Utility Class */
