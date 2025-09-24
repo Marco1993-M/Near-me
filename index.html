@@ -475,21 +475,31 @@
   <div class="quiz-container">
     <button id="quiz-close-btn" class="modal-close" aria-label="Close">&times;</button>
 
-    <!-- Progress bar -->
-    <div id="quiz-progress" class="quiz-progress"></div>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="welcome-screen">
+      <h2>Welcome to Your Coffee Taste Quiz ☕</h2>
+      <p>Discover your perfect coffee profile in just 5 questions!</p>
+      <button id="start-quiz-btn" class="quiz-option">Start Quiz</button>
+    </div>
 
-    <!-- Question -->
-    <div id="quiz-question"></div>
+    <!-- Quiz Content -->
+    <div id="quiz-content" class="hidden">
+      <!-- Progress bar -->
+      <div id="quiz-progress" class="quiz-progress"></div>
 
-    <!-- Options -->
-    <div id="quiz-options"></div>
+      <!-- Question -->
+      <div id="quiz-question"></div>
 
-    <!-- Flavor wheel (radar chart) -->
-    <canvas id="flavor-wheel" width="200" height="200" style="margin-top:16px; display:none;"></canvas>
+      <!-- Options -->
+      <div id="quiz-options"></div>
+
+      <!-- Flavor wheel (radar chart) -->
+      <canvas id="flavor-wheel" width="200" height="200" style="margin-top:16px; display:none;"></canvas>
+    </div>
   </div>
 </div>
 
-  <!-- Quiz Results Page -->
+<!-- Quiz Results Page -->
 <div id="quiz-results" class="quiz-results hidden">
   <h2 id="quiz-results-heading" class="quiz-results-heading"></h2>
   <p id="quiz-results-description" class="quiz-results-description"></p>
