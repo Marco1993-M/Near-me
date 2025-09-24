@@ -63,6 +63,17 @@ export function initTasteProfile() {
     { slug: 'balanced-elegant', name: "⚖️Balanced & Elegant⚖️", description: "Seeks harmony across flavor, body, and acidity.", tags: ["balanced"], beans: ["Panama Geisha", "Honduras SHG"] }
   ];
 
+
+  const startBtn = document.getElementById('start-quiz-btn');
+const welcomeScreen = document.getElementById('welcome-screen');
+const quizContent = document.getElementById('quiz-content');
+
+startBtn.addEventListener('click', () => {
+  welcomeScreen.classList.add('hidden');
+  quizContent.classList.remove('hidden');
+  showQuestion(0); // start the quiz
+});
+
   // --- DOM Elements ---
   const quizModal = document.getElementById('quiz-modal');
   const quizQuestion = document.getElementById('quiz-question');
