@@ -126,70 +126,88 @@ export function initSearch() {
 }
 
 /* -------------------- UNIFIED SEARCH -------------------- */
+/* -------------------- UNIFIED SEARCH (Optimized) -------------------- */
 let lastQueryId = 0;
+const searchCache = new Map();
+let roasterCache = null;
 
-async function performUnifiedSearch(query, userLocation) {
-  query = query.toLowerCase();
-  const queryId = ++lastQueryId; // track this request
-
-  const { cities, places } = await getPlacePredictionsGrouped(query, userLocation);
-
-  // stale guard → ignore old responses
-  if (queryId !== lastQueryId) return { cities: [], shops: [], roasters: [] };
-
-  // --- Shops (Google Places) with full details ---
-  const shops = [];
-  const placesService = new google.maps.places.PlacesService(document.createElement('div'));
-
-  for (const p of places) {
-    try {
-      const place = await new Promise((resolve, reject) => {
-        placesService.getDetails({ placeId: p.place_id }, (details, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK) resolve(details);
-          else resolve(null); // ignore errors
-        });
-      });
-
-      if (place) {
-        shops.push({
-          name: place.name,
-          place_id: place.place_id,
-          type: 'shop',
-          lat: place.geometry?.location?.lat?.(),
-          lng: place.geometry?.location?.lng?.(),
-          description: place.formatted_address || ''
-        });
-      }
-    } catch (err) {
-      console.warn('Failed to get details for place', p.place_id, err);
-    }
-  }
-
-  // --- Roasters (Supabase) ---
-  let roasters = [];
-  try {
+// --- Fetch and cache roasters once ---
+async function getRoastersFromSupabase(query) {
+  if (!roasterCache) {
     const { data, error } = await supabase
       .from('shops')
       .select('roasters')
       .not('roasters', 'is', null);
 
-    if (!error && data) {
-      const allRoasters = data.flatMap(s =>
-        Array.isArray(s.roasters) ? s.roasters : [s.roasters]
-      );
-      const uniqueRoasters = [...new Set(allRoasters)];
-      roasters = uniqueRoasters
-        .filter(r => r.toLowerCase().includes(query))
-        .map(r => ({ name: r, type: 'roaster' }));
+    if (error) {
+      console.error('Roaster fetch error:', error);
+      return [];
     }
-  } catch (err) {
-    console.error('Roaster search error:', err);
+
+    const allRoasters = data.flatMap(s =>
+      Array.isArray(s.roasters) ? s.roasters : [s.roasters]
+    );
+    roasterCache = [...new Set(allRoasters.map(r => r.trim()))];
   }
 
-  // --- Cities ---
+  return roasterCache
+    .filter(r => r.toLowerCase().includes(query.toLowerCase()))
+    .map(r => ({ name: r, type: 'roaster' }));
+}
+
+export async function performUnifiedSearch(query, userLocation) {
+  query = query.toLowerCase();
+  const queryId = ++lastQueryId;
+
+  // --- Cache check ---
+  if (searchCache.has(query)) {
+    return searchCache.get(query);
+  }
+
+  // --- Parallelize Google + roasters ---
+  const [googleResults, roasters] = await Promise.all([
+    getPlacePredictionsGrouped(query, userLocation),
+    getRoastersFromSupabase(query)
+  ]);
+
+  if (queryId !== lastQueryId) return { cities: [], shops: [], roasters: [] }; // stale
+
+  const { cities, places } = googleResults;
+
+  // --- Batch shop details requests ---
+  const placesService = new google.maps.places.PlacesService(document.createElement('div'));
+  const detailPromises = places.map(p =>
+    new Promise(resolve => {
+      placesService.getDetails({ placeId: p.place_id }, (details, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          resolve({
+            name: details.name,
+            place_id: details.place_id,
+            type: 'shop',
+            lat: details.geometry?.location?.lat?.(),
+            lng: details.geometry?.location?.lng?.(),
+            description: details.formatted_address || ''
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    })
+  );
+
+  const details = await Promise.allSettled(detailPromises);
+  const shops = details
+    .filter(d => d.status === 'fulfilled' && d.value)
+    .map(d => d.value);
+
+  // --- Cities with type ---
   const citiesWithType = (cities || []).map(c => ({ ...c, type: 'city' }));
 
-  return { cities: citiesWithType, shops, roasters };
+  // --- Final result ---
+  const result = { cities: citiesWithType, shops, roasters };
+
+  searchCache.set(query, result); // store in cache
+  return result;
 }
 
 
