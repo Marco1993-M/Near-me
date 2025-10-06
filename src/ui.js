@@ -17,6 +17,8 @@ export function hideModal(modalId) {
   // code to hide a modal...
 }
 
+// UI.js
+
 const toastMessages = {
   favorites: [
     "You’ve got great taste 👌 That café is now in your faves.",
@@ -65,41 +67,66 @@ const toastMessages = {
     "Hey there ☕ The beans are hot, the map is yours.",
     "Let’s find your new favorite spot 🔎",
     "Good to see you 🌟 Coffee adventures await.",
-    "These are the good old coffee days. ❤️",
-    "I declare… COFFEE! ☕️",
-    "You miss 100% of the shots you don’t take. – Wayne Gretzky – Michael Scott 🏀"
+    "Office quote break: ‘I wish there was a way to know you’re in the good old days before you’ve actually left them.’ — Andy. Guess what? These are the good old coffee days. ❤️"
   ],
   search: [
-    "Nice choice 👌",
-    "Hot pick! 🔥",
+    "Nice choice 👌 That one’s worth the hype.",
+    "Hot pick! 🔥 Might be your new go-to spot.",
     "Looking good 😍 Check out what’s nearby too.",
     "Found it! 🗺️ Your coffee destiny awaits.",
-    "I’m ready to get hurt again. 💔☕️",
-    "Assistant to the Regional Barista. ☕️"
+    "Michael Scott: ‘I’m ready to get hurt again.’ … by falling for another café. ❤️"
   ]
 };
 
 
 export function showToast({ message = null, category = "info", type = "info", duration = 3000 } = {}) {
-  let toast = document.getElementById("toast");
-
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "toast";
-    document.body.appendChild(toast);
+  // Ensure a toast container exists
+  let container = document.getElementById("toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.style.position = "fixed";
+    container.style.bottom = "20px";
+    container.style.left = "50%";
+    container.style.transform = "translateX(-50%)";
+    container.style.zIndex = "9999";
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "10px";
+    document.body.appendChild(container);
   }
 
   const pool = toastMessages[category] || toastMessages.info;
   const finalMessage = message || pool[Math.floor(Math.random() * pool.length)];
 
-  toast.className = `show ${type}`;
+  const toast = document.createElement("div");
   toast.textContent = finalMessage;
+  toast.className = `toast ${type}`;
+  toast.style.background = "rgba(0,0,0,0.85)";
+  toast.style.color = "white";
+  toast.style.padding = "10px 20px";
+  toast.style.borderRadius = "8px";
+  toast.style.fontSize = "14px";
+  toast.style.opacity = "0";
+  toast.style.transform = "translateY(20px)";
+  toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
 
-  clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => {
-    toast.className = toast.className.replace("show", "");
+  container.appendChild(toast);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.style.opacity = "1";
+    toast.style.transform = "translateY(0)";
+  });
+
+  // Remove after duration
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(20px)";
+    toast.addEventListener("transitionend", () => toast.remove(), { once: true });
   }, duration);
 }
+
 
 
 
