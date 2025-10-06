@@ -1,4 +1,7 @@
 import supabase from './supabase.js';
+import { showToast } from './UI.js';
+
+/* ------------------------------ HELPERS ------------------------------ */
 
 async function getCurrentUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -6,13 +9,20 @@ async function getCurrentUser() {
   return user;
 }
 
-function closeReviewBanner(reviewBanner) {
+function closeReviewBanner(reviewBanner, afterClose) {
   reviewBanner.style.animation = 'slideDown 0.3s ease-in forwards';
-  reviewBanner.addEventListener('animationend', () => {
-    reviewBanner.classList.add('hidden');
-    reviewBanner.style.animation = '';
-    document.body.classList.remove('body-no-scroll');
-  }, { once: true });
+  reviewBanner.addEventListener(
+    'animationend',
+    () => {
+      reviewBanner.classList.add('hidden');
+      reviewBanner.style.animation = '';
+      document.body.classList.remove('body-no-scroll');
+      if (typeof afterClose === 'function') {
+        try { afterClose(); } catch (err) { console.error('afterClose callback error', err); }
+      }
+    },
+    { once: true }
+  );
 }
 
 function buildReviewBannerHTML(shop) {
@@ -49,54 +59,80 @@ function buildReviewBannerHTML(shop) {
   `;
 }
 
-export async function showReviewBanner(shop) {
+/* -------------------------- DEFAULT CALLBACK -------------------------- */
+
+function defaultAfterReview(shop) {
+  // Try showing details modal if available
+  if (typeof window.showShopDetails === 'function') {
+    window.showShopDetails(shop);
+    return;
+  }
+
+  // Otherwise, visually highlight the shop card if present
+  const shopCard = document.querySelector(`[data-shop-id="${shop.id}"]`);
+  if (shopCard) {
+    shopCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    shopCard.classList.add('highlight');
+    setTimeout(() => shopCard.classList.remove('highlight'), 2000);
+  } else {
+    console.log(`Review submitted for ${shop.name}, but no card found.`);
+  }
+}
+
+/* ---------------------------- MAIN FUNCTION ---------------------------- */
+
+export async function showReviewBanner(shop, { onSuccess } = {}) {
   if (!shop?.name || !shop?.address || !shop?.city) return;
+
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) return;
 
-  // Ensure logged in
+  // Check user login
   let user;
-  try { user = await getCurrentUser(); } 
-  catch {
+  try {
+    user = await getCurrentUser();
+  } catch {
     if (window.showAuthBannerIfNotLoggedIn) {
       const loggedIn = await window.showAuthBannerIfNotLoggedIn();
       if (!loggedIn) return;
       user = await getCurrentUser();
     } else {
-      alert('You must be logged in to leave a review.');
+      showToast({ message: "You must be logged in to leave a review.", category: "error" });
       return;
     }
   }
 
+  // Render banner
   reviewBanner.innerHTML = buildReviewBannerHTML(shop);
   reviewBanner.classList.remove('hidden');
   reviewBanner.style.animation = 'slideUp 0.4s ease-out forwards';
   document.body.classList.add('body-no-scroll');
   reviewBanner.addEventListener('click', e => e.stopPropagation());
 
-  // Rating carousel
+  // Rating logic
   const ratingContainer = reviewBanner.querySelector('#rating-container');
   const ratingButtons = reviewBanner.querySelectorAll('.rating-pill');
   let selectedRating = 5;
 
-  ratingButtons.forEach(btn => btn.addEventListener('click', () => {
-    ratingButtons.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedRating = parseInt(btn.textContent);
-    // Smooth scroll to center selected rating
-    const scrollLeft = btn.offsetLeft + btn.offsetWidth / 2 - ratingContainer.offsetWidth / 2;
-    ratingContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-  }));
+  ratingButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      ratingButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRating = parseInt(btn.textContent, 10);
+      const scrollLeft = btn.offsetLeft + btn.offsetWidth / 2 - ratingContainer.offsetWidth / 2;
+      ratingContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    });
+  });
 
-  // Pre-select 5
+  // Pre-select middle button
   const middleButton = Array.from(ratingButtons).find(btn => btn.textContent === '5');
   if (middleButton) middleButton.click();
 
-  // Close handlers
+  // Close logic
   reviewBanner.querySelector('#review-drag-handle')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
   reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
 
-  // Specialty coffee toggle with smooth animation
+  // Specialty toggle
   const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
   const specialtySection = reviewBanner.querySelector('#specialty-details-section');
   toggleBtn?.addEventListener('click', () => {
@@ -105,19 +141,26 @@ export async function showReviewBanner(shop) {
       specialtySection.classList.remove('hidden');
       const fullHeight = specialtySection.scrollHeight;
       specialtySection.style.transition = 'height 0.3s ease-out';
-      requestAnimationFrame(() => specialtySection.style.height = fullHeight + 'px');
-      specialtySection.addEventListener('transitionend', () => { specialtySection.style.height = ''; specialtySection.style.transition = ''; }, { once: true });
+      requestAnimationFrame(() => (specialtySection.style.height = fullHeight + 'px'));
+      specialtySection.addEventListener('transitionend', () => {
+        specialtySection.style.height = '';
+        specialtySection.style.transition = '';
+      }, { once: true });
       toggleBtn.textContent = '− Hide Specialty Coffee Info';
     } else {
       const fullHeight = specialtySection.scrollHeight;
       specialtySection.style.height = fullHeight + 'px';
-      requestAnimationFrame(() => specialtySection.style.height = '0px');
-      specialtySection.addEventListener('transitionend', () => { specialtySection.classList.add('hidden'); specialtySection.style.height = ''; specialtySection.style.transition = ''; }, { once: true });
+      requestAnimationFrame(() => (specialtySection.style.height = '0px'));
+      specialtySection.addEventListener('transitionend', () => {
+        specialtySection.classList.add('hidden');
+        specialtySection.style.height = '';
+        specialtySection.style.transition = '';
+      }, { once: true });
       toggleBtn.textContent = '+ Add Specialty Coffee Info';
     }
   });
 
-  // Submit
+  // Submit handler
   reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async function handleSubmit() {
     const submitBtn = this;
     submitBtn.disabled = true;
@@ -127,12 +170,23 @@ export async function showReviewBanner(shop) {
     const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
     const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
 
-    if (!selectedRating) { alert('Please select a rating.'); submitBtn.disabled = false; return; }
-    if (!reviewText) { alert('Please write a review.'); submitBtn.disabled = false; return; }
+    if (!selectedRating) {
+      showToast({ message: "Please select a rating.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
+    if (!reviewText) {
+      showToast({ message: "Please write a review.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
 
     try {
-      let shopId = shop.id || await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
-      shop.id = shopId;
+      let shopId = shop.id;
+      if (!shopId) {
+        shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+        shop.id = shopId;
+      }
 
       const currentUser = await getCurrentUser();
       const review = {
@@ -147,16 +201,25 @@ export async function showReviewBanner(shop) {
         roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
         origin: reviewBanner.querySelector('#origin')?.value || null,
         tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
 
       const { error } = await supabase.from('reviews').insert([review]);
-      if (error) throw error;
+      if (error) {
+        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", type: "error", duration: 4000 });
+        submitBtn.disabled = false;
+        return;
+      }
 
-      closeReviewBanner(reviewBanner);
-      showShopDetails?.(shop);
+      // ✅ Success
+      showToast({ category: "reviews", type: "success", duration: 3000 });
+      closeReviewBanner(reviewBanner, () => {
+        if (typeof onSuccess === 'function') onSuccess(shop);
+        else defaultAfterReview(shop);
+      });
+
     } catch (err) {
-      alert(`Failed to submit review: ${err.message}`);
+      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", type: "error", duration: 4000 });
       submitBtn.disabled = false;
     }
   });
