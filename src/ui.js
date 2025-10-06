@@ -25,7 +25,7 @@ const toastMessages = {
     "Barista approved ✅ Saved to your coffee crawl list.",
     "Trending pick! 🔥 Everyone’s buzzing about this one.",
     "Saved 💛 Good luck resisting a daily visit now.",
-    "Michael Scott voice: ‘Would I rather be feared or loved?’ Easy — loved. Just like this café. 💕"
+    "Would I rather be feared or loved?’ Easy — loved. Just like this café. 💕"
   ],
   reviews: [
     "Your voice matters 📝 Thanks for spreading the coffee gospel.",
@@ -67,14 +67,14 @@ const toastMessages = {
     "Hey there ☕ The beans are hot, the map is yours.",
     "Let’s find your new favorite spot 🔎",
     "Good to see you 🌟 Coffee adventures await.",
-    "Office quote break: ‘I wish there was a way to know you’re in the good old days before you’ve actually left them.’ — Andy. Guess what? These are the good old coffee days. ❤️"
+    "Pivot!"
   ],
   search: [
     "Nice choice 👌 That one’s worth the hype.",
     "Hot pick! 🔥 Might be your new go-to spot.",
     "Looking good 😍 Check out what’s nearby too.",
     "Found it! 🗺️ Your coffee destiny awaits.",
-    "Michael Scott: ‘I’m ready to get hurt again.’ … by falling for another café. ❤️"
+    "Michael Scott: ‘I declare BANKRUPCY!"
   ]
 };
 
