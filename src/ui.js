@@ -80,52 +80,37 @@ const toastMessages = {
 
 
 export function showToast({ message = null, category = "info", type = "info", duration = 3000 } = {}) {
-  // Ensure a toast container exists
+  // Ensure a container exists
   let container = document.getElementById("toast-container");
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-container";
-    container.style.position = "fixed";
-    container.style.bottom = "20px";
-    container.style.left = "50%";
-    container.style.transform = "translateX(-50%)";
-    container.style.zIndex = "9999";
-    container.style.display = "flex";
-    container.style.flexDirection = "column";
-    container.style.gap = "10px";
     document.body.appendChild(container);
   }
 
+  // Pick message from category pool
   const pool = toastMessages[category] || toastMessages.info;
   const finalMessage = message || pool[Math.floor(Math.random() * pool.length)];
 
+  // Create toast element
   const toast = document.createElement("div");
+  toast.className = `custom-toast ${type}`;
   toast.textContent = finalMessage;
-  toast.className = `toast ${type}`;
-  toast.style.background = "rgba(0,0,0,0.85)";
-  toast.style.color = "white";
-  toast.style.padding = "10px 20px";
-  toast.style.borderRadius = "8px";
-  toast.style.fontSize = "14px";
-  toast.style.opacity = "0";
-  toast.style.transform = "translateY(20px)";
-  toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
 
   container.appendChild(toast);
 
-  // Animate in
-  requestAnimationFrame(() => {
-    toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
-  });
+  // Trigger fade-in
+  requestAnimationFrame(() => toast.classList.add("show"));
 
-  // Remove after duration
+  // Fade out after duration
   setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transform = "translateY(20px)";
+    toast.classList.remove("show");
     toast.addEventListener("transitionend", () => toast.remove(), { once: true });
   }, duration);
 }
+
+
+
 
 
 
