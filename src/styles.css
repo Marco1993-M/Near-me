@@ -2314,7 +2314,7 @@ dialog#favorites[open] {
   padding-right: 32px;
   padding-bottom: 32px;
   padding-left: 32px;
-  z-index: 1001;
+  z-index: 1002;
   opacity: 0;
   transition: bottom 0.35s ease, opacity 0.35s ease;
 }
@@ -2968,7 +2968,7 @@ dialog#favorites[open] {
   flex-direction: column;
   gap: 10px;
   align-items: center;
-  z-index: 9999;
+  z-index: 1001;
 }
 
 /* Individual toast */
