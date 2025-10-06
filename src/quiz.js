@@ -178,7 +178,7 @@ startBtn.addEventListener('click', () => {
       quizLoading.classList.remove('hidden');
       quizLoading.textContent = "Grinding your perfect cup… ☕";
     }
-    setTimeout(() => displayResults(), 1500);
+    setTimeout(() => displayResults(), 100);
   }
 
   // --- Display Results ---
