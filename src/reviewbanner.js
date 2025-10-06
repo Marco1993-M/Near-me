@@ -1,5 +1,5 @@
 import supabase from './supabase.js';
-import { showToast } from './UI.js';
+import { showToast } from './ui.js';
 
 /* ------------------------------ HELPERS ------------------------------ */
 
