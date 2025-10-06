@@ -43,26 +43,53 @@ export function initSearch() {
   }
 
   // --- Input handler (debounced) ---
-  searchInput.addEventListener(
-    'input',
-    debounce(async (e) => {
-      const query = e.target.value.trim();
-      if (!query) {
-        await resetMapToAllShops();
-        searchDropdown.classList.add('hidden');
-        searchDropdown.innerHTML = '';
-        return;
-      }
+ searchInput.addEventListener(
+  'input',
+  debounceAsync(async (e) => {
+    const query = e.target.value.trim();
+    if (!query) {
+      await resetMapToAllShops();
+      hideDropdown();
+      return;
+    }
 
-      try {
-        const { shops, cities, roasters } = await performUnifiedSearch(query, mapInstance.map.getCenter());
-        renderSearchResults({ shops, cities, roasters }, searchDropdown);
-      } catch (err) {
-        console.error('Search error:', err);
-        searchDropdown.classList.add('hidden');
-      }
-    }, 300)
-  );
+    try {
+      const { shops, cities, roasters } = await performUnifiedSearch(
+        query,
+        getMapInstance().map.getCenter()
+      );
+      renderSearchResults({ shops, cities, roasters }, searchDropdown);
+    } catch (err) {
+      console.error('Search error:', err);
+      hideDropdown();
+    }
+  }, 400)
+);
+
+/* -------------------- DEBOUNCE ASYNC -------------------- */
+function debounceAsync(fn, wait) {
+  let timeout;
+  let pendingPromise = null;
+  return function (...args) {
+    clearTimeout(timeout);
+    if (pendingPromise && pendingPromise.cancel) pendingPromise.cancel?.();
+    return new Promise((resolve) => {
+      timeout = setTimeout(() => {
+        pendingPromise = fn(...args);
+        resolve(pendingPromise);
+      }, wait);
+    });
+  };
+}
+
+/* -------------------- HIDE DROPDOWN -------------------- */
+function hideDropdown() {
+  if (searchDropdown) {
+    searchDropdown.classList.add('hidden');
+    searchDropdown.innerHTML = '';
+  }
+}
+
 
   // --- Enter key handler ---
   searchDropdown.addEventListener('click', async (e) => {
@@ -125,13 +152,13 @@ export function initSearch() {
   });
 }
 
-/* -------------------- UNIFIED SEARCH -------------------- */
 /* -------------------- UNIFIED SEARCH (Optimized) -------------------- */
 let lastQueryId = 0;
 const searchCache = new Map();
+const googleCache = new Map();
 let roasterCache = null;
 
-// --- Fetch and cache roasters once ---
+/* -------------------- FETCH & CACHE ROASTERS -------------------- */
 async function getRoastersFromSupabase(query) {
   if (!roasterCache) {
     const { data, error } = await supabase
@@ -147,6 +174,7 @@ async function getRoastersFromSupabase(query) {
     const allRoasters = data.flatMap(s =>
       Array.isArray(s.roasters) ? s.roasters : [s.roasters]
     );
+
     roasterCache = [...new Set(allRoasters.map(r => r.trim()))];
   }
 
@@ -155,76 +183,19 @@ async function getRoastersFromSupabase(query) {
     .map(r => ({ name: r, type: 'roaster' }));
 }
 
-export async function performUnifiedSearch(query, userLocation) {
-  query = query.toLowerCase();
-  const queryId = ++lastQueryId;
-
-  // --- Cache check ---
-  if (searchCache.has(query)) {
-    return searchCache.get(query);
-  }
-
-  // --- Parallelize Google + roasters ---
-  const [googleResults, roasters] = await Promise.all([
-    getPlacePredictionsGrouped(query, userLocation),
-    getRoastersFromSupabase(query)
-  ]);
-
-  if (queryId !== lastQueryId) return { cities: [], shops: [], roasters: [] }; // stale
-
-  const { cities, places } = googleResults;
-
-  // --- Batch shop details requests ---
-  const placesService = new google.maps.places.PlacesService(document.createElement('div'));
-  const detailPromises = places.map(p =>
-    new Promise(resolve => {
-      placesService.getDetails({ placeId: p.place_id }, (details, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-          resolve({
-            name: details.name,
-            place_id: details.place_id,
-            type: 'shop',
-            lat: details.geometry?.location?.lat?.(),
-            lng: details.geometry?.location?.lng?.(),
-            description: details.formatted_address || ''
-          });
-        } else {
-          resolve(null);
-        }
-      });
-    })
-  );
-
-  const details = await Promise.allSettled(detailPromises);
-  const shops = details
-    .filter(d => d.status === 'fulfilled' && d.value)
-    .map(d => d.value);
-
-  // --- Cities with type ---
-  const citiesWithType = (cities || []).map(c => ({ ...c, type: 'city' }));
-
-  // --- Final result ---
-  const result = { cities: citiesWithType, shops, roasters };
-
-  searchCache.set(query, result); // store in cache
-  return result;
-}
-
-
-/* -------------------- GOOGLE PLACES PREDICTIONS -------------------- */
+/* -------------------- GOOGLE PREDICTIONS WITH CACHE -------------------- */
 async function getPlacePredictionsGrouped(query, userLocation) {
-  autocompleteService =
-    autocompleteService || new google.maps.places.AutocompleteService();
+  const key = query + (userLocation ? `${userLocation.lat},${userLocation.lng}` : '');
+  if (googleCache.has(key)) return googleCache.get(key);
+
+  autocompleteService = autocompleteService || new google.maps.places.AutocompleteService();
 
   const baseOpts = userLocation
-    ? {
-        location: new google.maps.LatLng(userLocation.lat, userLocation.lng),
-        radius: 50000
-      }
+    ? { location: new google.maps.LatLng(userLocation.lat, userLocation.lng), radius: 50000 }
     : {};
 
-  function getPredictions(opts) {
-    return new Promise(resolve => {
+  async function getPredictions(opts) {
+    return new Promise((resolve) => {
       autocompleteService.getPlacePredictions(opts, (predictions, status) => {
         if (status === 'OK' && predictions) resolve(predictions);
         else resolve([]);
@@ -238,8 +209,79 @@ async function getPlacePredictionsGrouped(query, userLocation) {
   if (!cities.length) cities = await getPredictions({ input: query, ...baseOpts });
   if (!places.length) places = await getPredictions({ input: query, ...baseOpts });
 
-  return { cities, places };
+  const result = { cities, places };
+  googleCache.set(key, result);
+  return result;
 }
+
+/* -------------------- BATCH HELPER -------------------- */
+async function batchPromises(items, fn, batchSize = 5) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize).map(fn);
+    const settled = await Promise.allSettled(batch);
+    results.push(...settled.map(r => (r.status === 'fulfilled' ? r.value : null)));
+  }
+  return results.filter(Boolean);
+}
+
+function getPlacesServiceInstance() {
+  if (!placesService) placesService = new google.maps.places.PlacesService(document.createElement('div'));
+  return placesService;
+}
+
+/* -------------------- UNIFIED SEARCH -------------------- */
+export async function performUnifiedSearch(query, userLocation) {
+  query = query.trim().toLowerCase();
+  const queryId = ++lastQueryId;
+
+  if (!query) return { cities: [], shops: [], roasters: [] };
+
+  // --- Check local cache ---
+  if (searchCache.has(query)) return searchCache.get(query);
+
+  // --- Fetch Google + roasters in parallel ---
+  const [googleResults, roasters] = await Promise.all([
+    getPlacePredictionsGrouped(query, userLocation),
+    getRoastersFromSupabase(query)
+  ]);
+
+  if (queryId !== lastQueryId) return { cities: [], shops: [], roasters: [] }; // stale
+
+  const { cities, places } = googleResults;
+
+  // --- Batch getDetails for shops ---
+  const placesServiceInstance = getPlacesServiceInstance();
+  const shops = await batchPromises(
+    places,
+    (p) =>
+      new Promise((resolve) => {
+        placesServiceInstance.getDetails({ placeId: p.place_id }, (details, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK) {
+            resolve({
+              name: details.name,
+              place_id: details.place_id,
+              type: 'shop',
+              lat: details.geometry?.location?.lat?.(),
+              lng: details.geometry?.location?.lng?.(),
+              description: details.formatted_address || ''
+            });
+          } else resolve(null);
+        });
+      }),
+    5
+  );
+
+  // --- Cities with type ---
+  const citiesWithType = (cities || []).map(c => ({ ...c, type: 'city' }));
+
+  // --- Final result ---
+  const result = { cities: citiesWithType, shops, roasters };
+  searchCache.set(query, result);
+  return result;
+}
+
+
 
 /* -------------------- SCORING & SORTING -------------------- */
 function getItemText(item) {
@@ -310,6 +352,11 @@ function sortAndRenderResults(results, dropdown, userLocation) {
 }
 
 
+/* -------------------- NORMALIZE -------------------- */
+function normalizeText(str) {
+  return str?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() || '';
+}
+
 /* -------------------- RENDER -------------------- */
 function renderSearchResults({ shops, roasters, cities }, dropdown) {
   dropdown.innerHTML = '';
@@ -332,14 +379,15 @@ function renderSearchResults({ shops, roasters, cities }, dropdown) {
       li.dataset.type = type;
       li.className = `search-result search-result-${type}`;
 
+      // Use normalized text
       if (type === 'roaster') {
-        li.textContent = item.name || item;
+        li.textContent = normalizeText(item.name || item);
         li.dataset.roasterName = item.name || item;
       } else if (type === 'shop') {
-        li.textContent = item.name || item.description || '';
+        li.textContent = normalizeText(item.name || item.description || '');
         li.dataset.placeId = item.place_id;
       } else if (type === 'city') {
-        li.textContent = item.description || item.name || (item.structured_formatting?.main_text) || '';
+        li.textContent = normalizeText(item.description || item.name || (item.structured_formatting?.main_text) || '');
         li.dataset.placeId = item.place_id;
       }
 
@@ -358,7 +406,6 @@ function renderSearchResults({ shops, roasters, cities }, dropdown) {
     dropdown.classList.add('hidden');
   }
 }
-
 
 /* -------------------- UTILITIES -------------------- */
 function debounce(fn, wait) {
