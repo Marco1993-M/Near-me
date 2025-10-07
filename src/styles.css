@@ -1133,26 +1133,43 @@ body, html {
 }
 
 
-/* Checkbox group */
-.review-banner-checkbox-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 1.5rem;
+.review-banner-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
 }
-.review-banner-checkbox-label {
+
+.review-banner-options {
+  display: flex;
+  flex-wrap: wrap;       /* allow wrapping to a second line */
+  gap: 10px;             /* space between pills */
+  margin: 12px 0;
+}
+
+.option-pill {
+  flex: 0 0 auto;        /* don't shrink, width based on content */
+  padding: 8px 12px;
+  border: 0.5px solid #ccc;
+  border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  cursor: pointer;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  font-size: 0.875rem;
-  color: #000000;
+  gap: 6px;
+  transition: all 0.2s;
 }
-.review-banner-checkbox {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-  accent-color: #000000;
+
+.option-pill.active {
+  background-color: #c6f5d3;
+  color: Black;
+  border-color: #000000;
 }
+
+
 
 /* -------------------- Review Banner Buttons -------------------- */
 .review-banner-actions {
@@ -1176,7 +1193,7 @@ body, html {
 #submit-review-button {
   background-color: #d7f7d3; /* Light green */
   color: black;
-  border-color: #000000;
+  border: 0.5px solid #000000;
 }
 
 #submit-review-button:hover {
@@ -1188,7 +1205,7 @@ body, html {
 #review-cancel-button {
   background-color: white;
   color: black;
-  border: 1px solid #000000;
+  border: 0.5px solid #000000;
 }
 
 #review-cancel-button:hover {
@@ -1208,7 +1225,7 @@ body, html {
   padding: 6px 14px;
   border-radius: 9999px;
   background-color: #f5f5f5;
-  border: 1px solid #ccc;
+  border: 0.5px solid #ccc;
   cursor: pointer;
   font-size: 14px;
   text-align: center;
@@ -1224,6 +1241,7 @@ body, html {
   color: Black;
   border-color: #000000;
 }
+
 
 
 .review-banner-toggle-details {
@@ -1277,6 +1295,42 @@ body, html {
 /* Utility */
 .hidden {
   display: none !important;
+}
+
+/* -------------------- Drink Pills -------------------- */
+.review-banner-drink-container {
+  margin: 12px 0;
+}
+
+.review-banner-drink-container p {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.drink-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drink-pill {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.drink-pill:hover {
+  background-color: #e0e0e0;
+}
+
+.drink-pill.active {
+  background-color: #c7f5d3; /* Purple to match rating active */
+  color: black;
+  border-color: #c7f5d3;
 }
 
 
