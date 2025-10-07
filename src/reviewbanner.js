@@ -28,6 +28,7 @@ function closeReviewBanner(reviewBanner, afterClose) {
 function buildReviewBannerHTML(shop) {
   return `
     <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
+
     <h3 id="shop-name" class="review-banner-heading">Leave a Review for ${shop.name}</h3>
     <p class="review-banner-instruction">Select a rating</p>
 
@@ -38,10 +39,11 @@ function buildReviewBannerHTML(shop) {
 
     <textarea id="review-text" class="review-banner-textarea" placeholder="Write your review..." required></textarea>
 
-    <div class="review-banner-checkbox-container">
-      <label><input id="review-parking" type="checkbox"> Parking</label>
-      <label><input id="review-pet-friendly" type="checkbox"> Pet Friendly</label>
-      <label><input id="review-outside-seating" type="checkbox"> Outside Seating</label>
+    <!-- --- New Toggle Pill Options --- -->
+    <div class="review-banner-options">
+      <button type="button" data-option="parking" class="option-pill">🚗 Parking</button>
+      <button type="button" data-option="pet-friendly" class="option-pill">🐶 Pet Friendly</button>
+      <button type="button" data-option="outside-seating" class="option-pill">☀️ Outside Seating</button>
     </div>
 
     <!-- Drink pills -->
@@ -61,10 +63,50 @@ function buildReviewBannerHTML(shop) {
 
     <button id="toggle-specialty-details" class="review-banner-toggle-details">+ Add Specialty Coffee Info</button>
     <div id="specialty-details-section" class="review-banner-specialty hidden">
-      <label>Brew Method:<select id="brew-method"><option value="">Select</option><option>Espresso</option><option>Pour Over</option><option>French Press</option><option>Aeropress</option><option>Cold Brew</option></select></label>
-      <label>Roast Level:<select id="roast-level"><option value="">Select</option><option>Light</option><option>Medium</option><option>Dark</option></select></label>
-      <label>Origin:<select id="origin"><option value="">Select</option><option>Ethiopia</option><option>Colombia</option><option>Kenya</option><option>Brazil</option><option>Guatemala</option><option>Rwanda</option><option>Costa Rica</option><option>Other</option></select></label>
-      <label>Tasting Notes:<select id="tasting-notes"><option value="">Select</option><option>Fruity</option><option>Chocolate</option><option>Nutty</option><option>Floral</option><option>Citrus</option><option>Spicy</option><option>Earthy</option><option>Other</option></select></label>
+      <label>Brew Method:
+        <select id="brew-method">
+          <option value="">Select</option>
+          <option>Espresso</option>
+          <option>Pour Over</option>
+          <option>French Press</option>
+          <option>Aeropress</option>
+          <option>Cold Brew</option>
+        </select>
+      </label>
+      <label>Roast Level:
+        <select id="roast-level">
+          <option value="">Select</option>
+          <option>Light</option>
+          <option>Medium</option>
+          <option>Dark</option>
+        </select>
+      </label>
+      <label>Origin:
+        <select id="origin">
+          <option value="">Select</option>
+          <option>Ethiopia</option>
+          <option>Colombia</option>
+          <option>Kenya</option>
+          <option>Brazil</option>
+          <option>Guatemala</option>
+          <option>Rwanda</option>
+          <option>Costa Rica</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Tasting Notes:
+        <select id="tasting-notes">
+          <option value="">Select</option>
+          <option>Fruity</option>
+          <option>Chocolate</option>
+          <option>Nutty</option>
+          <option>Floral</option>
+          <option>Citrus</option>
+          <option>Spicy</option>
+          <option>Earthy</option>
+          <option>Other</option>
+        </select>
+      </label>
     </div>
 
     <div class="review-banner-actions">
@@ -73,6 +115,7 @@ function buildReviewBannerHTML(shop) {
     </div>
   `;
 }
+
 
 /* -------------------------- DEFAULT CALLBACK -------------------------- */
 
@@ -120,6 +163,19 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   reviewBanner.style.animation = 'slideUp 0.4s ease-out forwards';
   document.body.classList.add('body-no-scroll');
   reviewBanner.addEventListener('click', e => e.stopPropagation());
+
+  // --- Toggle pills logic ---
+const optionPills = reviewBanner.querySelectorAll('.option-pill');
+const optionsState = { parking: false, 'pet-friendly': false, 'outside-seating': false };
+
+optionPills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    const key = pill.dataset.option;
+    optionsState[key] = !optionsState[key];
+    pill.classList.toggle('active', optionsState[key]);
+  });
+});
+
 
   // Rating logic
   const ratingContainer = reviewBanner.querySelector('#rating-container');
@@ -188,9 +244,10 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     submitBtn.disabled = true;
 
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
-    const parking = reviewBanner.querySelector('#review-parking').checked;
-    const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
-    const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
+    const parking = optionsState.parking;
+    const petFriendly = optionsState['pet-friendly'];
+    const outsideSeating = optionsState['outside-seating'];
+
     const drink = selectedDrink;
 
     if (!selectedRating) {
