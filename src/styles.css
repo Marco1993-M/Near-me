@@ -1044,34 +1044,43 @@ body, html {
   text-align: left;
 }
 
-/* Rating carousel */
+/* Make the carousel break out of its container padding */
 .review-banner-rating-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 1rem 0 0.5rem;
+  width: 100%;
+  position: relative; /* for overflow handling */
+  overflow: visible;
 }
+
+/* Carousel itself */
 .rating-carousel {
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 1rem 0.5rem;
-  gap: 1rem;
+  gap: 0.75rem;
   justify-content: flex-start;
-  max-width: 100%;
+  width: calc(100% + 2rem); /* extend beyond container padding */
+  margin-left: -1rem; /* match container horizontal padding */
+  margin-bottom: 0.25rem;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  margin-bottom: 0.25rem;
   -webkit-overflow-scrolling: touch;
+  padding: 1rem 1rem; /* inner spacing for pills */
 }
+
 .rating-carousel::-webkit-scrollbar {
   display: none;
 }
+
+/* Pills */
 .rating-pill {
   flex: 0 0 auto;
   scroll-snap-align: center;
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   font-size: 1.5rem;
   font-weight: 200;
@@ -1087,23 +1096,34 @@ body, html {
   cursor: pointer;
   user-select: none;
 }
+
+/* Active pill */
 .rating-pill.active {
-  width: 50px;
-  height: 50px;
+  width: 55px;
+  height: 55px;
   color: #fff;
   background-color: #c7f5d3;
-  border-color: #000;
-  border: 0.5px solid black;
+  border: 0.5px solid #000;
   transform: scale(1.15);
   font-weight: 700;
   box-shadow: 0 6px 16px rgba(0,0,0,0.12);
 }
+
+/* Scroll hint */
 .rating-scroll-hint {
   font-size: 0.75rem;
   color: #aaa;
   margin-top: 0.25rem;
   text-align: center;
 }
+
+/* Peek first/last pills */
+.rating-carousel::before,
+.rating-carousel::after {
+  content: "";
+  flex: 0 0 15px;
+}
+
 
 /* Textarea */
 .review-banner-textarea {
