@@ -210,33 +210,46 @@ optionPills.forEach(pill => {
   reviewBanner.querySelector('#review-drag-handle')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
   reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
 
-  // Specialty toggle
-  const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
-  const specialtySection = reviewBanner.querySelector('#specialty-details-section');
-  toggleBtn?.addEventListener('click', () => {
-    if (specialtySection.classList.contains('hidden')) {
-      specialtySection.style.height = '0px';
-      specialtySection.classList.remove('hidden');
-      const fullHeight = specialtySection.scrollHeight;
-      specialtySection.style.transition = 'height 0.3s ease-out';
-      requestAnimationFrame(() => (specialtySection.style.height = fullHeight + 'px'));
-      specialtySection.addEventListener('transitionend', () => {
-        specialtySection.style.height = '';
-        specialtySection.style.transition = '';
-      }, { once: true });
-      toggleBtn.textContent = '− Hide Specialty Coffee Info';
-    } else {
-      const fullHeight = specialtySection.scrollHeight;
-      specialtySection.style.height = fullHeight + 'px';
-      requestAnimationFrame(() => (specialtySection.style.height = '0px'));
-      specialtySection.addEventListener('transitionend', () => {
-        specialtySection.classList.add('hidden');
-        specialtySection.style.height = '';
-        specialtySection.style.transition = '';
-      }, { once: true });
-      toggleBtn.textContent = '+ Add Specialty Coffee Info';
-    }
-  });
+// Specialty toggle
+const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
+const specialtySection = reviewBanner.querySelector('#specialty-details-section');
+
+toggleBtn?.addEventListener('click', () => {
+  const isOpen = !specialtySection.classList.contains('hidden');
+  toggleBtn.disabled = true; // prevent spam clicks
+
+  if (isOpen) {
+    // Closing
+    specialtySection.style.maxHeight = specialtySection.scrollHeight + 'px';
+    requestAnimationFrame(() => {
+      specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
+      specialtySection.style.maxHeight = '0';
+      specialtySection.style.opacity = '0';
+    });
+    toggleBtn.textContent = '+ Add Specialty Coffee Info';
+  } else {
+    // Opening
+    specialtySection.classList.remove('hidden');
+    specialtySection.style.opacity = '0';
+    specialtySection.style.maxHeight = '0';
+    requestAnimationFrame(() => {
+      specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
+      specialtySection.style.maxHeight = specialtySection.scrollHeight + 'px';
+      specialtySection.style.opacity = '1';
+    });
+    toggleBtn.textContent = '− Hide Specialty Coffee Info';
+  }
+
+  specialtySection.addEventListener('transitionend', () => {
+    specialtySection.style.transition = '';
+    specialtySection.style.maxHeight = '';
+    if (isOpen) specialtySection.classList.add('hidden');
+    toggleBtn.disabled = false;
+  }, { once: true });
+});
+
+
+
 
   // Submit handler
   reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async function handleSubmit() {
