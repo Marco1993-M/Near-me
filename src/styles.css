@@ -1154,47 +1154,47 @@ body, html {
   accent-color: #000000;
 }
 
-/* Action buttons */
+/* -------------------- Review Banner Buttons -------------------- */
 .review-banner-actions {
   display: flex;
-  justify-content: space-between;
-  margin-top: 24px;
+  justify-content: flex-start; /* LEFT justified */
   gap: 12px;
+  margin-top: 16px;
 }
-.review-banner-cancel-button,
-.review-banner-submit-button {
-  background: rgba(255,255,255,0.1);
-  color: #000000;
-  padding: 10px 20px;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  border-radius: 12px;
-  font-size: 1rem;
+
+.review-banner-actions button {
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
   cursor: pointer;
-  flex: 1;
-  box-shadow:none;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition: all 0.2s ease;
 }
-.review-banner-cancel-button:hover,
-.review-banner-submit-button:hover {
-  box-shadow:
-    2px 2px 4px rgba(0,0,0,0.12),
-    -2px -2px 4px rgba(255,255,255,0.25);
-  transform: scale(1.05);
+
+/* Submit button (primary) */
+#submit-review-button {
+  background-color: #d7f7d3; /* Light green */
+  color: black;
+  border-color: #000000;
 }
-.review-banner-cancel-button:active,
-.review-banner-submit-button:active {
-  box-shadow:
-    inset 2px 2px 5px rgba(0,0,0,0.12),
-    inset -2px -2px 5px rgba(255,255,255,0.25);
+
+#submit-review-button:hover {
+  background-color: #a1e1b3; /* Darker green */
+  border-color: #000000;
 }
-.review-banner-cancel-button:focus,
-.review-banner-submit-button:focus {
-  outline: none;
-  box-shadow:
-    inset 2px 2px 5px rgba(0,0,0,0.15),
-    inset -2px -2px 5px rgba(255,255,255,0.3),
-    0 0 0 2px rgba(255,255,255,0.5);
+
+/* Cancel button (secondary) */
+#review-cancel-button {
+  background-color: white;
+  color: black;
+  border: 1px solid #000000;
 }
+
+#review-cancel-button:hover {
+  background-color: #f0f0ff;
+}
+
 
 .review-banner-toggle-details {
   margin: 1rem 0;
