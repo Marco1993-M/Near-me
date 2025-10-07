@@ -1867,20 +1867,21 @@ body, html {
 ======================= */
 #top100 {
   position: fixed;
-  bottom: env(safe-area-inset-bottom, 0);
-  left: 50%;
+  bottom: 0; /* stick to bottom */
+  left: 50%; /* keep centered horizontally */
   transform: translateX(-50%) translateY(100%);
-  width: 100vw;
-  height: clamp(85vh, 85vh, 85vh);
+  width: 100vw;          /* full viewport width */
+  height: calc(100vh - env(safe-area-inset-top, 0)); /* almost full height */
+  max-height: 100vh;     /* never exceed viewport */
   padding: 0;
-  border-radius: 12px 12px 0 0;
-   border: 0.5px solid #000000;
+  border-radius: 12px 12px 0 0; /* rounded top corners */
+  border: 0.5px solid #000000;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(2px) saturate(180%);
   -webkit-backdrop-filter: blur(2px) saturate(180%);
   z-index: 1009;
   box-sizing: border-box;
-  overflow: visible;
+  overflow-y: auto; /* allow scrolling if content exceeds height */
   animation: slideUpTop100 0.4s ease-out forwards;
 }
 
@@ -1890,10 +1891,11 @@ body, html {
     opacity: 0;
   }
   100% {
-    transform: translateX(-50%) translateY(0%);
+    transform: translateX(-50%) translateY(0);
     opacity: 1;
   }
 }
+
 
 .modal-content {
   display: flex;
