@@ -107,6 +107,17 @@ function buildReviewBannerHTML(shop) {
           <option>Other</option>
         </select>
       </label>
+    <label>Process:
+  <select id="process">
+    <option value="">Select</option>
+    <option>Washed</option>
+    <option>Natural</option>
+    <option>Honey</option>
+    <option>Pulped Natural</option>
+    <option>Other</option>
+  </select>
+</label>
+
     </div>
 
     <div class="review-banner-actions">
@@ -298,6 +309,7 @@ toggleBtn?.addEventListener('click', () => {
         drink,
         brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
         roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
+        process: reviewBanner.querySelector('#process')?.value || null,
         origin: reviewBanner.querySelector('#origin')?.value || null,
         tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
         created_at: new Date().toISOString(),
