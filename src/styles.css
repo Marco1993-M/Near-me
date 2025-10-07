@@ -1195,6 +1195,36 @@ body, html {
   background-color: #f0f0ff;
 }
 
+/* -------------------- Drink Pills -------------------- */
+#review-banner .drink-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#review-banner .drink-pill {
+  all: unset; /* Reset default browser styles */
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+#review-banner .drink-pill:hover {
+  background-color: #e0e0e0;
+}
+
+#review-banner .drink-pill.active {
+  background-color: #4f46e5; /* Match rating active pill */
+  color: white;
+  border-color: #4f46e5;
+}
+
 
 
 .review-banner-toggle-details {
