@@ -1220,11 +1220,10 @@ body, html {
 }
 
 #review-banner .drink-pill.active {
-  background-color: #4f46e5; /* Match rating active pill */
-  color: white;
-  border-color: #4f46e5;
+  background-color: #d0f3d5; /* Match rating active pill */
+  color: Black;
+  border-color: #000000;
 }
-
 
 
 .review-banner-toggle-details {
