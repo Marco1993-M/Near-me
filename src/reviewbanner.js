@@ -44,6 +44,21 @@ function buildReviewBannerHTML(shop) {
       <label><input id="review-outside-seating" type="checkbox"> Outside Seating</label>
     </div>
 
+    <!-- Drink pills -->
+    <div id="drink-container" class="review-banner-drink-container">
+      <p></p>
+      <div class="drink-pills">
+        <button type="button" data-value="Latte" class="drink-pill">Latte</button>
+        <button type="button" data-value="Cappuccino" class="drink-pill">Cappuccino</button>
+        <button type="button" data-value="Flat White" class="drink-pill">Flat White</button>
+        <button type="button" data-value="Espresso" class="drink-pill">Espresso</button>
+        <button type="button" data-value="Americano" class="drink-pill">Americano</button>
+        <button type="button" data-value="Cortado" class="drink-pill">Cortado</button>
+        <button type="button" data-value="Seasonal" class="drink-pill">Seasonal</button>
+        <button type="button" data-value="Iced" class="drink-pill">Iced</button>
+      </div>
+    </div>
+
     <button id="toggle-specialty-details" class="review-banner-toggle-details">+ Add Specialty Coffee Info</button>
     <div id="specialty-details-section" class="review-banner-specialty hidden">
       <label>Brew Method:<select id="brew-method"><option value="">Select</option><option>Espresso</option><option>Pour Over</option><option>French Press</option><option>Aeropress</option><option>Cold Brew</option></select></label>
@@ -62,13 +77,11 @@ function buildReviewBannerHTML(shop) {
 /* -------------------------- DEFAULT CALLBACK -------------------------- */
 
 function defaultAfterReview(shop) {
-  // Try showing details modal if available
   if (typeof window.showShopDetails === 'function') {
     window.showShopDetails(shop);
     return;
   }
 
-  // Otherwise, visually highlight the shop card if present
   const shopCard = document.querySelector(`[data-shop-id="${shop.id}"]`);
   if (shopCard) {
     shopCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -87,7 +100,6 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) return;
 
-  // Check user login
   let user;
   try {
     user = await getCurrentUser();
@@ -102,7 +114,7 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     }
   }
 
-  // Render banner
+  // Inject dynamic HTML
   reviewBanner.innerHTML = buildReviewBannerHTML(shop);
   reviewBanner.classList.remove('hidden');
   reviewBanner.style.animation = 'slideUp 0.4s ease-out forwards';
@@ -124,9 +136,19 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     });
   });
 
-  // Pre-select middle button
   const middleButton = Array.from(ratingButtons).find(btn => btn.textContent === '5');
   if (middleButton) middleButton.click();
+
+  // Drink pill selection
+  let selectedDrink = null;
+  const drinkButtons = reviewBanner.querySelectorAll('.drink-pill');
+  drinkButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      drinkButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDrink = btn.dataset.value;
+    });
+  });
 
   // Close logic
   reviewBanner.querySelector('#review-drag-handle')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
@@ -169,6 +191,7 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     const parking = reviewBanner.querySelector('#review-parking').checked;
     const petFriendly = reviewBanner.querySelector('#review-pet-friendly').checked;
     const outsideSeating = reviewBanner.querySelector('#review-outside-seating').checked;
+    const drink = selectedDrink;
 
     if (!selectedRating) {
       showToast({ message: "Please select a rating.", category: "error" });
@@ -177,6 +200,11 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     }
     if (!reviewText) {
       showToast({ message: "Please write a review.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
+    if (!drink) {
+      showToast({ message: "Please select a drink.", category: "error" });
       submitBtn.disabled = false;
       return;
     }
@@ -197,6 +225,7 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
         parking,
         pet_friendly: petFriendly,
         outside_seating: outsideSeating,
+        drink,
         brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
         roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
         origin: reviewBanner.querySelector('#origin')?.value || null,
@@ -211,7 +240,6 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
         return;
       }
 
-      // ✅ Success
       showToast({ category: "reviews", type: "success", duration: 3000 });
       closeReviewBanner(reviewBanner, () => {
         if (typeof onSuccess === 'function') onSuccess(shop);
