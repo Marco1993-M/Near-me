@@ -188,52 +188,83 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   });
 
   // --- Submit review ---
-  reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async function handleSubmit() {
+// --- Submit review ---
+reviewBanner.querySelector('#submit-review-button')?.addEventListener(
+  'click',
+  async function handleSubmit() {
     const submitBtn = this;
     submitBtn.disabled = true;
 
+    // Gather review data
     const reviewText = reviewBanner.querySelector('#review-text').value.trim();
     const parking = optionsState.parking;
     const petFriendly = optionsState['pet-friendly'];
     const outsideSeating = optionsState['outside-seating'];
     const drink = selectedDrink;
 
-    if (!selectedRating) { showToast({ message: "Please select a rating.", category: "error" }); submitBtn.disabled = false; return; }
-    if (!reviewText) { showToast({ message: "Please write a review.", category: "error" }); submitBtn.disabled = false; return; }
-    if (!drink) { showToast({ message: "Please select a drink.", category: "error" }); submitBtn.disabled = false; return; }
+    if (!selectedRating) {
+      showToast({ message: "Please select a rating.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
+    if (!reviewText) {
+      showToast({ message: "Please write a review.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
+    if (!drink) {
+      showToast({ message: "Please select a drink.", category: "error" });
+      submitBtn.disabled = false;
+      return;
+    }
 
     try {
+      // Ensure shop exists
       let shopId = shop.id;
       if (!shopId) {
-        shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+        shopId = await getOrCreateShop(
+          shop.name,
+          shop.address,
+          shop.city,
+          shop.lat,
+          shop.lng
+        );
         shop.id = shopId;
       }
 
-const review = {
-  user_id: currentUserId || null,
-  shop_id: shopId,
-  rating: selectedRating,
-  text: reviewText,
-  parking,
-  pet_friendly: petFriendly,
-  outside_seating: outsideSeating,
-  drink,
-  brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
-  roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
-  process: reviewBanner.querySelector('#process')?.value || null,
-  origin: reviewBanner.querySelector('#origin')?.value || null,
-  tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
-  created_at: new Date().toISOString(),
-};
+      // Build review payload
+      const reviewPayload = {
+        shop_id: shopId,
+        rating: selectedRating,
+        text: reviewText,
+        parking,
+        pet_friendly: petFriendly,
+        outside_seating: outsideSeating,
+        drink,
+        brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
+        roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
+        process: reviewBanner.querySelector('#process')?.value || null,
+        origin: reviewBanner.querySelector('#origin')?.value || null,
+        tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
+        created_at: new Date().toISOString(),
+      };
 
+      // Only include user_id if logged in
+      if (currentUserId) reviewPayload.user_id = currentUserId;
 
-      const { error } = await supabase.from('reviews').insert([review]);
+      // Insert review
+      const { error } = await supabase.from('reviews').insert([reviewPayload]);
       if (error) {
-        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", duration: 4000 });
+        showToast({
+          message: `Failed to submit review: ${error.message}`,
+          category: "error",
+          duration: 4000,
+        });
         submitBtn.disabled = false;
         return;
       }
 
+      // Success feedback
       showToast({ category: "reviews", type: "success", duration: 3000 });
       closeReviewBanner(reviewBanner, () => {
         if (typeof onSuccess === 'function') onSuccess(shop);
@@ -241,8 +272,13 @@ const review = {
       });
 
     } catch (err) {
-      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", duration: 4000 });
+      showToast({
+        message: `Failed to submit review: ${err.message}`,
+        category: "error",
+        duration: 4000,
+      });
       submitBtn.disabled = false;
     }
-  });
+  }
+);
 }
