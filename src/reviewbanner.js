@@ -210,7 +210,7 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
       }
 
 const review = {
-  user_id: currentUserId || '00000000-0000-0000-0000-000000000000', // placeholder for anonymous
+  user_id: currentUserId || null,
   shop_id: shopId,
   rating: selectedRating,
   text: reviewText,
