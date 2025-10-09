@@ -1,13 +1,8 @@
 import supabase from './supabase.js';
 import { showToast } from './ui.js';
+import { getOrCreateShop } from './db.js';
 
 /* ------------------------------ HELPERS ------------------------------ */
-
-async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) throw new Error('User not logged in');
-  return user;
-}
 
 function closeReviewBanner(reviewBanner, afterClose) {
   reviewBanner.style.animation = 'slideDown 0.3s ease-in forwards';
@@ -17,9 +12,7 @@ function closeReviewBanner(reviewBanner, afterClose) {
       reviewBanner.classList.add('hidden');
       reviewBanner.style.animation = '';
       document.body.classList.remove('body-no-scroll');
-      if (typeof afterClose === 'function') {
-        try { afterClose(); } catch (err) { console.error('afterClose callback error', err); }
-      }
+      if (typeof afterClose === 'function') afterClose();
     },
     { once: true }
   );
@@ -28,27 +21,19 @@ function closeReviewBanner(reviewBanner, afterClose) {
 function buildReviewBannerHTML(shop) {
   return `
     <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
-
     <h3 id="shop-name" class="review-banner-heading">Leave a Review for ${shop.name}</h3>
     <p class="review-banner-instruction">Select a rating</p>
-
     <div id="rating-container" class="rating-carousel">
       ${Array.from({ length: 10 }, (_, i) => `<button type="button" class="rating-pill">${i + 1}</button>`).join('')}
     </div>
     <p class="rating-scroll-hint">scroll to choose a rating</p>
-
     <textarea id="review-text" class="review-banner-textarea" placeholder="Write your review..." required></textarea>
-
-    <!-- --- New Toggle Pill Options --- -->
     <div class="review-banner-options">
       <button type="button" data-option="parking" class="option-pill">🚗 Parking</button>
       <button type="button" data-option="pet-friendly" class="option-pill">🐶 Pet Friendly</button>
       <button type="button" data-option="outside-seating" class="option-pill">☀️ Outside Seating</button>
     </div>
-
-    <!-- Drink pills -->
     <div id="drink-container" class="review-banner-drink-container">
-      <p></p>
       <div class="drink-pills">
         <button type="button" data-value="Latte" class="drink-pill">Latte</button>
         <button type="button" data-value="Cappuccino" class="drink-pill">Cappuccino</button>
@@ -60,73 +45,30 @@ function buildReviewBannerHTML(shop) {
         <button type="button" data-value="Iced" class="drink-pill">Iced</button>
       </div>
     </div>
-
     <button id="toggle-specialty-details" class="review-banner-toggle-details">+ Add Specialty Coffee Info</button>
     <div id="specialty-details-section" class="review-banner-specialty hidden">
       <label>Brew Method:
-        <select id="brew-method">
-          <option value="">Select</option>
-          <option>Espresso</option>
-          <option>Pour Over</option>
-          <option>French Press</option>
-          <option>Aeropress</option>
-          <option>Cold Brew</option>
-        </select>
+        <select id="brew-method"><option value="">Select</option><option>Espresso</option><option>Pour Over</option><option>French Press</option><option>Aeropress</option><option>Cold Brew</option></select>
       </label>
       <label>Roast Level:
-        <select id="roast-level">
-          <option value="">Select</option>
-          <option>Light</option>
-          <option>Medium</option>
-          <option>Dark</option>
-        </select>
+        <select id="roast-level"><option value="">Select</option><option>Light</option><option>Medium</option><option>Dark</option></select>
       </label>
       <label>Origin:
-        <select id="origin">
-          <option value="">Select</option>
-          <option>Ethiopia</option>
-          <option>Colombia</option>
-          <option>Kenya</option>
-          <option>Brazil</option>
-          <option>Guatemala</option>
-          <option>Rwanda</option>
-          <option>Costa Rica</option>
-          <option>Other</option>
-        </select>
+        <select id="origin"><option value="">Select</option><option>Ethiopia</option><option>Colombia</option><option>Kenya</option><option>Brazil</option><option>Guatemala</option><option>Rwanda</option><option>Costa Rica</option><option>Other</option></select>
       </label>
       <label>Tasting Notes:
-        <select id="tasting-notes">
-          <option value="">Select</option>
-          <option>Fruity</option>
-          <option>Chocolate</option>
-          <option>Nutty</option>
-          <option>Floral</option>
-          <option>Citrus</option>
-          <option>Spicy</option>
-          <option>Earthy</option>
-          <option>Other</option>
-        </select>
+        <select id="tasting-notes"><option value="">Select</option><option>Fruity</option><option>Chocolate</option><option>Nutty</option><option>Floral</option><option>Citrus</option><option>Spicy</option><option>Earthy</option><option>Other</option></select>
       </label>
-    <label>Process:
-  <select id="process">
-    <option value="">Select</option>
-    <option>Washed</option>
-    <option>Natural</option>
-    <option>Honey</option>
-    <option>Pulped Natural</option>
-    <option>Other</option>
-  </select>
-</label>
-
+      <label>Process:
+        <select id="process"><option value="">Select</option><option>Washed</option><option>Natural</option><option>Honey</option><option>Pulped Natural</option><option>Other</option></select>
+      </label>
     </div>
-
     <div class="review-banner-actions">
       <button id="review-cancel-button">Cancel</button>
       <button id="submit-review-button">Submit</button>
     </div>
   `;
 }
-
 
 /* -------------------------- DEFAULT CALLBACK -------------------------- */
 
@@ -154,18 +96,13 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   const reviewBanner = document.getElementById('review-banner');
   if (!reviewBanner) return;
 
-  let user;
+  // --- Get current user if logged in, otherwise anonymous ---
+  let currentUserId = null;
   try {
-    user = await getCurrentUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) currentUserId = user.id;
   } catch {
-    if (window.showAuthBannerIfNotLoggedIn) {
-      const loggedIn = await window.showAuthBannerIfNotLoggedIn();
-      if (!loggedIn) return;
-      user = await getCurrentUser();
-    } else {
-      showToast({ message: "You must be logged in to leave a review.", category: "error" });
-      return;
-    }
+    console.log("Anonymous review: user not logged in.");
   }
 
   // Inject dynamic HTML
@@ -175,24 +112,21 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   document.body.classList.add('body-no-scroll');
   reviewBanner.addEventListener('click', e => e.stopPropagation());
 
-  // --- Toggle pills logic ---
-const optionPills = reviewBanner.querySelectorAll('.option-pill');
-const optionsState = { parking: false, 'pet-friendly': false, 'outside-seating': false };
-
-optionPills.forEach(pill => {
-  pill.addEventListener('click', () => {
-    const key = pill.dataset.option;
-    optionsState[key] = !optionsState[key];
-    pill.classList.toggle('active', optionsState[key]);
+  // --- Option pills ---
+  const optionPills = reviewBanner.querySelectorAll('.option-pill');
+  const optionsState = { parking: false, 'pet-friendly': false, 'outside-seating': false };
+  optionPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      const key = pill.dataset.option;
+      optionsState[key] = !optionsState[key];
+      pill.classList.toggle('active', optionsState[key]);
+    });
   });
-});
 
-
-  // Rating logic
+  // --- Rating pills ---
   const ratingContainer = reviewBanner.querySelector('#rating-container');
   const ratingButtons = reviewBanner.querySelectorAll('.rating-pill');
   let selectedRating = 5;
-
   ratingButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       ratingButtons.forEach(b => b.classList.remove('active'));
@@ -202,11 +136,10 @@ optionPills.forEach(pill => {
       ratingContainer.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     });
   });
-
   const middleButton = Array.from(ratingButtons).find(btn => btn.textContent === '5');
   if (middleButton) middleButton.click();
 
-  // Drink pill selection
+  // --- Drink pills ---
   let selectedDrink = null;
   const drinkButtons = reviewBanner.querySelectorAll('.drink-pill');
   drinkButtons.forEach(btn => {
@@ -217,52 +150,44 @@ optionPills.forEach(pill => {
     });
   });
 
-  // Close logic
+  // --- Cancel / Close ---
   reviewBanner.querySelector('#review-drag-handle')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
   reviewBanner.querySelector('#review-cancel-button')?.addEventListener('click', () => closeReviewBanner(reviewBanner));
 
-// Specialty toggle
-const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
-const specialtySection = reviewBanner.querySelector('#specialty-details-section');
-
-toggleBtn?.addEventListener('click', () => {
-  const isOpen = !specialtySection.classList.contains('hidden');
-  toggleBtn.disabled = true; // prevent spam clicks
-
-  if (isOpen) {
-    // Closing
-    specialtySection.style.maxHeight = specialtySection.scrollHeight + 'px';
-    requestAnimationFrame(() => {
-      specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
-      specialtySection.style.maxHeight = '0';
-      specialtySection.style.opacity = '0';
-    });
-    toggleBtn.textContent = '+ Add Specialty Coffee Info';
-  } else {
-    // Opening
-    specialtySection.classList.remove('hidden');
-    specialtySection.style.opacity = '0';
-    specialtySection.style.maxHeight = '0';
-    requestAnimationFrame(() => {
-      specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
+  // --- Specialty toggle ---
+  const toggleBtn = reviewBanner.querySelector('#toggle-specialty-details');
+  const specialtySection = reviewBanner.querySelector('#specialty-details-section');
+  toggleBtn?.addEventListener('click', () => {
+    const isOpen = !specialtySection.classList.contains('hidden');
+    toggleBtn.disabled = true;
+    if (isOpen) {
       specialtySection.style.maxHeight = specialtySection.scrollHeight + 'px';
-      specialtySection.style.opacity = '1';
-    });
-    toggleBtn.textContent = '− Hide Specialty Coffee Info';
-  }
+      requestAnimationFrame(() => {
+        specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
+        specialtySection.style.maxHeight = '0';
+        specialtySection.style.opacity = '0';
+      });
+      toggleBtn.textContent = '+ Add Specialty Coffee Info';
+    } else {
+      specialtySection.classList.remove('hidden');
+      specialtySection.style.opacity = '0';
+      specialtySection.style.maxHeight = '0';
+      requestAnimationFrame(() => {
+        specialtySection.style.transition = 'max-height 0.35s ease, opacity 0.35s ease';
+        specialtySection.style.maxHeight = specialtySection.scrollHeight + 'px';
+        specialtySection.style.opacity = '1';
+      });
+      toggleBtn.textContent = '− Hide Specialty Coffee Info';
+    }
+    specialtySection.addEventListener('transitionend', () => {
+      specialtySection.style.transition = '';
+      specialtySection.style.maxHeight = '';
+      if (isOpen) specialtySection.classList.add('hidden');
+      toggleBtn.disabled = false;
+    }, { once: true });
+  });
 
-  specialtySection.addEventListener('transitionend', () => {
-    specialtySection.style.transition = '';
-    specialtySection.style.maxHeight = '';
-    if (isOpen) specialtySection.classList.add('hidden');
-    toggleBtn.disabled = false;
-  }, { once: true });
-});
-
-
-
-
-  // Submit handler
+  // --- Submit review ---
   reviewBanner.querySelector('#submit-review-button')?.addEventListener('click', async function handleSubmit() {
     const submitBtn = this;
     submitBtn.disabled = true;
@@ -271,24 +196,11 @@ toggleBtn?.addEventListener('click', () => {
     const parking = optionsState.parking;
     const petFriendly = optionsState['pet-friendly'];
     const outsideSeating = optionsState['outside-seating'];
-
     const drink = selectedDrink;
 
-    if (!selectedRating) {
-      showToast({ message: "Please select a rating.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
-    if (!reviewText) {
-      showToast({ message: "Please write a review.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
-    if (!drink) {
-      showToast({ message: "Please select a drink.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
+    if (!selectedRating) { showToast({ message: "Please select a rating.", category: "error" }); submitBtn.disabled = false; return; }
+    if (!reviewText) { showToast({ message: "Please write a review.", category: "error" }); submitBtn.disabled = false; return; }
+    if (!drink) { showToast({ message: "Please select a drink.", category: "error" }); submitBtn.disabled = false; return; }
 
     try {
       let shopId = shop.id;
@@ -297,9 +209,8 @@ toggleBtn?.addEventListener('click', () => {
         shop.id = shopId;
       }
 
-      const currentUser = await getCurrentUser();
       const review = {
-        user_id: currentUser.id,
+        user_id: currentUserId, // <--- anonymous if null
         shop_id: shopId,
         rating: selectedRating,
         text: reviewText,
@@ -317,7 +228,7 @@ toggleBtn?.addEventListener('click', () => {
 
       const { error } = await supabase.from('reviews').insert([review]);
       if (error) {
-        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", type: "error", duration: 4000 });
+        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", duration: 4000 });
         submitBtn.disabled = false;
         return;
       }
@@ -329,7 +240,7 @@ toggleBtn?.addEventListener('click', () => {
       });
 
     } catch (err) {
-      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", type: "error", duration: 4000 });
+      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", duration: 4000 });
       submitBtn.disabled = false;
     }
   });
