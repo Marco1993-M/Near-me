@@ -187,7 +187,6 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     }, { once: true });
   });
 
-  // --- Submit review ---
 // --- Submit review ---
 reviewBanner.querySelector('#submit-review-button')?.addEventListener(
   'click',
@@ -202,34 +201,26 @@ reviewBanner.querySelector('#submit-review-button')?.addEventListener(
     const outsideSeating = optionsState['outside-seating'];
     const drink = selectedDrink;
 
-    if (!selectedRating) {
-      showToast({ message: "Please select a rating.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
-    if (!reviewText) {
-      showToast({ message: "Please write a review.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
-    if (!drink) {
-      showToast({ message: "Please select a drink.", category: "error" });
-      submitBtn.disabled = false;
-      return;
-    }
+    if (!selectedRating) { showToast({ message: "Please select a rating.", category: "error" }); submitBtn.disabled = false; return; }
+    if (!reviewText) { showToast({ message: "Please write a review.", category: "error" }); submitBtn.disabled = false; return; }
+    if (!drink) { showToast({ message: "Please select a drink.", category: "error" }); submitBtn.disabled = false; return; }
 
     try {
       // Ensure shop exists
       let shopId = shop.id;
       if (!shopId) {
-        shopId = await getOrCreateShop(
-          shop.name,
-          shop.address,
-          shop.city,
-          shop.lat,
-          shop.lng
-        );
+        shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
         shop.id = shopId;
+      }
+
+      // Generate session anon ID if not logged in
+      let anonId = null;
+      if (!currentUserId) {
+        anonId = sessionStorage.getItem('anonId');
+        if (!anonId) {
+          anonId = crypto.randomUUID();
+          sessionStorage.setItem('anonId', anonId);
+        }
       }
 
       // Build review payload
@@ -247,24 +238,33 @@ reviewBanner.querySelector('#submit-review-button')?.addEventListener(
         origin: reviewBanner.querySelector('#origin')?.value || null,
         tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
         created_at: new Date().toISOString(),
+        user_id: currentUserId || null,
+        anon_id: anonId, // session-bound for anonymous users
+        status: currentUserId ? 'approved' : 'pending', // auto-approve logged-in
       };
 
-      // Only include user_id if logged in
-      if (currentUserId) reviewPayload.user_id = currentUserId;
+      // Check duplicate anonymous review per session
+      if (!currentUserId && anonId) {
+        const { count } = await supabase
+          .from('reviews')
+          .select('*', { count: 'exact' })
+          .eq('shop_id', shopId)
+          .eq('anon_id', anonId);
+        if (count > 0) {
+          showToast({ message: "You've already submitted a review for this shop this session.", category: "error" });
+          submitBtn.disabled = false;
+          return;
+        }
+      }
 
       // Insert review
       const { error } = await supabase.from('reviews').insert([reviewPayload]);
       if (error) {
-        showToast({
-          message: `Failed to submit review: ${error.message}`,
-          category: "error",
-          duration: 4000,
-        });
+        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", duration: 4000 });
         submitBtn.disabled = false;
         return;
       }
 
-      // Success feedback
       showToast({ category: "reviews", type: "success", duration: 3000 });
       closeReviewBanner(reviewBanner, () => {
         if (typeof onSuccess === 'function') onSuccess(shop);
@@ -272,11 +272,7 @@ reviewBanner.querySelector('#submit-review-button')?.addEventListener(
       });
 
     } catch (err) {
-      showToast({
-        message: `Failed to submit review: ${err.message}`,
-        category: "error",
-        duration: 4000,
-      });
+      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", duration: 4000 });
       submitBtn.disabled = false;
     }
   }
