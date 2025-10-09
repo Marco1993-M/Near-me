@@ -209,22 +209,23 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
         shop.id = shopId;
       }
 
-      const review = {
-        user_id: currentUserId, // <--- anonymous if null
-        shop_id: shopId,
-        rating: selectedRating,
-        text: reviewText,
-        parking,
-        pet_friendly: petFriendly,
-        outside_seating: outsideSeating,
-        drink,
-        brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
-        roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
-        process: reviewBanner.querySelector('#process')?.value || null,
-        origin: reviewBanner.querySelector('#origin')?.value || null,
-        tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
-        created_at: new Date().toISOString(),
-      };
+const review = {
+  user_id: currentUserId || '00000000-0000-0000-0000-000000000000', // placeholder for anonymous
+  shop_id: shopId,
+  rating: selectedRating,
+  text: reviewText,
+  parking,
+  pet_friendly: petFriendly,
+  outside_seating: outsideSeating,
+  drink,
+  brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
+  roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
+  process: reviewBanner.querySelector('#process')?.value || null,
+  origin: reviewBanner.querySelector('#origin')?.value || null,
+  tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
+  created_at: new Date().toISOString(),
+};
+
 
       const { error } = await supabase.from('reviews').insert([review]);
       if (error) {
