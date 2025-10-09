@@ -18,6 +18,10 @@ function closeReviewBanner(reviewBanner, afterClose) {
   );
 }
 
+function slugify(name) {
+  return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+}
+
 function buildReviewBannerHTML(shop) {
   return `
     <div id="review-drag-handle" class="review-banner-drag-handle" aria-label="Drag to close"></div>
@@ -77,7 +81,6 @@ function defaultAfterReview(shop) {
     window.showShopDetails(shop);
     return;
   }
-
   const shopCard = document.querySelector(`[data-shop-id="${shop.id}"]`);
   if (shopCard) {
     shopCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -104,6 +107,16 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
   } catch {
     console.log("Anonymous review: user not logged in.");
   }
+
+  // --- Ensure shop has a slug ---
+  if (!shop.slug) {
+    shop.slug = slugify(shop.name);
+    await supabase.from('shops').upsert([{ id: shop.id, slug: shop.slug }]);
+  }
+
+  // --- Update URL for shareable review page ---
+  const newUrl = `${window.location.origin}/review/${shop.slug}`;
+  window.history.replaceState({}, '', newUrl);
 
   // Inject dynamic HTML
   reviewBanner.innerHTML = buildReviewBannerHTML(shop);
@@ -187,94 +200,110 @@ export async function showReviewBanner(shop, { onSuccess } = {}) {
     }, { once: true });
   });
 
-// --- Submit review ---
-reviewBanner.querySelector('#submit-review-button')?.addEventListener(
-  'click',
-  async function handleSubmit() {
-    const submitBtn = this;
-    submitBtn.disabled = true;
+  // --- Submit review ---
+  reviewBanner.querySelector('#submit-review-button')?.addEventListener(
+    'click',
+    async function handleSubmit() {
+      const submitBtn = this;
+      submitBtn.disabled = true;
 
-    // Gather review data
-    const reviewText = reviewBanner.querySelector('#review-text').value.trim();
-    const parking = optionsState.parking;
-    const petFriendly = optionsState['pet-friendly'];
-    const outsideSeating = optionsState['outside-seating'];
-    const drink = selectedDrink;
+      // Gather review data
+      const reviewText = reviewBanner.querySelector('#review-text').value.trim();
+      const parking = optionsState.parking;
+      const petFriendly = optionsState['pet-friendly'];
+      const outsideSeating = optionsState['outside-seating'];
+      const drink = selectedDrink;
 
-    if (!selectedRating) { showToast({ message: "Please select a rating.", category: "error" }); submitBtn.disabled = false; return; }
-    if (!reviewText) { showToast({ message: "Please write a review.", category: "error" }); submitBtn.disabled = false; return; }
-    if (!drink) { showToast({ message: "Please select a drink.", category: "error" }); submitBtn.disabled = false; return; }
+      if (!selectedRating) { showToast({ message: "Please select a rating.", category: "error" }); submitBtn.disabled = false; return; }
+      if (!reviewText) { showToast({ message: "Please write a review.", category: "error" }); submitBtn.disabled = false; return; }
+      if (!drink) { showToast({ message: "Please select a drink.", category: "error" }); submitBtn.disabled = false; return; }
 
-    try {
-      // Ensure shop exists
-      let shopId = shop.id;
-      if (!shopId) {
-        shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
-        shop.id = shopId;
-      }
-
-      // Generate session anon ID if not logged in
-      let anonId = null;
-      if (!currentUserId) {
-        anonId = sessionStorage.getItem('anonId');
-        if (!anonId) {
-          anonId = crypto.randomUUID();
-          sessionStorage.setItem('anonId', anonId);
+      try {
+        // Ensure shop exists
+        let shopId = shop.id;
+        if (!shopId) {
+          shopId = await getOrCreateShop(shop.name, shop.address, shop.city, shop.lat, shop.lng);
+          shop.id = shopId;
         }
-      }
 
-      // Build review payload
-      const reviewPayload = {
-        shop_id: shopId,
-        rating: selectedRating,
-        text: reviewText,
-        parking,
-        pet_friendly: petFriendly,
-        outside_seating: outsideSeating,
-        drink,
-        brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
-        roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
-        process: reviewBanner.querySelector('#process')?.value || null,
-        origin: reviewBanner.querySelector('#origin')?.value || null,
-        tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
-        created_at: new Date().toISOString(),
-        user_id: currentUserId || null,
-        anon_id: anonId, // session-bound for anonymous users
-        status: currentUserId ? 'approved' : 'pending', // auto-approve logged-in
-      };
+        // Generate session anon ID if not logged in
+        let anonId = null;
+        if (!currentUserId) {
+          anonId = sessionStorage.getItem('anonId');
+          if (!anonId) {
+            anonId = crypto.randomUUID();
+            sessionStorage.setItem('anonId', anonId);
+          }
+        }
 
-      // Check duplicate anonymous review per session
-      if (!currentUserId && anonId) {
-        const { count } = await supabase
-          .from('reviews')
-          .select('*', { count: 'exact' })
-          .eq('shop_id', shopId)
-          .eq('anon_id', anonId);
-        if (count > 0) {
-          showToast({ message: "You've already submitted a review for this shop this session.", category: "error" });
+        // Build review payload
+        const reviewPayload = {
+          shop_id: shopId,
+          rating: selectedRating,
+          text: reviewText,
+          parking,
+          pet_friendly: petFriendly,
+          outside_seating: outsideSeating,
+          drink,
+          brew_method: reviewBanner.querySelector('#brew-method')?.value || null,
+          roast_level: reviewBanner.querySelector('#roast-level')?.value || null,
+          process: reviewBanner.querySelector('#process')?.value || null,
+          origin: reviewBanner.querySelector('#origin')?.value || null,
+          tasting_notes: reviewBanner.querySelector('#tasting-notes')?.value || null,
+          created_at: new Date().toISOString(),
+          user_id: currentUserId || null,
+          anon_id: anonId, // session-bound for anonymous users
+          status: currentUserId ? 'approved' : 'pending', // auto-approve logged-in
+        };
+
+        // Check duplicate anonymous review per session
+        if (!currentUserId && anonId) {
+          const { count } = await supabase
+            .from('reviews')
+            .select('*', { count: 'exact' })
+            .eq('shop_id', shopId)
+            .eq('anon_id', anonId);
+          if (count > 0) {
+            showToast({ message: "You've already submitted a review for this shop this session.", category: "error" });
+            submitBtn.disabled = false;
+            return;
+          }
+        }
+
+        // Insert review
+        const { error } = await supabase.from('reviews').insert([reviewPayload]);
+        if (error) {
+          showToast({ message: `Failed to submit review: ${error.message}`, category: "error", duration: 4000 });
           submitBtn.disabled = false;
           return;
         }
-      }
 
-      // Insert review
-      const { error } = await supabase.from('reviews').insert([reviewPayload]);
-      if (error) {
-        showToast({ message: `Failed to submit review: ${error.message}`, category: "error", duration: 4000 });
+        showToast({ category: "reviews", type: "success", duration: 3000 });
+        closeReviewBanner(reviewBanner, () => {
+          if (typeof onSuccess === 'function') onSuccess(shop);
+          else defaultAfterReview(shop);
+        });
+
+      } catch (err) {
+        showToast({ message: `Failed to submit review: ${err.message}`, category: "error", duration: 4000 });
         submitBtn.disabled = false;
-        return;
       }
-
-      showToast({ category: "reviews", type: "success", duration: 3000 });
-      closeReviewBanner(reviewBanner, () => {
-        if (typeof onSuccess === 'function') onSuccess(shop);
-        else defaultAfterReview(shop);
-      });
-
-    } catch (err) {
-      showToast({ message: `Failed to submit review: ${err.message}`, category: "error", duration: 4000 });
-      submitBtn.disabled = false;
     }
-  }
-);
+  );
 }
+
+/* -------------------- PAGE LOAD HANDLER FOR SLUGS -------------------- */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  if (pathParts[0] === 'review' && pathParts[1]) {
+    const slug = pathParts[1];
+    const { data: shop, error } = await supabase
+      .from('shops')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (shop && !error) showReviewBanner(shop);
+    else console.warn('Shop not found for slug:', slug);
+  }
+});
