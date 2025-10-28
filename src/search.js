@@ -358,6 +358,13 @@ function normalizeText(str) {
 }
 
 /* -------------------- RENDER -------------------- */
+function extractStreetFromAddress(address) {
+  if (!address) return null;
+  const parts = address.split(',').map(p => p.trim());
+  // Usually the street name is the first part of the formatted address
+  return parts.length > 0 ? parts[0] : null;
+}
+
 function renderSearchResults({ shops, roasters, cities }, dropdown) {
   dropdown.innerHTML = '';
   const fragment = document.createDocumentFragment();
@@ -379,15 +386,33 @@ function renderSearchResults({ shops, roasters, cities }, dropdown) {
       li.dataset.type = type;
       li.className = `search-result search-result-${type}`;
 
-      // Use normalized text
       if (type === 'roaster') {
+        // --- Roaster (single line)
         li.textContent = normalizeText(item.name || item);
         li.dataset.roasterName = item.name || item;
+
       } else if (type === 'shop') {
-        li.textContent = normalizeText(item.name || item.description || '');
+        // --- Shop (two-line: name + street)
+        const streetName =
+          extractStreetFromAddress(item.description || item.formatted_address || '') ||
+          'Street unknown';
+
+        li.innerHTML = `
+          <div class="shop-result">
+            <strong>${normalizeText(item.name || '')}</strong>
+            <small>${streetName}</small>
+          </div>
+        `;
         li.dataset.placeId = item.place_id;
+
       } else if (type === 'city') {
-        li.textContent = normalizeText(item.description || item.name || (item.structured_formatting?.main_text) || '');
+        // --- City (single line)
+        li.textContent = normalizeText(
+          item.description ||
+          item.name ||
+          (item.structured_formatting?.main_text) ||
+          ''
+        );
         li.dataset.placeId = item.place_id;
       }
 
