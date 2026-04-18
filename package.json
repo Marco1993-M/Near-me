@@ -4,20 +4,28 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "node generate-sitemap.js && vite build",
-    "preview": "vite preview",
-    "generate-sitemap": "node generate-sitemap.js"
-  },
-  "devDependencies": {
-    "vite": "^6.3.5"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@sentry/browser": "^10.1.0",
     "@supabase/supabase-js": "^2.50.0",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "dotenv": "^17.2.1",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.3",
+    "fuse.js": "^7.1.0",
     "leaflet": "^1.9.4",
     "leaflet-routing-machine": "^3.2.12",
-    "sitemap": "^8.0.0"
+    "next": "^16.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "sitemap": "^8.0.0",
+    "typescript": "^6.0.2"
   }
 }
