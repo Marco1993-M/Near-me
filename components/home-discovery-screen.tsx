@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Cafe } from "@/types/cafe";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
@@ -108,6 +109,7 @@ function formatDistance(distanceKm: number) {
 }
 
 export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
+  const pathname = usePathname();
   const mappableCafes = useMemo(
     () =>
       cafes.filter(
@@ -342,6 +344,30 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               ? `Recommendations shaped around ${activeCoffeeProfile.recommendedDrinks.join(", ")}`
               : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
           };
+
+  useEffect(() => {
+    if (!pathname?.startsWith("/cafes/")) {
+      return;
+    }
+
+    const slug = decodeURIComponent(pathname.replace(/^\/cafes\//, "").split("/")[0] ?? "").trim();
+
+    if (!slug) {
+      return;
+    }
+
+    const matchedCafe = mappableCafes.find((cafe) => cafe.slug === slug) ?? cafes.find((cafe) => cafe.slug === slug);
+
+    if (!matchedCafe) {
+      return;
+    }
+
+    setActiveCafeId((current) => (current === matchedCafe.id ? current : matchedCafe.id));
+    setSheetState((current) => (current === "full" ? current : "half"));
+    setIsSearchOpen(false);
+    setIsTopPicksOpen(false);
+    setIsProfilerOpen(false);
+  }, [cafes, mappableCafes, pathname]);
 
   useEffect(() => {
     return () => {
