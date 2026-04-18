@@ -577,6 +577,7 @@ img {
   align-items: center;
   gap: 0.55rem;
   margin-left: auto;
+  min-width: 0;
 }
 
 .map-radius-shell {
@@ -2743,14 +2744,13 @@ img {
   }
 
   .diesel-topbar {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
     align-items: center;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
     gap: 0.5rem;
-    padding-right: 0.1rem;
+    overflow: hidden;
+    padding-right: 0;
     scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
   }
 
   .diesel-topbar::-webkit-scrollbar {
@@ -2765,9 +2765,19 @@ img {
 
   .diesel-topbar-actions {
     order: 0;
-    width: auto;
-    flex: 0 0 auto;
+    width: 100%;
+    flex: none;
+    justify-content: flex-start;
     margin-left: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 0.1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .diesel-topbar-actions::-webkit-scrollbar {
+    display: none;
   }
 
   .diesel-action-chip {
