@@ -2743,23 +2743,35 @@ img {
   }
 
   .diesel-topbar {
-    align-items: stretch;
-    flex-wrap: wrap;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.5rem;
+    padding-right: 0.1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .diesel-topbar::-webkit-scrollbar {
+    display: none;
   }
 
   .diesel-location-chip {
-    order: 1;
+    order: 0;
     flex: 0 0 auto;
     min-width: fit-content;
   }
 
   .diesel-topbar-actions {
-    order: 2;
+    order: 0;
     width: auto;
+    flex: 0 0 auto;
+    margin-left: 0;
   }
 
   .diesel-action-chip {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
   }
 
   .diesel-selection-primary-main {
