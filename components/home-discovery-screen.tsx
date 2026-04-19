@@ -146,6 +146,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
+  const previousRadiusKmRef = useRef(selectedRadiusKm);
 
   const coffeeProfileSlug = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -450,13 +451,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       return;
     }
 
+    const radiusChanged = previousRadiusKmRef.current !== selectedRadiusKm;
+    previousRadiusKmRef.current = selectedRadiusKm;
     const activeDistance = activeCafeId ? cafeDistances.get(activeCafeId) : undefined;
     const activeWithinRadius =
       !userLocation ||
       activeDistance === undefined ||
       activeDistance <= selectedRadiusKm;
 
-    if (hasExplicitCafeSelectionRef.current && activeCafeId && activeWithinRadius) {
+    if (hasExplicitCafeSelectionRef.current && activeCafeId && (activeWithinRadius || !radiusChanged)) {
       return;
     }
 
