@@ -20,6 +20,7 @@ import {
   subscribeToCoffeeProfile,
 } from "@/lib/coffee-profiler";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
+import { siteConfig } from "@/lib/site";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   getFavoriteCafeIds,
@@ -346,6 +347,52 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               ? `Recommendations shaped around ${activeCoffeeProfile.recommendedDrinks.join(", ")}`
               : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
           };
+  const cafesWithinRadius = useMemo(() => {
+    if (!userLocation) {
+      return cafesByDistance;
+    }
+
+    return cafesByDistance.filter((cafe) => {
+      const distance = cafeDistances.get(cafe.id);
+      return typeof distance === "number" && distance <= selectedRadiusKm;
+    });
+  }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
+  const nearestKnownCafes = useMemo(() => {
+    if (!userLocation) {
+      return cafesByDistance.slice(0, 3);
+    }
+
+    return cafesByDistance
+      .filter((cafe) => {
+        const distance = cafeDistances.get(cafe.id);
+        return typeof distance === "number" && distance > selectedRadiusKm;
+      })
+      .slice(0, 3);
+  }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
+  const nextRadiusKm = radiusOptionsKm.find((radiusKm) => radiusKm > selectedRadiusKm) ?? null;
+  const hasNoRadiusMatches = Boolean(userLocation) && cafesWithinRadius.length === 0;
+  const emptyStateTitle = nearestKnownCafes.length > 0 ? `No specialty spots in ${selectedRadiusKm} km` : "We have not mapped this area yet";
+  const emptyStateBody =
+    nearestKnownCafes.length > 0
+      ? "Nothing in the current radius yet, but there are still good options a little farther out."
+      : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
+  const suggestCafeHref = useMemo(() => {
+    const subject = "Suggest a cafe for Near Me";
+    const lines = [
+      "Hi Near Me,",
+      "",
+      "I want to suggest a cafe to add to the map.",
+      "",
+      `Current radius: ${selectedRadiusKm} km`,
+      userLocation ? `My location: ${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}` : null,
+      "",
+      "Cafe name:",
+      "Address / area:",
+      "Why it belongs on Near Me:",
+    ].filter(Boolean);
+
+    return `mailto:${siteConfig.suggestCafeEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
+  }, [selectedRadiusKm, userLocation]);
 
   function selectCafe(
     cafeId: string,
@@ -1017,6 +1064,76 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <span className="diesel-sheet-handle-bar" />
               </button>
 
+              {hasNoRadiusMatches ? (
+                <>
+                  <div className="diesel-selection-copy diesel-empty-state-copy">
+                    <strong>{emptyStateTitle}</strong>
+                    <p>{emptyStateBody}</p>
+                  </div>
+
+                  {nearestKnownCafes.length > 0 ? (
+                    <div className="diesel-empty-state-nearest">
+                      <span>Closest known cafes</span>
+                      <div className="diesel-empty-state-list">
+                        {nearestKnownCafes.map((cafe) => {
+                          const cafeDistance = cafeDistances.get(cafe.id);
+
+                          return (
+                            <button
+                              key={cafe.id}
+                              className="diesel-empty-state-row"
+                              type="button"
+                              onClick={() =>
+                                selectCafe(cafe.id, {
+                                  explicit: true,
+                                  pan: true,
+                                  nextSheetState: "collapsed",
+                                })
+                              }
+                            >
+                              <div className="diesel-empty-state-row-copy">
+                                <strong>{cafe.name}</strong>
+                                <span>{[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null].filter(Boolean).join(" · ")}</span>
+                              </div>
+                              <span className="diesel-empty-state-row-score">
+                                {cafe.reviewSummary.reviewCount > 0
+                                  ? cafe.reviewSummary.averageRating.toFixed(1)
+                                  : "New"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="diesel-empty-state-actions">
+                    {nextRadiusKm ? (
+                      <button
+                        className="diesel-selection-primary control-primary"
+                        type="button"
+                        onClick={() => setSelectedRadiusKm(nextRadiusKm)}
+                      >
+                        Expand to {nextRadiusKm} km
+                      </button>
+                    ) : null}
+                    <button
+                      className="diesel-selection-secondary control-chip"
+                      type="button"
+                      onClick={openSearch}
+                    >
+                      Search this area
+                    </button>
+                    <a
+                      className="diesel-selection-secondary control-chip"
+                      href={suggestCafeHref}
+                    >
+                      Suggest a cafe
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <>
               <div className="diesel-selection-head">
                 <div className="diesel-selection-meta">
                   <span>{activeCafe.city}</span>
@@ -1186,6 +1303,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   );
                 })}
               </div>
+                </>
+              )}
             </section>
           </>
         ) : null}
