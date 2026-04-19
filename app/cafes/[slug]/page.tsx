@@ -264,10 +264,11 @@ export default async function CafePage({ params }: CafePageProps) {
               </article>
 
               <article className="cafe-detail-section">
-                <h2>Canonical route</h2>
+                <h2>Good to know</h2>
                 <p>
-                  Search engines can index this page directly at <strong>/cafes/{cafe.slug}</strong>, which gives Near
-                  Me a stable page for each shop instead of relying only on map state.
+                  {cafe.website
+                    ? "Check the cafe website before heading out for current hours, menu changes, or seasonal drinks."
+                    : "Availability, menu focus, and opening hours can shift, so it is worth checking before making the trip."}
                 </p>
               </article>
             </div>
