@@ -7,6 +7,7 @@ type DiscoveryMapProps = {
   cafes: MapCafe[];
   activeCafeId: string | null;
   onSelectCafe: (cafeId: string) => void;
+  panToActiveCafeToken?: number;
   userLocation?: { latitude: number; longitude: number } | null;
   selectedRadiusKm?: number;
   locateRequestToken?: number;
@@ -237,6 +238,7 @@ export function DiscoveryMap({
   cafes,
   activeCafeId,
   onSelectCafe,
+  panToActiveCafeToken = 0,
   userLocation = null,
   selectedRadiusKm = 3,
   locateRequestToken = 0,
@@ -254,7 +256,6 @@ export function DiscoveryMap({
   const userMarkerRef = useRef<LeafletMarker | null>(null);
   const userRadiusRef = useRef<import("leaflet").Circle | null>(null);
   const hasAutoFramedRef = useRef(false);
-  const previousActiveCafeIdRef = useRef<string | null>(null);
   const selectedRadiusKmRef = useRef(selectedRadiusKm);
 
   useEffect(() => {
@@ -573,12 +574,6 @@ export function DiscoveryMap({
     const L = leafletRef.current;
     const map = mapRef.current;
     const registry = markerRegistryRef.current;
-    const activeCafe = activeCafeId
-      ? Array.from(registry.values()).find(
-          (record): record is CafeMarkerRecord => record.kind === "cafe" && record.cafe.id === activeCafeId,
-        )?.cafe ?? null
-      : null;
-    const previousActiveCafeId = previousActiveCafeIdRef.current;
 
     if (!isMapReady) {
       return;
@@ -607,19 +602,28 @@ export function DiscoveryMap({
       }
       record.marker.setZIndexOffset(record.cafeIds.includes(activeCafeId ?? "") ? 850 : 350);
     });
+  }, [activeCafeId, isMapReady]);
 
-    if (
-      L &&
-      map &&
-      activeCafe &&
-      previousActiveCafeId !== null &&
-      previousActiveCafeId !== activeCafeId
-    ) {
-      panToWithOffset(map, L, [activeCafe.latitude, activeCafe.longitude], 96);
+  useEffect(() => {
+    if (!panToActiveCafeToken) {
+      return;
     }
 
-    previousActiveCafeIdRef.current = activeCafeId;
-  }, [activeCafeId, isMapReady]);
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    const registry = markerRegistryRef.current;
+    const activeCafe = activeCafeId
+      ? Array.from(registry.values()).find(
+          (record): record is CafeMarkerRecord => record.kind === "cafe" && record.cafe.id === activeCafeId,
+        )?.cafe ?? null
+      : null;
+
+    if (!isMapReady || !L || !map || !activeCafe) {
+      return;
+    }
+
+    panToWithOffset(map, L, [activeCafe.latitude, activeCafe.longitude], 96);
+  }, [activeCafeId, isMapReady, panToActiveCafeToken]);
 
   return <div ref={mapElementRef} className="map-canvas" />;
 }

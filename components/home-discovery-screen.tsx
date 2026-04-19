@@ -118,6 +118,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     [cafes],
   );
   const [activeCafeId, setActiveCafeId] = useState<string | null>(mappableCafes[0]?.id ?? null);
+  const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedRadiusKm, setSelectedRadiusKm] = useState(3);
@@ -143,6 +144,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [reviewToast, setReviewToast] = useState<string | null>(null);
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
+  const hasExplicitCafeSelectionRef = useRef(false);
 
   const coffeeProfileSlug = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -345,6 +347,31 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
           };
 
+  function selectCafe(
+    cafeId: string,
+    options?: {
+      explicit?: boolean;
+      pan?: boolean;
+      nextSheetState?: "collapsed" | "half" | "full";
+    },
+  ) {
+    const explicit = options?.explicit ?? true;
+
+    if (explicit) {
+      hasExplicitCafeSelectionRef.current = true;
+    }
+
+    setActiveCafeId(cafeId);
+
+    if (options?.pan) {
+      setPanToActiveCafeToken((current) => current + 1);
+    }
+
+    if (options?.nextSheetState) {
+      setSheetState(options.nextSheetState);
+    }
+  }
+
   useEffect(() => {
     if (!pathname?.startsWith("/cafes/")) {
       return;
@@ -362,12 +389,57 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       return;
     }
 
+    hasExplicitCafeSelectionRef.current = true;
     setActiveCafeId((current) => (current === matchedCafe.id ? current : matchedCafe.id));
-    setSheetState((current) => (current === "full" ? current : "half"));
+    setSheetState("half");
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
   }, [cafes, mappableCafes, pathname]);
+
+  useEffect(() => {
+    if (mappableCafes.length === 0) {
+      setActiveCafeId(null);
+      return;
+    }
+
+    const activeDistance = activeCafeId ? cafeDistances.get(activeCafeId) : undefined;
+    const activeWithinRadius =
+      !userLocation ||
+      activeDistance === undefined ||
+      activeDistance <= selectedRadiusKm;
+
+    if (hasExplicitCafeSelectionRef.current && activeCafeId && activeWithinRadius) {
+      return;
+    }
+
+    if (hasExplicitCafeSelectionRef.current && activeCafeId && !activeWithinRadius) {
+      hasExplicitCafeSelectionRef.current = false;
+    }
+
+    const inRadiusCafe =
+      userLocation
+        ? cafesByDistance.find((cafe) => {
+            const distance = cafeDistances.get(cafe.id);
+            return typeof distance === "number" && distance <= selectedRadiusKm;
+          }) ?? null
+        : null;
+
+    const suggestedCafe = inRadiusCafe ?? cafesByDistance[0] ?? mappableCafes[0] ?? null;
+
+    if (!suggestedCafe) {
+      return;
+    }
+
+    setActiveCafeId((current) => (current === suggestedCafe.id ? current : suggestedCafe.id));
+  }, [
+    activeCafeId,
+    cafeDistances,
+    cafesByDistance,
+    mappableCafes,
+    selectedRadiusKm,
+    userLocation,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -602,7 +674,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       <DiscoveryMap
         cafes={mappableCafes}
         activeCafeId={activeCafe?.id ?? null}
-        onSelectCafe={setActiveCafeId}
+        onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true })}
+        panToActiveCafeToken={panToActiveCafeToken}
         userLocation={userLocation}
         selectedRadiusKm={selectedRadiusKm}
         locateRequestToken={locateRequestToken}
@@ -724,8 +797,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         className="map-search-result-row"
                         type="button"
                         onClick={() => {
-                          setActiveCafeId(cafe.id);
-                          setSheetState("collapsed");
+                          selectCafe(cafe.id, {
+                            explicit: true,
+                            pan: true,
+                            nextSheetState: "collapsed",
+                          });
                           closeSearch();
                         }}
                       >
@@ -825,8 +901,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       className="map-top-pick-row"
                       type="button"
                       onClick={() => {
-                        setActiveCafeId(cafe.id);
-                        setSheetState("collapsed");
+                        selectCafe(cafe.id, {
+                          explicit: true,
+                          pan: true,
+                          nextSheetState: "collapsed",
+                        });
                         closeTopPicks();
                       }}
                     >
@@ -1079,8 +1158,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       className={`diesel-result-row${isActive ? " active" : ""}`}
                       type="button"
                       onClick={() => {
-                        setActiveCafeId(cafe.id);
-                        setSheetState((current) => (current === "full" ? "half" : current));
+                        selectCafe(cafe.id, {
+                          explicit: true,
+                          pan: true,
+                          nextSheetState: sheetState === "full" ? "half" : sheetState,
+                        });
                       }}
                     >
                       <div className="diesel-result-row-main">
