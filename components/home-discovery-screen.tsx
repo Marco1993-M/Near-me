@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Cafe } from "@/types/cafe";
+import type { Cafe, FallbackPlace } from "@/types/cafe";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import {
@@ -119,7 +119,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     [cafes],
   );
   const [activeCafeId, setActiveCafeId] = useState<string | null>(mappableCafes[0]?.id ?? null);
+  const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
+  const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedRadiusKm, setSelectedRadiusKm] = useState(3);
@@ -143,6 +145,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [reviewState, setReviewState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewToast, setReviewToast] = useState<string | null>(null);
+  const [fallbackPlaces, setFallbackPlaces] = useState<FallbackPlace[]>([]);
+  const [fallbackState, setFallbackState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
@@ -372,11 +376,20 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
   const nextRadiusKm = radiusOptionsKm.find((radiusKm) => radiusKm > selectedRadiusKm) ?? null;
   const hasNoRadiusMatches = Boolean(userLocation) && cafesWithinRadius.length === 0;
-  const emptyStateTitle = nearestKnownCafes.length > 0 ? `No specialty spots in ${selectedRadiusKm} km` : "We have not mapped this area yet";
+  const activeFallbackPlace =
+    fallbackPlaces.find((place) => place.id === activeFallbackId) ?? fallbackPlaces[0] ?? null;
+  const emptyStateTitle =
+    fallbackPlaces.length > 0
+      ? `No Near Me picks in ${selectedRadiusKm} km`
+      : nearestKnownCafes.length > 0
+        ? `No specialty spots in ${selectedRadiusKm} km`
+        : "We have not mapped this area yet";
   const emptyStateBody =
-    nearestKnownCafes.length > 0
-      ? "Nothing in the current radius yet, but there are still good options a little farther out."
-      : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
+    fallbackPlaces.length > 0
+      ? "We found a few nearby options, but they are not yet verified by Near Me."
+      : nearestKnownCafes.length > 0
+        ? "Nothing in the current radius yet, but there are still good options a little farther out."
+        : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
   const suggestCafeHref = useMemo(() => {
     const subject = "Suggest a cafe for Near Me";
     const lines = [
@@ -395,6 +408,50 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     return `mailto:${siteConfig.suggestCafeEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
   }, [selectedRadiusKm, userLocation]);
 
+  useEffect(() => {
+    if (!hasNoRadiusMatches || !userLocation) {
+      setFallbackPlaces([]);
+      setActiveFallbackId(null);
+      setFallbackState("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    const searchParams = new URLSearchParams({
+      lat: String(userLocation.latitude),
+      lng: String(userLocation.longitude),
+      radiusKm: String(selectedRadiusKm),
+    });
+
+    setFallbackState("loading");
+
+    void fetch(`/api/fallback-cafes?${searchParams.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((payload: { places?: FallbackPlace[] }) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const places = payload.places ?? [];
+        setFallbackPlaces(places);
+        setActiveFallbackId((current) => current && places.some((place) => place.id === current) ? current : places[0]?.id ?? null);
+        setFallbackState("ready");
+      })
+      .catch(() => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setFallbackPlaces([]);
+        setActiveFallbackId(null);
+        setFallbackState("error");
+      });
+
+    return () => controller.abort();
+  }, [hasNoRadiusMatches, selectedRadiusKm, userLocation]);
+
   function selectCafe(
     cafeId: string,
     options?: {
@@ -409,6 +466,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       hasExplicitCafeSelectionRef.current = true;
     }
 
+    setActiveFallbackId(null);
     setActiveCafeId(cafeId);
 
     if (options?.pan) {
@@ -417,6 +475,22 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     if (options?.nextSheetState) {
       setSheetState(options.nextSheetState);
+    }
+  }
+
+  function selectFallbackPlace(
+    placeId: string,
+    options?: {
+      pan?: boolean;
+    },
+  ) {
+    hasExplicitCafeSelectionRef.current = false;
+    setActiveCafeId(null);
+    setActiveFallbackId(placeId);
+    setSheetState("collapsed");
+
+    if (options?.pan) {
+      setPanToFallbackPlaceToken((current) => current + 1);
     }
   }
 
@@ -726,6 +800,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         activeCafeId={activeCafe?.id ?? null}
         onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true })}
         panToActiveCafeToken={panToActiveCafeToken}
+        fallbackPlaces={hasNoRadiusMatches ? fallbackPlaces : []}
+        activeFallbackPlaceId={activeFallbackPlace?.id ?? null}
+        onSelectFallbackPlace={(placeId) => selectFallbackPlace(placeId, { pan: true })}
+        panToFallbackPlaceToken={panToFallbackPlaceToken}
         userLocation={userLocation}
         selectedRadiusKm={selectedRadiusKm}
         locateRequestToken={locateRequestToken}
@@ -1048,7 +1126,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </div>
         ) : null}
 
-        {activeCafe ? (
+        {activeCafe || hasNoRadiusMatches ? (
           <>
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
@@ -1074,9 +1152,83 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <p>{emptyStateBody}</p>
                   </div>
 
-                  {nearestKnownCafes.length > 0 ? (
+                  {activeFallbackPlace ? (
+                    <div className="diesel-fallback-feature">
+                      <div className="diesel-fallback-kicker">
+                        <span>Nearby option</span>
+                        <strong>Not yet verified by Near Me</strong>
+                      </div>
+                      <div className="diesel-fallback-feature-copy">
+                        <strong>{activeFallbackPlace.name}</strong>
+                        <p>
+                          {[
+                            activeFallbackPlace.city,
+                            formatDistance(activeFallbackPlace.distanceKm),
+                            activeFallbackPlace.category,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                      <div className="diesel-selection-footer">
+                        <span>{activeFallbackPlace.address}</span>
+                      </div>
+                      <div className="diesel-empty-state-actions">
+                        <a
+                          className="diesel-selection-primary control-primary"
+                          href={`https://www.google.com/maps/search/?api=1&query=${activeFallbackPlace.latitude},${activeFallbackPlace.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Directions
+                        </a>
+                        <a
+                          className="diesel-selection-secondary control-chip"
+                          href={suggestCafeHref}
+                        >
+                          Suggest this cafe
+                        </a>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {fallbackState === "loading" ? (
                     <div className="diesel-empty-state-nearest">
-                      <span>Closest known cafes</span>
+                      <span>Checking nearby options</span>
+                    </div>
+                  ) : null}
+
+                  {fallbackPlaces.length > 0 ? (
+                    <div className="diesel-empty-state-nearest">
+                      <span>Nearby options</span>
+                      <div className="diesel-empty-state-list">
+                        {fallbackPlaces.map((place) => {
+                          const isActiveFallback = place.id === activeFallbackPlace?.id;
+
+                          return (
+                            <button
+                              key={place.id}
+                              className={`diesel-empty-state-row${isActiveFallback ? " active" : ""}`}
+                              type="button"
+                              onClick={() => selectFallbackPlace(place.id, { pan: true })}
+                            >
+                              <div className="diesel-empty-state-row-copy">
+                                <strong>{place.name}</strong>
+                                <span>{[place.city, formatDistance(place.distanceKm), place.category].filter(Boolean).join(" · ")}</span>
+                              </div>
+                              <span className="diesel-empty-state-row-score">
+                                {formatDistance(place.distanceKm)}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!activeFallbackPlace && fallbackState !== "loading" && nearestKnownCafes.length > 0 ? (
+                    <div className="diesel-empty-state-nearest">
+                      <span>Closest Near Me picks</span>
                       <div className="diesel-empty-state-list">
                         {nearestKnownCafes.map((cafe) => {
                           const cafeDistance = cafeDistances.get(cafe.id);

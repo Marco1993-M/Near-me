@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MapCafe } from "@/types/cafe";
+import type { FallbackPlace, MapCafe } from "@/types/cafe";
 
 type DiscoveryMapProps = {
   cafes: MapCafe[];
   activeCafeId: string | null;
   onSelectCafe: (cafeId: string) => void;
   panToActiveCafeToken?: number;
+  fallbackPlaces?: FallbackPlace[];
+  activeFallbackPlaceId?: string | null;
+  onSelectFallbackPlace?: (placeId: string) => void;
+  panToFallbackPlaceToken?: number;
   userLocation?: { latitude: number; longitude: number } | null;
   selectedRadiusKm?: number;
   locateRequestToken?: number;
@@ -44,6 +48,11 @@ type ClusterDisplay = {
   kind: "cafe" | "cluster";
   cafes: MappableCafe[];
   center: [number, number];
+};
+
+type FallbackMarkerRecord = {
+  place: FallbackPlace;
+  marker: LeafletMarker;
 };
 
 const defaultCenter: [number, number] = [-33.9249, 18.4241];
@@ -166,6 +175,39 @@ function buildUserMarker(L: LeafletModule) {
   });
 }
 
+function buildFallbackMarker(L: LeafletModule, isActive: boolean) {
+  const background = isActive
+    ? "linear-gradient(145deg, #5d6f66, #304039)"
+    : "linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(231, 239, 234, 0.94))";
+  const borderColor = isActive ? "rgba(255, 255, 252, 0.92)" : "rgba(93, 111, 102, 0.42)";
+  const shadow = isActive
+    ? "0 14px 28px rgba(20, 32, 24, 0.24)"
+    : "0 8px 18px rgba(20, 32, 24, 0.12)";
+  const color = isActive ? "#fffffc" : "#5d6f66";
+  const halo = isActive ? "box-shadow:0 0 0 7px rgba(93, 111, 102, 0.14);" : "";
+
+  return L.divIcon({
+    className: "leaflet-marker-reset",
+    html: `<span style="
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:1.65rem;
+      height:1.65rem;
+      border-radius:999px;
+      background:${background};
+      border:1.5px dashed ${borderColor};
+      box-shadow:${shadow};
+      color:${color};
+      font-size:0.9rem;
+      font-weight:700;
+      ${halo}
+    ">?</span>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -180,6 +222,13 @@ function buildPopupMarkup(cafe: MapCafe) {
     <strong>${escapeHtml(cafe.name)}</strong>
     <span>${escapeHtml(cafe.city)}</span>
   </a>`;
+}
+
+function buildFallbackPopupMarkup(place: FallbackPlace) {
+  return `<div class="marker-popup-link">
+    <strong>${escapeHtml(place.name)}</strong>
+    <span>${escapeHtml(place.city)} · ${escapeHtml(place.category)}</span>
+  </div>`;
 }
 
 function buildClusterDisplays(cafes: MappableCafe[], zoom: number, activeCafeId: string | null) {
@@ -239,6 +288,10 @@ export function DiscoveryMap({
   activeCafeId,
   onSelectCafe,
   panToActiveCafeToken = 0,
+  fallbackPlaces = [],
+  activeFallbackPlaceId = null,
+  onSelectFallbackPlace,
+  panToFallbackPlaceToken = 0,
   userLocation = null,
   selectedRadiusKm = 3,
   locateRequestToken = 0,
@@ -252,7 +305,9 @@ export function DiscoveryMap({
   const leafletRef = useRef<LeafletModule | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerLayerRef = useRef<LeafletLayerGroup | null>(null);
+  const fallbackMarkerLayerRef = useRef<LeafletLayerGroup | null>(null);
   const markerRegistryRef = useRef<Map<string, MarkerRecord>>(new Map());
+  const fallbackMarkerRegistryRef = useRef<Map<string, FallbackMarkerRecord>>(new Map());
   const userMarkerRef = useRef<LeafletMarker | null>(null);
   const userRadiusRef = useRef<import("leaflet").Circle | null>(null);
   const hasAutoFramedRef = useRef(false);
@@ -364,6 +419,7 @@ export function DiscoveryMap({
 
       mapRef.current = map;
       markerLayerRef.current = L.layerGroup().addTo(map);
+      fallbackMarkerLayerRef.current = L.layerGroup().addTo(map);
       setMapZoom(map.getZoom());
       setIsMapReady(true);
 
@@ -379,6 +435,7 @@ export function DiscoveryMap({
       mapRef.current?.remove();
       mapRef.current = null;
       markerLayerRef.current = null;
+      fallbackMarkerLayerRef.current = null;
       userMarkerRef.current = null;
       userRadiusRef.current = null;
       leafletRef.current = null;
@@ -572,6 +629,56 @@ export function DiscoveryMap({
 
   useEffect(() => {
     const L = leafletRef.current;
+    const layerGroup = fallbackMarkerLayerRef.current;
+
+    if (!isMapReady || !L || !layerGroup) {
+      return;
+    }
+
+    const registry = fallbackMarkerRegistryRef.current;
+    const nextIds = new Set(fallbackPlaces.map((place) => place.id));
+
+    registry.forEach(({ marker }, key) => {
+      if (nextIds.has(key)) {
+        return;
+      }
+
+      layerGroup.removeLayer(marker);
+      registry.delete(key);
+    });
+
+    fallbackPlaces.forEach((place) => {
+      const existing = registry.get(place.id);
+
+      if (existing) {
+        existing.place = place;
+        existing.marker.setLatLng([place.latitude, place.longitude]);
+        existing.marker.setIcon(buildFallbackMarker(L, place.id === activeFallbackPlaceId));
+        existing.marker.setZIndexOffset(place.id === activeFallbackPlaceId ? 1250 : 250);
+        return;
+      }
+
+      const marker = L.marker([place.latitude, place.longitude], {
+        icon: buildFallbackMarker(L, place.id === activeFallbackPlaceId),
+        riseOnHover: true,
+      });
+
+      marker.setZIndexOffset(place.id === activeFallbackPlaceId ? 1250 : 250);
+      marker.on("click", () => onSelectFallbackPlace?.(place.id));
+      marker.bindPopup(buildFallbackPopupMarkup(place), {
+        closeButton: false,
+        autoPanPadding: [24, 24],
+        className: "marker-popup-shell",
+        offset: [0, -12],
+      });
+      marker.addTo(layerGroup);
+
+      registry.set(place.id, { place, marker });
+    });
+  }, [activeFallbackPlaceId, fallbackPlaces, isMapReady, onSelectFallbackPlace]);
+
+  useEffect(() => {
+    const L = leafletRef.current;
     const map = mapRef.current;
     const registry = markerRegistryRef.current;
 
@@ -605,6 +712,26 @@ export function DiscoveryMap({
   }, [activeCafeId, isMapReady]);
 
   useEffect(() => {
+    const L = leafletRef.current;
+    const registry = fallbackMarkerRegistryRef.current;
+
+    if (!isMapReady || !L) {
+      return;
+    }
+
+    registry.forEach((record) => {
+      record.marker.setIcon(buildFallbackMarker(L, record.place.id === activeFallbackPlaceId));
+      record.marker.setZIndexOffset(record.place.id === activeFallbackPlaceId ? 1250 : 250);
+
+      if (record.place.id === activeFallbackPlaceId) {
+        record.marker.openPopup();
+      } else {
+        record.marker.closePopup();
+      }
+    });
+  }, [activeFallbackPlaceId, isMapReady]);
+
+  useEffect(() => {
     if (!panToActiveCafeToken) {
       return;
     }
@@ -624,6 +751,25 @@ export function DiscoveryMap({
 
     panToWithOffset(map, L, [activeCafe.latitude, activeCafe.longitude], 96);
   }, [activeCafeId, isMapReady, panToActiveCafeToken]);
+
+  useEffect(() => {
+    if (!panToFallbackPlaceToken) {
+      return;
+    }
+
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    const registry = fallbackMarkerRegistryRef.current;
+    const activeFallbackPlace = activeFallbackPlaceId
+      ? registry.get(activeFallbackPlaceId)?.place ?? null
+      : null;
+
+    if (!isMapReady || !L || !map || !activeFallbackPlace) {
+      return;
+    }
+
+    panToWithOffset(map, L, [activeFallbackPlace.latitude, activeFallbackPlace.longitude], 96);
+  }, [activeFallbackPlaceId, isMapReady, panToFallbackPlaceToken]);
 
   return <div ref={mapElementRef} className="map-canvas" />;
 }
