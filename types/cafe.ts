@@ -54,3 +54,16 @@ export type MapCafe = Pick<
   Cafe,
   "id" | "slug" | "name" | "city" | "countryCode" | "latitude" | "longitude" | "tags" | "reviewSummary"
 >;
+
+export type FallbackPlace = {
+  id: string;
+  source: "osm-overpass";
+  name: string;
+  address: string;
+  city: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  distanceKm: number;
+  website: string | null;
+};

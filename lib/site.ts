@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const siteConfig = {
   name: "Near Me Cafe",
   shortName: "Near Me",
-  suggestCafeEmail: "hello@near-me.cafe",
+  suggestCafeEmail: "marcogerritsen1@gmail.com",
   description:
     "Find standout local coffee shops anywhere in the world with low-friction discovery, trusted details, and traveler-friendly search.",
   url: "https://www.near-me.cafe",
