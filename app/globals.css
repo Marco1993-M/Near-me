@@ -2903,13 +2903,13 @@ img {
   }
 
   .diesel-topbar {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
+    display: flex;
     align-items: center;
-    flex-wrap: nowrap !important;
     gap: 0.5rem;
-    overflow: hidden;
-    padding-right: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 0.1rem;
+    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
 
@@ -2925,20 +2925,10 @@ img {
 
   .diesel-topbar-actions {
     display: flex !important;
-    order: 0;
-    width: 100%;
-    flex: none;
+    flex: 0 0 auto;
     justify-content: flex-start;
-    margin-left: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-right: 0.1rem;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .diesel-topbar-actions::-webkit-scrollbar {
-    display: none;
+    margin-left: auto;
+    min-width: max-content;
   }
 
   .diesel-action-chip {
