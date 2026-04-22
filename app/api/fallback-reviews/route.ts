@@ -66,14 +66,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Add a short useful note first." }, { status: 400 });
   }
 
-  const { data: sourceRow, error: sourceError } = await supabase
+  const { data: existingSourceRow, error: existingSourceError } = await supabase
     .from(CANONICAL_TABLES.placeSources)
-    .upsert([{ code: sourceCode, name: "Fallback nearby options" }], { onConflict: "code" })
     .select("id")
-    .single();
+    .eq("code", sourceCode)
+    .maybeSingle();
 
-  if (sourceError || !sourceRow?.id) {
+  if (existingSourceError) {
+    console.error("[fallback-reviews] Failed to look up place source.", existingSourceError);
     return NextResponse.json({ error: "Could not prepare review source." }, { status: 500 });
+  }
+
+  let sourceRow = existingSourceRow;
+
+  if (!sourceRow?.id) {
+    const { data: insertedSourceRow, error: insertSourceError } = await supabase
+      .from(CANONICAL_TABLES.placeSources)
+      .insert([{ code: sourceCode, name: "Fallback nearby options" }])
+      .select("id")
+      .single();
+
+    if (insertSourceError || !insertedSourceRow?.id) {
+      console.error("[fallback-reviews] Failed to create place source.", insertSourceError);
+      return NextResponse.json({ error: "Could not prepare review source." }, { status: 500 });
+    }
+
+    sourceRow = insertedSourceRow;
   }
 
   const reviewEntry = {
@@ -93,6 +111,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existingError) {
+    console.error("[fallback-reviews] Failed to load existing nearby option.", existingError);
     return NextResponse.json({ error: "Could not load existing nearby option." }, { status: 500 });
   }
 
@@ -126,11 +145,17 @@ export async function POST(request: Request) {
     match_status: "unmatched",
   };
 
-  const { error: upsertError } = await supabase
-    .from(CANONICAL_TABLES.sourcePlaces)
-    .upsert([upsertPayload], { onConflict: "source_id,external_id" });
+  const sourcePlaceMutation = existingSourcePlace?.id
+    ? supabase
+        .from(CANONICAL_TABLES.sourcePlaces)
+        .update(upsertPayload)
+        .eq("id", existingSourcePlace.id)
+    : supabase.from(CANONICAL_TABLES.sourcePlaces).insert([upsertPayload]);
+
+  const { error: upsertError } = await sourcePlaceMutation;
 
   if (upsertError) {
+    console.error("[fallback-reviews] Failed to save fallback review.", upsertError);
     return NextResponse.json({ error: "Could not save fallback review." }, { status: 500 });
   }
 
