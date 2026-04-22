@@ -132,6 +132,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
+  const [isAddShopOpen, setIsAddShopOpen] = useState(false);
   const [profilerQuestionIndex, setProfilerQuestionIndex] = useState(0);
   const [profilerScores, setProfilerScores] = useState(defaultProfilerScores);
   const [profilerSelections, setProfilerSelections] = useState<number[]>([]);
@@ -147,6 +148,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [reviewToast, setReviewToast] = useState<string | null>(null);
   const [fallbackPlaces, setFallbackPlaces] = useState<FallbackPlace[]>([]);
   const [fallbackState, setFallbackState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [addShopName, setAddShopName] = useState("");
+  const [addShopArea, setAddShopArea] = useState("");
+  const [addShopNote, setAddShopNote] = useState("");
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
@@ -268,7 +272,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : null;
   const isActiveCafeSaved = activeCafe ? favoriteCafeIds.includes(activeCafe.id) : false;
   const canRetryLocation = locationState === "denied" || locationState === "unavailable";
-  const isOverlayOpen = isSearchOpen || isTopPicksOpen || isProfilerOpen;
+  const isOverlayOpen = isSearchOpen || isTopPicksOpen || isProfilerOpen || isAddShopOpen;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!normalizedSearchQuery) {
@@ -390,23 +394,25 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : nearestKnownCafes.length > 0
         ? "Nothing in the current radius yet, but there are still good options a little farther out."
         : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
-  const suggestCafeHref = useMemo(() => {
-    const subject = "Suggest a cafe for Near Me";
+  const addShopMailtoHref = useMemo(() => {
+    const subject = addShopName.trim()
+      ? `Add cafe to Near Me: ${addShopName.trim()}`
+      : "Add cafe to Near Me";
     const lines = [
       "Hi Near Me,",
       "",
-      "I want to suggest a cafe to add to the map.",
+      "I found a coffee shop that should be added to the map.",
       "",
-      `Current radius: ${selectedRadiusKm} km`,
+      `Cafe name: ${addShopName.trim() || "[add cafe name]"}`,
+      `Area / address: ${addShopArea.trim() || "[add area or address]"}`,
       userLocation ? `My location: ${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}` : null,
       "",
-      "Cafe name:",
-      "Address / area:",
-      "Why it belongs on Near Me:",
+      "Why it should be added:",
+      addShopNote.trim() || "[add a quick note]",
     ].filter(Boolean);
 
     return `mailto:${siteConfig.suggestCafeEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-  }, [selectedRadiusKm, userLocation]);
+  }, [addShopArea, addShopName, addShopNote, userLocation]);
 
   useEffect(() => {
     if (!hasNoRadiusMatches || !userLocation) {
@@ -593,6 +599,20 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
   function closeTopPicks() {
     setIsTopPicksOpen(false);
+  }
+
+  function openAddShopModal(prefill?: { name?: string; area?: string; note?: string }) {
+    setIsSearchOpen(false);
+    setIsTopPicksOpen(false);
+    setIsProfilerOpen(false);
+    setAddShopName(prefill?.name ?? searchQuery.trim());
+    setAddShopArea(prefill?.area ?? "");
+    setAddShopNote(prefill?.note ?? "");
+    setIsAddShopOpen(true);
+  }
+
+  function closeAddShopModal() {
+    setIsAddShopOpen(false);
   }
 
   function resetProfiler() {
@@ -955,6 +975,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   </div>
                 )}
               </div>
+
+              <button
+                className="map-search-add-shop"
+                type="button"
+                onClick={() => openAddShopModal({ name: searchQuery.trim() })}
+              >
+                Can&apos;t find it? Add a shop
+              </button>
             </section>
           </div>
         ) : null}
@@ -1126,6 +1154,78 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </div>
         ) : null}
 
+        {isAddShopOpen ? (
+          <div className="profiler-backdrop fade-slide-in" onClick={closeAddShopModal}>
+            <section
+              className="profiler-sheet add-shop-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-shop-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="profiler-head">
+                <div className="profiler-title-group">
+                  <span>Help grow Near Me</span>
+                  <h2 id="add-shop-title">Add a shop</h2>
+                </div>
+                <button className="map-search-close" type="button" onClick={closeAddShopModal} aria-label="Close add shop">
+                  Close
+                </button>
+              </div>
+
+              <div className="profiler-question-block">
+                <strong>Tell us about the cafe you found</strong>
+                <span>We will open your email app with the details prefilled so you can send it straight through.</span>
+              </div>
+
+              <label className="review-modal-section">
+                <strong>Cafe name</strong>
+                <input
+                  className="add-shop-input"
+                  type="text"
+                  value={addShopName}
+                  onChange={(event) => setAddShopName(event.target.value)}
+                  placeholder="Coffee shop name"
+                />
+              </label>
+
+              <label className="review-modal-section">
+                <strong>Area or address</strong>
+                <input
+                  className="add-shop-input"
+                  type="text"
+                  value={addShopArea}
+                  onChange={(event) => setAddShopArea(event.target.value)}
+                  placeholder="Town, suburb, or street address"
+                />
+              </label>
+
+              <label className="review-modal-section">
+                <strong>Why it belongs on Near Me</strong>
+                <textarea
+                  className="review-note-input"
+                  value={addShopNote}
+                  onChange={(event) => setAddShopNote(event.target.value)}
+                  placeholder="Specialty coffee, great espresso, local favorite, beautiful space..."
+                  rows={4}
+                />
+              </label>
+
+              <div className="review-modal-actions">
+                <button className="review-secondary" type="button" onClick={closeAddShopModal}>
+                  Cancel
+                </button>
+                <a
+                  className="review-primary"
+                  href={addShopMailtoHref}
+                >
+                  Email this to Near Me
+                </a>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         {activeCafe || hasNoRadiusMatches ? (
           <>
             <section
@@ -1182,12 +1282,19 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         >
                           Directions
                         </a>
-                        <a
+                        <button
                           className="diesel-selection-secondary control-chip"
-                          href={suggestCafeHref}
+                          type="button"
+                          onClick={() =>
+                            openAddShopModal({
+                              name: activeFallbackPlace.name,
+                              area: activeFallbackPlace.address,
+                              note: `Nearby fallback option from ${activeFallbackPlace.source}. Not yet verified by Near Me.`,
+                            })
+                          }
                         >
-                          Suggest this cafe
-                        </a>
+                          Add this shop
+                        </button>
                       </div>
                     </div>
                   ) : null}
@@ -1279,12 +1386,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     >
                       Search this area
                     </button>
-                    <a
+                    <button
                       className="diesel-selection-secondary control-chip"
-                      href={suggestCafeHref}
+                      type="button"
+                      onClick={() => openAddShopModal()}
                     >
-                      Suggest a cafe
-                    </a>
+                      Add a shop
+                    </button>
                   </div>
                 </>
               ) : (
