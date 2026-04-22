@@ -96,17 +96,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   ]);
 
   const sourceCodeById = new Map((placeSources ?? []).map((source) => [source.id, source.code]));
-  const candidates = (sourcePlaces ?? []).filter((sourcePlace) => {
-    const payload = (sourcePlace.payload ?? {}) as CandidatePayload;
-    const sourceCode = sourceCodeById.get(sourcePlace.source_id);
-
-    return (
-      payload.promotion_candidate === true ||
-      payload.submission_type === "user_add_shop" ||
-      payload.submission_type === "fallback_first_review" ||
-      sourceCode === "user-submissions"
-    );
-  });
+  const candidates = sourcePlaces ?? [];
 
   return (
     <main style={{ maxWidth: 860, margin: "0 auto", padding: "2rem 1rem 4rem" }}>
