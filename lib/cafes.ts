@@ -207,6 +207,7 @@ async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
   const supabase = getSupabaseServerClient();
 
   if (!supabase) {
+    console.error("[cafes] Missing Supabase server client while fetching canonical cafe bundle.");
     return null;
   }
 
@@ -235,7 +236,13 @@ async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
     .order("average_rating", { ascending: false, nullsFirst: false })
     .limit(1000);
 
-  if (cafeError || !cafeRows || cafeRows.length === 0) {
+  if (cafeError) {
+    console.error("[cafes] Failed to fetch cafes_new rows.", cafeError);
+    return null;
+  }
+
+  if (!cafeRows || cafeRows.length === 0) {
+    console.warn("[cafes] No active cafes returned from cafes_new.");
     return null;
   }
 
@@ -302,6 +309,14 @@ async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
   ]);
 
   if (cityError || cafeRoasterError || roasterError || cafeTagError || cafeDrinkError || reviewError) {
+    console.error("[cafes] Failed to fetch related canonical cafe data.", {
+      cityError,
+      cafeRoasterError,
+      roasterError,
+      cafeTagError,
+      cafeDrinkError,
+      reviewError,
+    });
     return null;
   }
 
@@ -318,6 +333,7 @@ async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
     : { data: [], error: null };
 
   if (reviewTagError) {
+    console.error("[cafes] Failed to fetch review tag rows.", reviewTagError);
     return null;
   }
 
@@ -470,7 +486,8 @@ export async function getFeaturedCafes() {
       const scoreB = b.reviewSummary.averageRating * 4 + b.reviewSummary.reviewCount;
       return scoreB - scoreA;
     });
-  } catch {
+  } catch (error) {
+    console.error("[cafes] Unexpected getFeaturedCafes failure.", error);
     return [];
   }
 }
