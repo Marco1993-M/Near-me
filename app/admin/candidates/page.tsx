@@ -88,7 +88,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
   const [{ data: sourcePlaces }, { data: placeSources }] = await Promise.all([
     supabase
       .from(CANONICAL_TABLES.sourcePlaces)
-      .select("id, created_at, raw_name, raw_address, raw_city, raw_country_code, latitude, longitude, website, payload, source_id, match_status, canonical_cafe_id")
+      .select("id, created_at, raw_name, raw_address, raw_city, raw_country_code, latitude, longitude, payload, source_id, match_status, canonical_cafe_id")
       .eq("match_status", "unmatched")
       .order("created_at", { ascending: false })
       .limit(100),
@@ -229,10 +229,6 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
                     <label style={{ display: "grid", gap: "0.32rem" }}>
                       <span>Longitude</span>
                       <input name="longitude" defaultValue={candidate.longitude ?? ""} style={{ padding: "0.72rem 0.82rem", borderRadius: 14, border: "1px solid rgba(20,32,24,0.14)" }} />
-                    </label>
-                    <label style={{ display: "grid", gap: "0.32rem" }}>
-                      <span>Website</span>
-                      <input name="website" defaultValue={candidate.website ?? ""} style={{ padding: "0.72rem 0.82rem", borderRadius: 14, border: "1px solid rgba(20,32,24,0.14)" }} />
                     </label>
                   </div>
 

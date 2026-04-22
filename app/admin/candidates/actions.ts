@@ -88,7 +88,7 @@ export async function approveCandidate(formData: FormData) {
 
   const { data: sourcePlace, error: sourcePlaceError } = await adminSupabase
     .from(CANONICAL_TABLES.sourcePlaces)
-    .select("id, canonical_cafe_id, raw_name, raw_address, raw_city, raw_country_code, latitude, longitude, website, payload")
+    .select("id, canonical_cafe_id, raw_name, raw_address, raw_city, raw_country_code, latitude, longitude, payload")
     .eq("id", sourcePlaceId)
     .maybeSingle();
 
@@ -105,7 +105,6 @@ export async function approveCandidate(formData: FormData) {
   const citySlug = slugify(cityName) || "unknown-city";
   const countryCode = (getString(formData, "countryCode") || sourcePlace.raw_country_code || "ZA").toUpperCase();
   const address = getString(formData, "address") || sourcePlace.raw_address || cityName;
-  const website = getString(formData, "website") || sourcePlace.website || null;
   const note = getString(formData, "note");
   const latitudeString = getString(formData, "latitude");
   const longitudeString = getString(formData, "longitude");
@@ -145,7 +144,6 @@ export async function approveCandidate(formData: FormData) {
         address_line1: address,
         latitude,
         longitude,
-        website,
         summary: note || null,
         status: "active",
       },
