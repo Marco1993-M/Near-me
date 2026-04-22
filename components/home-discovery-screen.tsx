@@ -33,6 +33,10 @@ type HomeDiscoveryScreenProps = {
   cafes: Cafe[];
 };
 
+type ReviewTarget =
+  | { type: "cafe"; cafe: Cafe }
+  | { type: "fallback"; place: FallbackPlace };
+
 const reviewDrinkOptions = [
   {
     label: "Espresso",
@@ -146,6 +150,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [reviewState, setReviewState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewToast, setReviewToast] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
   const [fallbackPlaces, setFallbackPlaces] = useState<FallbackPlace[]>([]);
   const [fallbackState, setFallbackState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [addShopName, setAddShopName] = useState("");
@@ -738,11 +743,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setReviewMessage("");
   }
 
-  function openReviewModal() {
+  function openReviewModal(target?: ReviewTarget) {
     if (reviewSuccessTimeoutRef.current) {
       window.clearTimeout(reviewSuccessTimeoutRef.current);
       reviewSuccessTimeoutRef.current = null;
     }
+    setReviewTarget(target ?? (activeCafe ? { type: "cafe", cafe: activeCafe } : null));
     resetReviewForm();
     setIsReviewOpen(true);
   }
@@ -751,6 +757,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsReviewOpen(false);
     setReviewState("idle");
     setReviewMessage("");
+    setReviewTarget(null);
   }
 
   function toggleReviewTag(tag: string) {
@@ -760,7 +767,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }
 
   async function handleReviewSubmit() {
-    if (!activeCafe) {
+    if (!reviewTarget) {
       return;
     }
 
@@ -776,61 +783,101 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       return;
     }
 
-    const supabase = getSupabaseClient();
-
-    if (!supabase) {
-      setReviewState("error");
-      setReviewMessage("Reviews are unavailable until Supabase is configured.");
-      return;
-    }
-
     const anonId = getAnonymousReviewerId();
-    const duplicateKey = `near-me-review:${activeCafe.id}:${anonId}`;
+    const duplicateKey =
+      reviewTarget.type === "cafe"
+        ? `near-me-review:${reviewTarget.cafe.id}:${anonId}`
+        : `near-me-fallback-review:${reviewTarget.place.source}:${reviewTarget.place.id}:${anonId}`;
 
     if (window.localStorage.getItem(duplicateKey)) {
       setReviewState("error");
-      setReviewMessage("You already left a review for this cafe on this device.");
+      setReviewMessage(
+        reviewTarget.type === "cafe"
+          ? "You already left a review for this cafe on this device."
+          : "You already reviewed this nearby option on this device.",
+      );
       return;
     }
 
     setReviewState("submitting");
     setReviewMessage("");
 
-    const payload = {
-      cafe_id: activeCafe.id,
-      rating: reviewRating,
-      note: reviewNote.trim(),
-      drink: reviewDrink,
-      anon_id: anonId,
-      status: "pending",
-      user_id: null,
-    };
+    if (reviewTarget.type === "cafe") {
+      const supabase = getSupabaseClient();
 
-    const { data, error } = await supabase
-      .from(CANONICAL_TABLES.reviews)
-      .insert([payload])
-      .select("id")
-      .single();
+      if (!supabase) {
+        setReviewState("error");
+        setReviewMessage("Reviews are unavailable until Supabase is configured.");
+        return;
+      }
 
-    if (error) {
-      setReviewState("error");
-      setReviewMessage(error.message || "Could not submit review.");
-      return;
-    }
+      const payload = {
+        cafe_id: reviewTarget.cafe.id,
+        rating: reviewRating,
+        note: reviewNote.trim(),
+        drink: reviewDrink,
+        anon_id: anonId,
+        status: "pending",
+        user_id: null,
+      };
 
-    if (data?.id && selectedReviewTags.length > 0) {
-      await supabase.from(CANONICAL_TABLES.reviewTags).insert(
-        selectedReviewTags.map((tag) => ({
-          review_id: data.id,
-          tag: slugifyReviewTag(tag),
-        })),
-      );
+      const { data, error } = await supabase
+        .from(CANONICAL_TABLES.reviews)
+        .insert([payload])
+        .select("id")
+        .single();
+
+      if (error) {
+        setReviewState("error");
+        setReviewMessage(error.message || "Could not submit review.");
+        return;
+      }
+
+      if (data?.id && selectedReviewTags.length > 0) {
+        await supabase.from(CANONICAL_TABLES.reviewTags).insert(
+          selectedReviewTags.map((tag) => ({
+            review_id: data.id,
+            tag: slugifyReviewTag(tag),
+          })),
+        );
+      }
+    } else {
+      const response = await fetch("/api/fallback-reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          place: reviewTarget.place,
+          rating: reviewRating,
+          note: reviewNote.trim(),
+          drink: reviewDrink,
+          tags: selectedReviewTags,
+          anonId,
+        }),
+      });
+
+      const payload = (await response.json()) as { success?: boolean; error?: string };
+
+      if (!response.ok || !payload.success) {
+        setReviewState("error");
+        setReviewMessage(payload.error || "Could not submit review.");
+        return;
+      }
     }
 
     window.localStorage.setItem(duplicateKey, "1");
     setReviewState("success");
-    setReviewMessage("Review sent. Thanks for helping the next coffee run.");
-    setReviewToast(`Review saved for ${activeCafe.name}`);
+    setReviewMessage(
+      reviewTarget.type === "cafe"
+        ? "Review sent. Thanks for helping the next coffee run."
+        : "Review sent. We will use it to assess this nearby option for Near Me.",
+    );
+    setReviewToast(
+      reviewTarget.type === "cafe"
+        ? `Review saved for ${reviewTarget.cafe.name}`
+        : `Review submitted for ${reviewTarget.place.name}`,
+    );
 
     if (reviewToastTimeoutRef.current) {
       window.clearTimeout(reviewToastTimeoutRef.current);
@@ -1327,6 +1374,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <button
                           className="diesel-selection-secondary control-chip"
                           type="button"
+                          onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
+                        >
+                          Be first to review
+                        </button>
+                        <button
+                          className="diesel-selection-secondary control-chip"
+                          type="button"
                           onClick={() =>
                             openAddShopModal({
                               name: activeFallbackPlace.name,
@@ -1514,7 +1568,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <button
                   className="diesel-selection-icon-button"
                   type="button"
-                  onClick={openReviewModal}
+                  onClick={() => activeCafe && openReviewModal({ type: "cafe", cafe: activeCafe })}
                   aria-label="Leave a review"
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1614,7 +1668,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </>
         ) : null}
 
-        {activeCafe && isReviewOpen ? (
+        {reviewTarget && isReviewOpen ? (
           <div className="review-modal-backdrop" onClick={closeReviewModal}>
             <section
               className="review-modal-sheet review-modal-sheet-enter"
@@ -1631,9 +1685,19 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               </div>
 
               <div className="review-modal-header">
-                <span className="review-modal-kicker">Quick review</span>
-                <h2 id="review-modal-title">How was {activeCafe.name}?</h2>
-                <p>Keep it short and useful. Rate the coffee, pick your drink, and add one clear note.</p>
+                <span className="review-modal-kicker">
+                  {reviewTarget.type === "cafe" ? "Quick review" : "First review"}
+                </span>
+                <h2 id="review-modal-title">
+                  {reviewTarget.type === "cafe"
+                    ? `How was ${reviewTarget.cafe.name}?`
+                    : `Help us review ${reviewTarget.place.name}`}
+                </h2>
+                <p>
+                  {reviewTarget.type === "cafe"
+                    ? "Keep it short and useful. Rate the coffee, pick your drink, and add one clear note."
+                    : "This place is not yet verified by Near Me. Your review helps us decide whether it belongs on the map."}
+                </p>
               </div>
 
               <div className="review-modal-section">
