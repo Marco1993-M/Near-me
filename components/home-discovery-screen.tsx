@@ -151,6 +151,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [addShopName, setAddShopName] = useState("");
   const [addShopArea, setAddShopArea] = useState("");
   const [addShopNote, setAddShopNote] = useState("");
+  const [addShopState, setAddShopState] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [addShopMessage, setAddShopMessage] = useState("");
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
@@ -394,26 +396,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : nearestKnownCafes.length > 0
         ? "Nothing in the current radius yet, but there are still good options a little farther out."
         : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
-  const addShopMailtoHref = useMemo(() => {
-    const subject = addShopName.trim()
-      ? `Add cafe to Near Me: ${addShopName.trim()}`
-      : "Add cafe to Near Me";
-    const lines = [
-      "Hi Near Me,",
-      "",
-      "I found a coffee shop that should be added to the map.",
-      "",
-      `Cafe name: ${addShopName.trim() || "[add cafe name]"}`,
-      `Area / address: ${addShopArea.trim() || "[add area or address]"}`,
-      userLocation ? `My location: ${userLocation.latitude.toFixed(5)}, ${userLocation.longitude.toFixed(5)}` : null,
-      "",
-      "Why it should be added:",
-      addShopNote.trim() || "[add a quick note]",
-    ].filter(Boolean);
-
-    return `mailto:${siteConfig.suggestCafeEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join("\n"))}`;
-  }, [addShopArea, addShopName, addShopNote, userLocation]);
-
   useEffect(() => {
     if (!hasNoRadiusMatches || !userLocation) {
       setFallbackPlaces([]);
@@ -457,6 +439,58 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     return () => controller.abort();
   }, [hasNoRadiusMatches, selectedRadiusKm, userLocation]);
+
+  async function handleAddShopSubmit() {
+    if (!addShopName.trim()) {
+      setAddShopState("error");
+      setAddShopMessage("Add the cafe name first.");
+      return;
+    }
+
+    setAddShopState("submitting");
+    setAddShopMessage("");
+
+    try {
+      const response = await fetch("/api/shop-suggestions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: addShopName.trim(),
+          area: addShopArea.trim(),
+          note: addShopNote.trim(),
+          latitude: userLocation?.latitude ?? null,
+          longitude: userLocation?.longitude ?? null,
+        }),
+      });
+
+      const payload = (await response.json()) as { success?: boolean; error?: string };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || "Could not submit shop.");
+      }
+
+      setAddShopState("success");
+      setAddShopMessage("Shop sent for review. Thanks for helping grow Near Me.");
+      setReviewToast(`Shop submitted: ${addShopName.trim()}`);
+
+      if (reviewToastTimeoutRef.current) {
+        window.clearTimeout(reviewToastTimeoutRef.current);
+      }
+      reviewToastTimeoutRef.current = window.setTimeout(() => {
+        setReviewToast(null);
+        reviewToastTimeoutRef.current = null;
+      }, 2600);
+
+      window.setTimeout(() => {
+        closeAddShopModal();
+      }, 420);
+    } catch (error) {
+      setAddShopState("error");
+      setAddShopMessage(error instanceof Error ? error.message : "Could not submit shop.");
+    }
+  }
 
   function selectCafe(
     cafeId: string,
@@ -608,6 +642,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setAddShopName(prefill?.name ?? searchQuery.trim());
     setAddShopArea(prefill?.area ?? "");
     setAddShopNote(prefill?.note ?? "");
+    setAddShopState("idle");
+    setAddShopMessage("");
     setIsAddShopOpen(true);
   }
 
@@ -1175,7 +1211,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
               <div className="profiler-question-block">
                 <strong>Tell us about the cafe you found</strong>
-                <span>We will open your email app with the details prefilled so you can send it straight through.</span>
+                <span>Send it straight to Near Me for review and we will add it to the queue.</span>
               </div>
 
               <label className="review-modal-section">
@@ -1211,16 +1247,22 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 />
               </label>
 
+              {addShopMessage ? (
+                <p className={`review-feedback review-feedback-${addShopState}`}>{addShopMessage}</p>
+              ) : null}
+
               <div className="review-modal-actions">
                 <button className="review-secondary" type="button" onClick={closeAddShopModal}>
                   Cancel
                 </button>
-                <a
+                <button
                   className="review-primary"
-                  href={addShopMailtoHref}
+                  type="button"
+                  onClick={handleAddShopSubmit}
+                  disabled={addShopState === "submitting"}
                 >
-                  Email this to Near Me
-                </a>
+                  {addShopState === "submitting" ? "Submitting..." : "Submit to Near Me"}
+                </button>
               </div>
             </section>
           </div>
