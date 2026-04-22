@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { Cafe, FallbackPlace } from "@/types/cafe";
+import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@/types/cafe";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import {
@@ -113,14 +113,54 @@ function formatDistance(distanceKm: number) {
   return `${Math.round(distanceKm)} km`;
 }
 
+function buildOptimisticReviewState(
+  cafe: Cafe,
+  input: { rating: number; note: string; selectedTags: string[] },
+): { reviewSummary: CafeReviewSummary; trustPreview: CafeTrustPreview } {
+  const currentCount = cafe.reviewSummary.reviewCount;
+  const nextCount = currentCount + 1;
+  const nextAverage =
+    currentCount > 0
+      ? Number((((cafe.reviewSummary.averageRating || 0) * currentCount + input.rating) / nextCount).toFixed(1))
+      : input.rating;
+
+  return {
+    reviewSummary: {
+      averageRating: nextAverage,
+      reviewCount: nextCount,
+    },
+    trustPreview: {
+      topMentions: Array.from(new Set([...input.selectedTags, ...cafe.trustPreview.topMentions])).slice(0, 2),
+      recentQuote: input.note.trim(),
+    },
+  };
+}
+
 export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const pathname = usePathname();
+  const [localReviewStateByCafeId, setLocalReviewStateByCafeId] = useState<
+    Record<string, { reviewSummary: CafeReviewSummary; trustPreview: CafeTrustPreview }>
+  >({});
+  const hydratedCafes = useMemo(
+    () =>
+      cafes.map((cafe) => {
+        const localReviewState = localReviewStateByCafeId[cafe.id];
+        return localReviewState
+          ? {
+              ...cafe,
+              reviewSummary: localReviewState.reviewSummary,
+              trustPreview: localReviewState.trustPreview,
+            }
+          : cafe;
+      }),
+    [cafes, localReviewStateByCafeId],
+  );
   const mappableCafes = useMemo(
     () =>
-      cafes.filter(
+      hydratedCafes.filter(
         (cafe) => typeof cafe.latitude === "number" && typeof cafe.longitude === "number",
       ),
-    [cafes],
+    [hydratedCafes],
   );
   const [activeCafeId, setActiveCafeId] = useState<string | null>(mappableCafes[0]?.id ?? null);
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
@@ -191,7 +231,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }, [mappableCafes, userLocation]);
 
   const activeCafe =
-    mappableCafes.find((cafe) => cafe.id === activeCafeId) ?? mappableCafes[0] ?? cafes[0] ?? null;
+    mappableCafes.find((cafe) => cafe.id === activeCafeId) ?? mappableCafes[0] ?? hydratedCafes[0] ?? null;
   const activeCoffeeProfile = useMemo(
     () => getCoffeeProfileBySlug(coffeeProfileSlug),
     [coffeeProfileSlug],
@@ -550,7 +590,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       return;
     }
 
-    const matchedCafe = mappableCafes.find((cafe) => cafe.slug === slug) ?? cafes.find((cafe) => cafe.slug === slug);
+    const matchedCafe =
+      mappableCafes.find((cafe) => cafe.slug === slug) ?? hydratedCafes.find((cafe) => cafe.slug === slug);
 
     if (!matchedCafe) {
       return;
@@ -562,7 +603,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
-  }, [cafes, mappableCafes, pathname]);
+  }, [hydratedCafes, mappableCafes, pathname]);
 
   useEffect(() => {
     if (mappableCafes.length === 0) {
@@ -867,6 +908,16 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }
 
     window.localStorage.setItem(duplicateKey, "1");
+    if (reviewTarget.type === "cafe") {
+      setLocalReviewStateByCafeId((current) => ({
+        ...current,
+        [reviewTarget.cafe.id]: buildOptimisticReviewState(reviewTarget.cafe, {
+          rating: reviewRating,
+          note: reviewNote,
+          selectedTags: selectedReviewTags,
+        }),
+      }));
+    }
     setReviewState("success");
     setReviewMessage(
       reviewTarget.type === "cafe"
