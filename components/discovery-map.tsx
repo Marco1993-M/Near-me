@@ -92,31 +92,9 @@ function panToWithOffset(
 }
 
 function buildCafeMarker(L: LeafletModule, isActive: boolean) {
-  const background = isActive
-    ? "linear-gradient(145deg, #24412d, #142018)"
-    : "linear-gradient(145deg, #dcf9e4, #c7f5d3)";
-  const borderColor = isActive ? "rgba(199, 245, 211, 0.65)" : "rgba(20, 32, 24, 0.36)";
-  const shadow = isActive
-    ? "0 14px 30px rgba(20, 32, 24, 0.32)"
-    : "0 8px 18px rgba(20, 32, 24, 0.18)";
-  const transform = isActive ? "rotate(-45deg) scale(1.18)" : "rotate(-45deg)";
-  const halo = isActive ? "box-shadow:0 0 0 7px rgba(199, 245, 211, 0.22);" : "";
-
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span style="
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:1.25rem;
-      height:1.25rem;
-      border-radius:999px 999px 999px 0;
-      transform:${transform};
-      background:${background};
-      border:2px solid ${borderColor};
-      box-shadow:${shadow};
-      ${halo}
-    "></span>`,
+    html: `<span class="nm-marker nm-marker-cafe${isActive ? " active" : ""}"><span class="nm-marker-cafe-dot"></span></span>`,
     iconSize: [26, 26],
     iconAnchor: [13, 26],
   });
@@ -124,35 +102,10 @@ function buildCafeMarker(L: LeafletModule, isActive: boolean) {
 
 function buildClusterMarker(L: LeafletModule, count: number, isActiveCluster: boolean) {
   const size = count >= 12 ? 44 : count >= 6 ? 40 : 36;
-  const background = isActiveCluster
-    ? "linear-gradient(145deg, #24412d, #142018)"
-    : "linear-gradient(145deg, rgba(255, 255, 252, 0.96), rgba(227, 248, 234, 0.92))";
-  const borderColor = isActiveCluster ? "rgba(199, 245, 211, 0.72)" : "rgba(20, 32, 24, 0.12)";
-  const shadow = isActiveCluster
-    ? "0 16px 32px rgba(20, 32, 24, 0.28)"
-    : "0 10px 24px rgba(20, 32, 24, 0.12)";
-  const color = isActiveCluster ? "#fffffc" : "#142018";
-  const halo = isActiveCluster
-    ? "0 0 0 7px rgba(199, 245, 211, 0.18)"
-    : "0 0 0 6px rgba(255, 255, 252, 0.4)";
 
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span style="
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:${size}px;
-      height:${size}px;
-      border-radius:999px;
-      background:${background};
-      border:1.5px solid ${borderColor};
-      box-shadow:${shadow}, ${halo};
-      color:${color};
-      font-size:0.76rem;
-      font-weight:800;
-      letter-spacing:-0.02em;
-    ">${count}</span>`,
+    html: `<span class="nm-marker nm-marker-cluster${isActiveCluster ? " active" : ""}" style="width:${size}px;height:${size}px;">${count}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -161,48 +114,16 @@ function buildClusterMarker(L: LeafletModule, count: number, isActiveCluster: bo
 function buildUserMarker(L: LeafletModule) {
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span style="
-      display:inline-flex;
-      width:1rem;
-      height:1rem;
-      border-radius:999px;
-      background:#fffffc;
-      border:3px solid #142018;
-      box-shadow:0 0 0 8px rgba(199, 245, 211, 0.28);
-    "></span>`,
+    html: `<span class="nm-marker nm-marker-user"></span>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
   });
 }
 
 function buildFallbackMarker(L: LeafletModule, isActive: boolean) {
-  const background = isActive
-    ? "linear-gradient(145deg, #5d6f66, #304039)"
-    : "linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(231, 239, 234, 0.94))";
-  const borderColor = isActive ? "rgba(255, 255, 252, 0.92)" : "rgba(93, 111, 102, 0.42)";
-  const shadow = isActive
-    ? "0 14px 28px rgba(20, 32, 24, 0.24)"
-    : "0 8px 18px rgba(20, 32, 24, 0.12)";
-  const color = isActive ? "#fffffc" : "#5d6f66";
-  const halo = isActive ? "box-shadow:0 0 0 7px rgba(93, 111, 102, 0.14);" : "";
-
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span style="
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:1.65rem;
-      height:1.65rem;
-      border-radius:999px;
-      background:${background};
-      border:1.5px dashed ${borderColor};
-      box-shadow:${shadow};
-      color:${color};
-      font-size:0.9rem;
-      font-weight:700;
-      ${halo}
-    ">?</span>`,
+    html: `<span class="nm-marker nm-marker-fallback${isActive ? " active" : ""}">?</span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
