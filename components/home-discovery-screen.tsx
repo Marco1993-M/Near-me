@@ -428,7 +428,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const nextRadiusKm = radiusOptionsKm.find((radiusKm) => radiusKm > selectedRadiusKm) ?? null;
   const hasNoRadiusMatches = Boolean(userLocation) && cafesWithinRadius.length === 0;
   const activeFallbackPlace =
-    fallbackPlaces.find((place) => place.id === activeFallbackId) ?? fallbackPlaces[0] ?? null;
+    fallbackPlaces.find((place) => place.id === activeFallbackId) ??
+    (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
   const emptyStateTitle =
     fallbackPlaces.length > 0
       ? `No Near Me picks in ${selectedRadiusKm} km`
@@ -442,7 +443,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         ? "Nothing in the current radius yet, but there are still good options a little farther out."
         : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
   useEffect(() => {
-    if (!hasNoRadiusMatches || !userLocation) {
+    if (!userLocation) {
       setFallbackPlaces([]);
       setActiveFallbackId(null);
       setFallbackState("idle");
@@ -469,7 +470,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
         const places = payload.places ?? [];
         setFallbackPlaces(places);
-        setActiveFallbackId((current) => current && places.some((place) => place.id === current) ? current : places[0]?.id ?? null);
+        setActiveFallbackId((current) =>
+          current && places.some((place) => place.id === current) ? current : null,
+        );
         setFallbackState("ready");
       })
       .catch(() => {
@@ -483,7 +486,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       });
 
     return () => controller.abort();
-  }, [hasNoRadiusMatches, selectedRadiusKm, userLocation]);
+  }, [selectedRadiusKm, userLocation]);
 
   async function handleAddShopSubmit() {
     if (!addShopName.trim()) {
@@ -954,7 +957,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         activeCafeId={activeCafe?.id ?? null}
         onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true })}
         panToActiveCafeToken={panToActiveCafeToken}
-        fallbackPlaces={hasNoRadiusMatches ? fallbackPlaces : []}
+        fallbackPlaces={fallbackPlaces}
         activeFallbackPlaceId={activeFallbackPlace?.id ?? null}
         onSelectFallbackPlace={(placeId) => selectFallbackPlace(placeId, { pan: true })}
         panToFallbackPlaceToken={panToFallbackPlaceToken}
@@ -1366,7 +1369,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </div>
         ) : null}
 
-        {activeCafe || hasNoRadiusMatches ? (
+        {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
           <>
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
@@ -1540,6 +1543,65 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     >
                       Add a shop
                     </button>
+                  </div>
+                </>
+              ) : activeFallbackPlace ? (
+                <>
+                  <div className="diesel-selection-copy diesel-empty-state-copy">
+                    <strong>Nearby option</strong>
+                    <p>Not yet verified by Near Me. Leave the first review to help us assess whether it belongs on the map.</p>
+                  </div>
+
+                  <div className="diesel-fallback-feature">
+                    <div className="diesel-fallback-kicker">
+                      <span>Prospective shop</span>
+                      <strong>{activeFallbackPlace.category}</strong>
+                    </div>
+                    <div className="diesel-fallback-feature-copy">
+                      <strong>{activeFallbackPlace.name}</strong>
+                      <p>
+                        {[
+                          activeFallbackPlace.city,
+                          formatDistance(activeFallbackPlace.distanceKm),
+                          activeFallbackPlace.category,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <div className="diesel-selection-footer">
+                      <span>{activeFallbackPlace.address}</span>
+                    </div>
+                    <div className="diesel-empty-state-actions">
+                      <a
+                        className="diesel-selection-primary control-primary"
+                        href={`https://www.google.com/maps/search/?api=1&query=${activeFallbackPlace.latitude},${activeFallbackPlace.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Directions
+                      </a>
+                      <button
+                        className="diesel-selection-secondary control-chip"
+                        type="button"
+                        onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
+                      >
+                        Review this place
+                      </button>
+                      <button
+                        className="diesel-selection-secondary control-chip"
+                        type="button"
+                        onClick={() =>
+                          openAddShopModal({
+                            name: activeFallbackPlace.name,
+                            area: activeFallbackPlace.address,
+                            note: `Nearby fallback option from ${activeFallbackPlace.source}. Not yet verified by Near Me.`,
+                          })
+                        }
+                      >
+                        Add this shop
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
