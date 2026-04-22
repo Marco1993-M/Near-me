@@ -92,9 +92,21 @@ function panToWithOffset(
 }
 
 function buildCafeMarker(L: LeafletModule, isActive: boolean) {
+  const outerFill = isActive ? "#24412d" : "#dcf9e4";
+  const outerStroke = isActive ? "rgba(199,245,211,0.72)" : "rgba(20,32,24,0.38)";
+  const innerFill = isActive ? "#fffffc" : "#24412d";
+  const scale = isActive ? "1.08" : "1";
+
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span class="nm-marker nm-marker-cafe${isActive ? " active" : ""}"><span class="nm-marker-cafe-dot"></span></span>`,
+    html: `<span style="display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" style="overflow:visible;transform:scale(${scale});filter:${isActive ? "drop-shadow(0 8px 18px rgba(20,32,24,0.28))" : "drop-shadow(0 5px 12px rgba(20,32,24,0.18))"};">
+        <g transform="translate(14 14)">
+          <path d="M0 11.5C4.4 7.2 8.1 3.7 8.1-1.5A8.1 8.1 0 1 0-8.1-1.5C-8.1 3.7-4.4 7.2 0 11.5Z" fill="${outerFill}" stroke="${outerStroke}" stroke-width="1.8"/>
+          <circle cx="0" cy="-1.5" r="2.7" fill="${innerFill}" />
+        </g>
+      </svg>
+    </span>`,
     iconSize: [26, 26],
     iconAnchor: [13, 26],
   });
@@ -102,10 +114,35 @@ function buildCafeMarker(L: LeafletModule, isActive: boolean) {
 
 function buildClusterMarker(L: LeafletModule, count: number, isActiveCluster: boolean) {
   const size = count >= 12 ? 44 : count >= 6 ? 40 : 36;
+  const background = isActiveCluster
+    ? "linear-gradient(145deg, #24412d, #142018)"
+    : "linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(227, 248, 234, 0.94))";
+  const borderColor = isActiveCluster ? "rgba(199, 245, 211, 0.72)" : "rgba(20, 32, 24, 0.12)";
+  const shadow = isActiveCluster
+    ? "0 16px 32px rgba(20, 32, 24, 0.28)"
+    : "0 10px 24px rgba(20, 32, 24, 0.12)";
+  const color = isActiveCluster ? "#fffffc" : "#142018";
+  const halo = isActiveCluster
+    ? "0 0 0 7px rgba(199, 245, 211, 0.18)"
+    : "0 0 0 6px rgba(255, 255, 252, 0.4)";
 
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span class="nm-marker nm-marker-cluster${isActiveCluster ? " active" : ""}" style="width:${size}px;height:${size}px;">${count}</span>`,
+    html: `<span style="
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:${size}px;
+      height:${size}px;
+      border-radius:999px;
+      background:${background};
+      border:1.5px solid ${borderColor};
+      box-shadow:${shadow}, ${halo};
+      color:${color};
+      font-size:0.76rem;
+      font-weight:800;
+      letter-spacing:-0.02em;
+    ">${count}</span>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -114,16 +151,48 @@ function buildClusterMarker(L: LeafletModule, count: number, isActiveCluster: bo
 function buildUserMarker(L: LeafletModule) {
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span class="nm-marker nm-marker-user"></span>`,
+    html: `<span style="
+      display:inline-flex;
+      width:1rem;
+      height:1rem;
+      border-radius:999px;
+      background:#fffffc;
+      border:3px solid #142018;
+      box-shadow:0 0 0 8px rgba(199, 245, 211, 0.28);
+    "></span>`,
     iconSize: [20, 20],
     iconAnchor: [10, 10],
   });
 }
 
 function buildFallbackMarker(L: LeafletModule, isActive: boolean) {
+  const background = isActive
+    ? "linear-gradient(145deg, #5d6f66, #304039)"
+    : "linear-gradient(145deg, rgba(255, 255, 252, 0.98), rgba(231, 239, 234, 0.94))";
+  const borderColor = isActive ? "rgba(255, 255, 252, 0.92)" : "rgba(93, 111, 102, 0.42)";
+  const shadow = isActive
+    ? "0 14px 28px rgba(20, 32, 24, 0.24)"
+    : "0 8px 18px rgba(20, 32, 24, 0.12)";
+  const color = isActive ? "#fffffc" : "#5d6f66";
+  const halo = isActive ? "box-shadow:0 0 0 7px rgba(93, 111, 102, 0.14);" : "";
+
   return L.divIcon({
     className: "leaflet-marker-reset",
-    html: `<span class="nm-marker nm-marker-fallback${isActive ? " active" : ""}">?</span>`,
+    html: `<span style="
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:1.65rem;
+      height:1.65rem;
+      border-radius:999px;
+      background:${background};
+      border:1.5px dashed ${borderColor};
+      box-shadow:${shadow};
+      color:${color};
+      font-size:0.9rem;
+      font-weight:700;
+      ${halo}
+    ">?</span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
