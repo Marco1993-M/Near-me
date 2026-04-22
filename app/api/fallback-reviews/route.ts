@@ -41,7 +41,6 @@ export async function POST(request: Request) {
   const name = place?.name?.trim();
   const address = place?.address?.trim() || null;
   const city = place?.city?.trim() || null;
-  const website = place?.website?.trim() || null;
   const note = payload.note?.trim() || "";
   const drink = payload.drink?.trim() || null;
   const rating = Number(payload.rating);
@@ -140,7 +139,6 @@ export async function POST(request: Request) {
     raw_country_code: "ZA",
     latitude,
     longitude,
-    website,
     payload: nextPayload,
     match_status: "unmatched",
   };
