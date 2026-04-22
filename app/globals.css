@@ -929,6 +929,21 @@ img {
   display: none;
 }
 
+.map-search-add-shop {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0.75rem 0.95rem;
+  border: 1px dashed rgba(20, 32, 24, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 255, 252, 0.44);
+  color: var(--near-me-ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
 .map-search-result-row {
   display: flex;
   align-items: flex-start;
@@ -2047,6 +2062,20 @@ img {
 
 .review-note-input::placeholder {
   color: rgba(20, 32, 24, 0.45);
+}
+
+.add-shop-sheet {
+  max-width: 32rem;
+}
+
+.add-shop-input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(20, 32, 24, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 252, 0.78);
+  color: var(--near-me-ink);
 }
 
 .review-feedback {
