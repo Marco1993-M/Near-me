@@ -861,7 +861,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         note: reviewNote.trim(),
         drink: reviewDrink,
         anon_id: anonId,
-        status: "pending",
+        status: "approved",
         user_id: null,
       };
 
