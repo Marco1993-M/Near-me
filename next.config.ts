@@ -6,6 +6,21 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: fileURLToPath(new URL(".", import.meta.url)),
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "near-me.cafe",
+          },
+        ],
+        destination: "https://www.near-me.cafe/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
