@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getCityHighlights, getFeaturedCafes } from "@/lib/cafes";
 
+export const revalidate = 300;
+
 type CityPageProps = {
   params: Promise<{
     slug: string;

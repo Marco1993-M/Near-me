@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { siteConfig } from "@/lib/site";
 import type { FallbackPlace } from "@/types/cafe";
@@ -96,18 +97,13 @@ function toFallbackPlace(
   };
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const latitude = Number(searchParams.get("lat"));
-  const longitude = Number(searchParams.get("lng"));
-  const requestedRadiusKm = Number(searchParams.get("radiusKm") ?? "3");
-  const radiusMeters = Math.min(Math.max(Math.round(Math.max(requestedRadiusKm * 4, 15) * 1000), 15000), 50000);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return NextResponse.json({ places: [] }, { status: 400 });
-  }
-
-  const query = `
+const getFallbackPlaces = unstable_cache(
+  async (
+    latitude: number,
+    longitude: number,
+    radiusMeters: number,
+  ): Promise<FallbackPlace[]> => {
+    const query = `
 [out:json][timeout:20];
 (
   node(around:${radiusMeters},${latitude},${longitude})["amenity"="cafe"];
@@ -120,7 +116,6 @@ export async function GET(request: Request) {
 out center tags;
 `;
 
-  try {
     const response = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
       headers: {
@@ -132,13 +127,14 @@ out center tags;
     });
 
     if (!response.ok) {
-      return NextResponse.json({ places: [] }, { status: 200 });
+      return [];
     }
 
     const payload = (await response.json()) as { elements?: OverpassElement[] };
     const userLocation = { latitude, longitude };
     const seen = new Set<string>();
-    const places = (payload.elements ?? [])
+
+    return (payload.elements ?? [])
       .map((element) => toFallbackPlace(element, userLocation))
       .filter((place): place is FallbackPlace => Boolean(place))
       .filter((place) => {
@@ -151,6 +147,26 @@ out center tags;
       })
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 8);
+  },
+  ["fallback-cafes"],
+  { revalidate: 300 },
+);
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const latitude = Number(searchParams.get("lat"));
+  const longitude = Number(searchParams.get("lng"));
+  const requestedRadiusKm = Number(searchParams.get("radiusKm") ?? "3");
+  const radiusMeters = Math.min(Math.max(Math.round(Math.max(requestedRadiusKm * 4, 15) * 1000), 15000), 50000);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return NextResponse.json({ places: [] }, { status: 400 });
+  }
+
+  try {
+    const roundedLatitude = Number(latitude.toFixed(3));
+    const roundedLongitude = Number(longitude.toFixed(3));
+    const places = await getFallbackPlaces(roundedLatitude, roundedLongitude, radiusMeters);
 
     return NextResponse.json({ places });
   } catch {

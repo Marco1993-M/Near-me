@@ -1,7 +1,7 @@
 import { HomeDiscoveryScreen } from "@/components/home-discovery-screen";
 import { getFeaturedCafes } from "@/lib/cafes";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function HomePage() {
   const featuredCafes = await getFeaturedCafes();

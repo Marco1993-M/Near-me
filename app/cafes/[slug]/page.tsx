@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { getCafeBySlug, getCafeTrustSignalsBySlug } from "@/lib/cafes";
 
+export const revalidate = 300;
+
 type CafePageProps = {
   params: Promise<{
     slug: string;
