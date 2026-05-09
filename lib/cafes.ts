@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import type { Cafe, CafeReview, CafeTrustPreview, CafeTrustSignals, CityHighlight } from "@/types/cafe";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { getSupabaseServerClient } from "@/lib/supabase";
@@ -203,7 +205,7 @@ async function selectInChunks<T>(input: {
   };
 }
 
-async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
+async function fetchCanonicalCafeBundleUncached(): Promise<CanonicalCafeBundle | null> {
   const supabase = getSupabaseServerClient();
 
   if (!supabase) {
@@ -473,9 +475,17 @@ async function fetchCanonicalCafeBundle(): Promise<CanonicalCafeBundle | null> {
   };
 }
 
-export async function getFeaturedCafes() {
+const getCanonicalCafeBundle = cache(
+  unstable_cache(
+    async () => fetchCanonicalCafeBundleUncached(),
+    ["canonical-cafe-bundle"],
+    { revalidate: 300 },
+  ),
+);
+
+export const getFeaturedCafes = cache(async () => {
   try {
-    const bundle = await fetchCanonicalCafeBundle();
+    const bundle = await getCanonicalCafeBundle();
 
     if (!bundle || bundle.cafes.length === 0) {
       return [];
@@ -490,12 +500,12 @@ export async function getFeaturedCafes() {
     console.error("[cafes] Unexpected getFeaturedCafes failure.", error);
     return [];
   }
-}
+});
 
-export async function getCafeBySlug(slug: string) {
+export const getCafeBySlug = cache(async (slug: string) => {
   const cafes = await getFeaturedCafes();
   return cafes.find((cafe) => cafe.slug === slug) ?? null;
-}
+});
 
 export async function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
   const cafe = await getCafeBySlug(slug);
@@ -564,9 +574,9 @@ export async function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrust
   };
 }
 
-export async function getCityHighlights() {
+export const getCityHighlights = cache(async () => {
   try {
-    const bundle = await fetchCanonicalCafeBundle();
+    const bundle = await getCanonicalCafeBundle();
 
     if (!bundle || bundle.cityHighlights.length === 0) {
       return [];
@@ -576,4 +586,4 @@ export async function getCityHighlights() {
   } catch {
     return [];
   }
-}
+});
