@@ -12,9 +12,10 @@ import {
 
 type CoffeeProfileCardProps = {
   onRetake?: () => void;
+  variant?: "default" | "floating";
 };
 
-export function CoffeeProfileCard({ onRetake }: CoffeeProfileCardProps) {
+export function CoffeeProfileCard({ onRetake, variant = "default" }: CoffeeProfileCardProps) {
   const profileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
     getStoredCoffeeProfileState,
@@ -32,6 +33,31 @@ export function CoffeeProfileCard({ onRetake }: CoffeeProfileCardProps) {
 
   const confidence = getCoffeeProfileConfidence(profileState);
   const traits = getCoffeeProfileTraitLabels(profileState.scores, 3);
+  const bestBets = profile.recommendedDrinks.slice(0, 2).join(" · ");
+
+  if (variant === "floating") {
+    return (
+      <section className="coffee-profile-card coffee-profile-card-floating">
+        <div className="coffee-profile-card-head">
+          <div className="coffee-profile-card-copy">
+            <span>Taste on</span>
+            <strong>{profile.shortName}</strong>
+            <p>{traits.length > 0 ? traits.slice(0, 2).join(" · ") : profile.description}</p>
+          </div>
+          {onRetake ? (
+            <button className="coffee-profile-card-action" type="button" onClick={onRetake}>
+              Tune
+            </button>
+          ) : null}
+        </div>
+
+        <div className="coffee-profile-card-meta">
+          <span>{confidence}</span>
+          <span>{bestBets}</span>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="coffee-profile-card">

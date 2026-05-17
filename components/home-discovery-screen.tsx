@@ -10,8 +10,6 @@ import { ProfileMatchPill } from "@/components/profile-match-pill";
 import {
   applyReviewToCoffeeProfileState,
   applyProfilerOptionScores,
-  COFFEE_PROFILER_EVENT,
-  COFFEE_PROFILER_STORAGE_KEY,
   coffeeProfilerQuestions,
   createCoffeeProfileState,
   getCafeProfileMatch,
@@ -64,7 +62,16 @@ const reviewDrinkOptions = [
     examples: "Signature or rotating special",
   },
 ] as const;
-const reviewTags = ["Specialty coffee", "Quiet", "Laptop-friendly", "Pastries", "Outdoor seating", "Friendly service"];
+const reviewTags = [
+  "Balanced",
+  "Chocolatey",
+  "Fruity",
+  "Floral",
+  "Smooth",
+  "Bold",
+  "Specialty coffee",
+  "Quiet",
+];
 const radiusOptionsKm = [1, 3, 5, 10];
 
 function slugifyReviewTag(value: string) {
@@ -1049,6 +1056,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             <button
               className="diesel-action-chip control-chip"
               type="button"
+              aria-label={activeCoffeeProfile ? "Open your taste profile" : "Open coffee profiler"}
+              onClick={activeCoffeeProfile ? openTopPicks : openProfiler}
+            >
+              {activeCoffeeProfile ? "Your taste" : "Profiler"}
+            </button>
+            <button
+              className="diesel-action-chip control-chip"
+              type="button"
               aria-label="Search coffee shops"
               onClick={openSearch}
             >
@@ -1416,6 +1431,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
         {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
           <>
+            {activeCoffeeProfile && !isOverlayOpen && !activeFallbackPlace && !hasNoRadiusMatches ? (
+              <div className="map-profile-floating-card fade-slide-in">
+                <CoffeeProfileCard onRetake={openProfiler} variant="floating" />
+              </div>
+            ) : null}
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
               aria-live="polite"
@@ -1902,6 +1922,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
               <div className="review-modal-section">
                 <strong>What stood out?</strong>
+                <span className="review-section-helper">
+                  Pick up to three signals that best describe the cup. These help Near Me learn your taste.
+                </span>
                 <div className="review-chip-row">
                   {reviewTags.map((tag) => (
                     <button
