@@ -180,7 +180,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedRadiusKm, setSelectedRadiusKm] = useState(3);
+  const [selectedRadiusKm, setSelectedRadiusKm] = useState(1);
   const [locationState, setLocationState] = useState<
     "idle" | "requesting" | "granted" | "denied" | "unavailable"
   >("idle");
@@ -746,6 +746,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsProfilerOpen(false);
   }
 
+  function cycleRadius() {
+    const currentIndex = radiusOptionsKm.indexOf(selectedRadiusKm);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % radiusOptionsKm.length;
+    setSelectedRadiusKm(radiusOptionsKm[nextIndex]);
+  }
+
   function saveResolvedProfile(nextScores: ReturnType<typeof defaultProfilerScores>) {
     const nextProfileState = createCoffeeProfileState(nextScores, {
       reviewCount: coffeeProfileState?.reviewCount ?? 0,
@@ -1039,9 +1045,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             type="button"
             onClick={canRetryLocation ? () => setLocateRequestToken((value) => value + 1) : undefined}
             aria-label={canRetryLocation ? "Retry location access" : "Current location status"}
+            title={canRetryLocation ? "Retry location" : locationCopy.label}
           >
-            <span>{locationCopy.caption}</span>
-            <strong>{locationCopy.label}</strong>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 21s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10Z" />
+              <circle cx="12" cy="11" r="2.5" />
+            </svg>
+            <strong>{canRetryLocation ? "Retry location" : locationCopy.label}</strong>
           </button>
 
           <div className="diesel-topbar-actions diesel-action-cluster" aria-label="Map actions">
@@ -1056,6 +1066,19 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <circle cx="12" cy="11" r="2.5" />
               </svg>
             </button>
+            {locationState === "granted" && userLocation ? (
+              <div className="map-radius-inline-shell">
+                <button
+                  className="map-radius-inline-trigger control-chip"
+                  type="button"
+                  aria-label={`Nearby radius ${selectedRadiusKm} kilometers`}
+                  onClick={cycleRadius}
+                  title={`Radius ${selectedRadiusKm} km`}
+                >
+                  <span>{selectedRadiusKm} km</span>
+                </button>
+              </div>
+            ) : null}
             <button
               className={`diesel-action-icon control-chip${isTopPicksOpen && topPickLens !== "for-you" ? " active" : ""}`}
               type="button"
@@ -1094,24 +1117,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             </button>
           </div>
         </div>
-
-        {locationState === "granted" && userLocation ? (
-          <div className="map-radius-shell fade-slide-in">
-            <div className="map-radius-switcher" role="tablist" aria-label="Nearby radius">
-              {radiusOptionsKm.map((radiusKm) => (
-                <button
-                  key={radiusKm}
-                  className={`map-radius-pill${selectedRadiusKm === radiusKm ? " active" : ""}`}
-                  type="button"
-                  onClick={() => setSelectedRadiusKm(radiusKm)}
-                  aria-label={`Show cafes within ${radiusKm} kilometers`}
-                >
-                  {radiusKm} km
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
 
         {isSearchOpen ? (
           <div className="map-search-shell fade-slide-in">
