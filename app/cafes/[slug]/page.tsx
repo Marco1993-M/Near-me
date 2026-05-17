@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CafeDetailProfileInsight } from "@/components/cafe-detail-profile-insight";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
-import { getCafeBySlug, getCafeTrustSignalsBySlug } from "@/lib/cafes";
+import { getCafeBySlug, getCafeStaticParams, getCafeTrustSignalsBySlug } from "@/lib/cafes";
 
 export const revalidate = 300;
 
@@ -10,6 +11,10 @@ type CafePageProps = {
     slug: string;
   }>;
 };
+
+export async function generateStaticParams() {
+  return getCafeStaticParams();
+}
 
 export async function generateMetadata({
   params,
@@ -166,6 +171,7 @@ export default async function CafePage({ params }: CafePageProps) {
             </div>
 
             <ProfileMatchPill cafe={cafe} variant="card" />
+            <CafeDetailProfileInsight cafe={cafe} />
 
             <div className="cafe-detail-quick-grid">
               <article className="cafe-detail-quick-card">

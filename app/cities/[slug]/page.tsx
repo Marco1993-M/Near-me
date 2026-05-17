@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCityHighlights, getFeaturedCafes } from "@/lib/cafes";
+import { getCityHighlights, getCityStaticParams, getFeaturedCafes } from "@/lib/cafes";
 
 export const revalidate = 300;
 
@@ -8,6 +8,10 @@ type CityPageProps = {
     slug: string;
   }>;
 };
+
+export async function generateStaticParams() {
+  return getCityStaticParams();
+}
 
 export async function generateMetadata({
   params,
