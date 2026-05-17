@@ -1393,6 +1393,21 @@ img {
   line-height: 1.45;
 }
 
+.map-profile-floating-card {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  top: calc(5rem + env(safe-area-inset-top));
+  z-index: 5000;
+  pointer-events: none;
+}
+
+.map-profile-floating-card .coffee-profile-card {
+  pointer-events: auto;
+  width: min(100%, 22rem);
+  box-shadow: var(--glass-highlight), 0 16px 34px rgba(20, 32, 24, 0.12);
+}
+
 .coffee-profile-card {
   display: grid;
   gap: 0.7rem;
@@ -1403,6 +1418,15 @@ img {
     linear-gradient(180deg, rgba(199, 245, 211, 0.26) 0%, rgba(255, 255, 252, 0.54) 100%),
     rgba(255, 255, 252, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.coffee-profile-card-floating {
+  gap: 0.55rem;
+  padding: 0.8rem 0.85rem;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.3) 0%, rgba(255, 255, 252, 0.66) 100%),
+    rgba(255, 255, 252, 0.62);
 }
 
 .coffee-profile-card-head {
@@ -1437,6 +1461,15 @@ img {
   line-height: 1.45;
 }
 
+.coffee-profile-card-floating .coffee-profile-card-copy strong {
+  font-size: 0.92rem;
+}
+
+.coffee-profile-card-floating .coffee-profile-card-copy p {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .coffee-profile-card-action {
   flex-shrink: 0;
   min-height: 2rem;
@@ -1449,12 +1482,23 @@ img {
   font-weight: 700;
 }
 
+.coffee-profile-card-floating .coffee-profile-card-action {
+  min-height: 1.8rem;
+  padding: 0 0.72rem;
+  font-size: 0.72rem;
+}
+
 .coffee-profile-card-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
   color: rgba(20, 32, 24, 0.56);
   font-size: 0.76rem;
+}
+
+.coffee-profile-card-floating .coffee-profile-card-meta {
+  gap: 0.35rem;
+  font-size: 0.72rem;
 }
 
 .coffee-profile-card-grid {
@@ -1507,6 +1551,53 @@ img {
   color: rgba(20, 32, 24, 0.52);
   font-size: 0.74rem;
   line-height: 1.35;
+}
+
+.cafe-detail-profile-insight {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(31, 106, 56, 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.32) 0%, rgba(255, 255, 252, 0.54) 100%),
+    rgba(255, 255, 252, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.cafe-detail-profile-insight-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.cafe-detail-profile-insight-head span {
+  color: rgba(20, 32, 24, 0.5);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cafe-detail-profile-insight-head strong {
+  color: #1f6a38;
+  font-size: 1rem;
+}
+
+.cafe-detail-profile-insight p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.68);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.cafe-detail-profile-insight-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.76rem;
 }
 
 .profile-match-pill {
@@ -2136,6 +2227,14 @@ img {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.review-section-helper {
+  display: block;
+  margin-bottom: 0.1rem;
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .review-note-input {
@@ -3044,6 +3143,11 @@ img {
     right: 1rem;
   }
 
+  .map-profile-floating-card {
+    left: 1rem;
+    right: 1rem;
+  }
+
   .diesel-sheet-toolbar {
     justify-content: flex-end;
   }
@@ -3120,5 +3224,11 @@ img {
 
   .diesel-sheet-results {
     padding-right: 0.35rem;
+  }
+
+  .map-profile-floating-card {
+    left: auto;
+    right: 1.25rem;
+    top: 5.75rem;
   }
 }
