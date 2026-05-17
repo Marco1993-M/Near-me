@@ -3125,6 +3125,10 @@ img {
     flex: 0 0 auto;
   }
 
+  .map-profile-floating-card {
+    top: calc(max(1rem, env(safe-area-inset-top)) + 6.25rem);
+  }
+
   .diesel-selection-primary-main {
     flex: 1.15 1 0;
   }
