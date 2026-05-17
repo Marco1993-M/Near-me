@@ -507,71 +507,79 @@ export const getCafeBySlug = cache(async (slug: string) => {
   return cafes.find((cafe) => cafe.slug === slug) ?? null;
 });
 
-export async function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
-  const cafe = await getCafeBySlug(slug);
-  const supabase = getSupabaseServerClient();
+const getCafeTrustSignalsBySlugCached = unstable_cache(
+  async (slug: string): Promise<CafeTrustSignals | null> => {
+    const cafe = await getCafeBySlug(slug);
+    const supabase = getSupabaseServerClient();
 
-  if (!cafe || !supabase) {
-    return null;
-  }
-
-  const { data: reviewRows, error: reviewError } = await supabase
-    .from(CANONICAL_TABLES.reviews)
-    .select("id, cafe_id, rating, note, drink, created_at")
-    .eq("cafe_id", cafe.id)
-    .eq("status", "approved")
-    .order("created_at", { ascending: false })
-    .limit(6);
-
-  if (reviewError || !reviewRows) {
-    return null;
-  }
-
-  const reviewsRaw = reviewRows as CanonicalReviewRow[];
-  const reviewIds = reviewsRaw.map((review) => review.id);
-  const { data: reviewTagRows, error: reviewTagError } = reviewIds.length
-    ? await supabase
-        .from(CANONICAL_TABLES.reviewTags)
-        .select("review_id, tag")
-        .in("review_id", reviewIds)
-    : { data: [], error: null };
-
-  if (reviewTagError) {
-    return null;
-  }
-
-  const tagsByReviewId = new Map<string, string[]>();
-  for (const row of (reviewTagRows as ReviewTagRow[]) ?? []) {
-    const current = tagsByReviewId.get(row.review_id) ?? [];
-    current.push(titleizeTag(row.tag));
-    tagsByReviewId.set(row.review_id, current);
-  }
-
-  const tagCounts = new Map<string, number>();
-  for (const tags of tagsByReviewId.values()) {
-    for (const tag of tags) {
-      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    if (!cafe || !supabase) {
+      return null;
     }
-  }
 
-  const recentReviews: CafeReview[] = reviewsRaw.map((review) => ({
-    id: review.id,
-    rating: Number(review.rating ?? 0),
-    note: review.note?.trim() || "Good coffee, worth checking out.",
-    drink: review.drink,
-    tags: tagsByReviewId.get(review.id) ?? [],
-    createdAt: review.created_at,
-  }));
+    const { data: reviewRows, error: reviewError } = await supabase
+      .from(CANONICAL_TABLES.reviews)
+      .select("id, cafe_id, rating, note, drink, created_at")
+      .eq("cafe_id", cafe.id)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(6);
 
-  const topTags = Array.from(tagCounts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 4)
-    .map(([tag]) => tag);
+    if (reviewError || !reviewRows) {
+      return null;
+    }
 
-  return {
-    topTags,
-    recentReviews,
-  };
+    const reviewsRaw = reviewRows as CanonicalReviewRow[];
+    const reviewIds = reviewsRaw.map((review) => review.id);
+    const { data: reviewTagRows, error: reviewTagError } = reviewIds.length
+      ? await supabase
+          .from(CANONICAL_TABLES.reviewTags)
+          .select("review_id, tag")
+          .in("review_id", reviewIds)
+      : { data: [], error: null };
+
+    if (reviewTagError) {
+      return null;
+    }
+
+    const tagsByReviewId = new Map<string, string[]>();
+    for (const row of (reviewTagRows as ReviewTagRow[]) ?? []) {
+      const current = tagsByReviewId.get(row.review_id) ?? [];
+      current.push(titleizeTag(row.tag));
+      tagsByReviewId.set(row.review_id, current);
+    }
+
+    const tagCounts = new Map<string, number>();
+    for (const tags of tagsByReviewId.values()) {
+      for (const tag of tags) {
+        tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+      }
+    }
+
+    const recentReviews: CafeReview[] = reviewsRaw.map((review) => ({
+      id: review.id,
+      rating: Number(review.rating ?? 0),
+      note: review.note?.trim() || "Good coffee, worth checking out.",
+      drink: review.drink,
+      tags: tagsByReviewId.get(review.id) ?? [],
+      createdAt: review.created_at,
+    }));
+
+    const topTags = Array.from(tagCounts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 4)
+      .map(([tag]) => tag);
+
+    return {
+      topTags,
+      recentReviews,
+    };
+  },
+  ["cafe-trust-signals-by-slug"],
+  { revalidate: 300 },
+);
+
+export function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
+  return getCafeTrustSignalsBySlugCached(slug);
 }
 
 export const getCityHighlights = cache(async () => {
@@ -586,4 +594,14 @@ export const getCityHighlights = cache(async () => {
   } catch {
     return [];
   }
+});
+
+export const getCafeStaticParams = cache(async () => {
+  const cafes = await getFeaturedCafes();
+  return cafes.map((cafe) => ({ slug: cafe.slug }));
+});
+
+export const getCityStaticParams = cache(async () => {
+  const cities = await getCityHighlights();
+  return cities.map((city) => ({ slug: city.slug }));
 });
