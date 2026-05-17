@@ -4,19 +4,24 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "reac
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@/types/cafe";
+import { CoffeeProfileCard } from "@/components/coffee-profile-card";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import {
+  applyReviewToCoffeeProfileState,
   applyProfilerOptionScores,
   COFFEE_PROFILER_EVENT,
-  coffeeProfilerQuestions,
   COFFEE_PROFILER_STORAGE_KEY,
+  coffeeProfilerQuestions,
+  createCoffeeProfileState,
+  getCafeProfileMatch,
   defaultProfilerScores,
   getCafeProfileMatchScore,
   getCoffeeProfileBySlug,
-  getStoredCoffeeProfileSlug,
-  getStoredCoffeeProfileSlugServerSnapshot,
+  getStoredCoffeeProfileState,
+  getStoredCoffeeProfileStateServerSnapshot,
   resolveCoffeeProfile,
+  setStoredCoffeeProfileState,
   subscribeToCoffeeProfile,
 } from "@/lib/coffee-profiler";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
@@ -203,10 +208,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const hasExplicitCafeSelectionRef = useRef(false);
   const previousRadiusKmRef = useRef(selectedRadiusKm);
 
-  const coffeeProfileSlug = useSyncExternalStore(
+  const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
-    getStoredCoffeeProfileSlug,
-    getStoredCoffeeProfileSlugServerSnapshot,
+    getStoredCoffeeProfileState,
+    getStoredCoffeeProfileStateServerSnapshot,
   );
   const favoriteCafeIds = useSyncExternalStore(
     (onStoreChange) => subscribeToFavoriteCafes(() => onStoreChange()),
@@ -233,8 +238,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeCafe =
     mappableCafes.find((cafe) => cafe.id === activeCafeId) ?? mappableCafes[0] ?? hydratedCafes[0] ?? null;
   const activeCoffeeProfile = useMemo(
-    () => getCoffeeProfileBySlug(coffeeProfileSlug),
-    [coffeeProfileSlug],
+    () => getCoffeeProfileBySlug(coffeeProfileState?.profileSlug),
+    [coffeeProfileState?.profileSlug],
   );
   const cafesByDistance = useMemo(() => {
     if (!userLocation) {
@@ -364,15 +369,21 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             const rightDistance = cafeDistances.get(right.id) ?? 999;
             const leftRadiusBonus = leftDistance <= selectedRadiusKm ? 0.8 : -Math.min(leftDistance - selectedRadiusKm, 8) * 0.08;
             const rightRadiusBonus = rightDistance <= selectedRadiusKm ? 0.8 : -Math.min(rightDistance - selectedRadiusKm, 8) * 0.08;
-            const leftScore = getCafeProfileMatchScore(left, activeCoffeeProfile) + leftRadiusBonus - leftDistance * 0.12;
-            const rightScore = getCafeProfileMatchScore(right, activeCoffeeProfile) + rightRadiusBonus - rightDistance * 0.12;
+            const leftScore =
+              getCafeProfileMatchScore(left, activeCoffeeProfile, coffeeProfileState) +
+              leftRadiusBonus -
+              leftDistance * 0.12;
+            const rightScore =
+              getCafeProfileMatchScore(right, activeCoffeeProfile, coffeeProfileState) +
+              rightRadiusBonus -
+              rightDistance * 0.12;
             return rightScore - leftScore;
           })
           .slice(0, 6)
       : [];
 
     return { nearby, worthIt, work, forYou };
-  }, [activeCoffeeProfile, cafeDistances, mappableCafes, rankedCafes, selectedRadiusKm]);
+  }, [activeCoffeeProfile, cafeDistances, coffeeProfileState, mappableCafes, rankedCafes, selectedRadiusKm]);
   const activeTopPicks =
     topPickLens === "nearby"
       ? topPickGroups.nearby
@@ -717,9 +728,21 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsProfilerOpen(false);
   }
 
-  function saveResolvedProfile(nextProfileSlug: string) {
-    window.localStorage.setItem(COFFEE_PROFILER_STORAGE_KEY, nextProfileSlug);
-    window.dispatchEvent(new CustomEvent(COFFEE_PROFILER_EVENT, { detail: nextProfileSlug }));
+  function saveResolvedProfile(nextScores: ReturnType<typeof defaultProfilerScores>) {
+    const nextProfileState = createCoffeeProfileState(nextScores, {
+      reviewCount: coffeeProfileState?.reviewCount ?? 0,
+      source: coffeeProfileState?.reviewCount ? "quiz+reviews" : "quiz",
+    });
+    setStoredCoffeeProfileState(nextProfileState);
+    setReviewToast(`Taste profile updated: ${resolveCoffeeProfile(nextScores).name}`);
+
+    if (reviewToastTimeoutRef.current) {
+      window.clearTimeout(reviewToastTimeoutRef.current);
+    }
+    reviewToastTimeoutRef.current = window.setTimeout(() => {
+      setReviewToast(null);
+      reviewToastTimeoutRef.current = null;
+    }, 2600);
   }
 
   function handleProfilerSingleChoice(optionIndex: number) {
@@ -728,7 +751,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     const nextScores = applyProfilerOptionScores(profilerScores, option);
 
     if (profilerQuestionIndex === coffeeProfilerQuestions.length - 1) {
-      saveResolvedProfile(resolveCoffeeProfile(nextScores).slug);
+      saveResolvedProfile(nextScores);
       setProfilerScores(nextScores);
       setIsProfilerOpen(false);
       setIsTopPicksOpen(true);
@@ -763,7 +786,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     window.setTimeout(() => {
       if (profilerQuestionIndex === coffeeProfilerQuestions.length - 1) {
-        saveResolvedProfile(resolveCoffeeProfile(nextScores).slug);
+        saveResolvedProfile(nextScores);
         setProfilerScores(nextScores);
         setProfilerSelections([]);
         setIsProfilerOpen(false);
@@ -921,15 +944,31 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         }),
       }));
     }
+
+    let nextProfileName: string | null = null;
+    if (coffeeProfileState) {
+      const nextProfileState = applyReviewToCoffeeProfileState(coffeeProfileState, {
+        rating: reviewRating,
+        drink: reviewDrink,
+        tags: selectedReviewTags,
+      });
+      setStoredCoffeeProfileState(nextProfileState);
+      nextProfileName = resolveCoffeeProfile(nextProfileState.scores).name;
+    }
+
     setReviewState("success");
     setReviewMessage(
       reviewTarget.type === "cafe"
-        ? "Review sent. Thanks for helping the next coffee run."
+        ? nextProfileName
+          ? `Review sent. Your taste profile is now leaning ${nextProfileName}.`
+          : "Review sent. Thanks for helping the next coffee run."
         : "Review sent. We will use it to assess this nearby option for Near Me.",
     );
     setReviewToast(
       reviewTarget.type === "cafe"
-        ? `Review saved for ${reviewTarget.cafe.name}`
+        ? nextProfileName
+          ? `Review saved for ${reviewTarget.cafe.name} · ${nextProfileName}`
+          : `Review saved for ${reviewTarget.cafe.name}`
         : `Review submitted for ${reviewTarget.place.name}`,
     );
 
@@ -1142,6 +1181,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 </div>
               </div>
 
+              {activeCoffeeProfile ? <CoffeeProfileCard onRetake={openProfiler} /> : null}
+
               <div className="map-top-picks-switcher" role="tablist" aria-label="Top pick lenses">
                 <button
                   className={`map-top-picks-pill${topPickLens === "nearby" ? " active" : ""}`}
@@ -1186,7 +1227,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
                   const cafeRating =
                     cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
-                  const profileMatch = activeCoffeeProfile ? Math.round(getCafeProfileMatchScore(cafe, activeCoffeeProfile) * 10) : null;
+                  const profileMatch = activeCoffeeProfile
+                    ? getCafeProfileMatch(cafe, activeCoffeeProfile, coffeeProfileState)
+                    : null;
 
                   return (
                     <button
@@ -1211,7 +1254,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             .join(" · ")}
                         </span>
                         {topPickLens === "for-you" && profileMatch ? (
-                          <span className="map-top-pick-match">Great match for your profile · {profileMatch}%</span>
+                          <span className="map-top-pick-match">
+                            {profileMatch.label} for your profile · {profileMatch.percentage}%
+                          </span>
                         ) : null}
                       </div>
                       <div className="map-top-pick-score">
@@ -1626,9 +1671,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <p>{activeCafe.summary}</p>
               </div>
 
-              {activeTrustMentions.length > 0 || activeTrustQuote ? (
+              {activeCoffeeProfile || activeTrustMentions.length > 0 || activeTrustQuote ? (
                 <div className="diesel-selection-trust">
-                  <ProfileMatchPill cafe={activeCafe} variant="card" />
+                  {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
                   {activeTrustMentions.length > 0 ? (
                     <div className="diesel-selection-trust-head">
                       <span>People mention</span>
