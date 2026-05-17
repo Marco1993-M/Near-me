@@ -174,7 +174,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       ),
     [hydratedCafes],
   );
-  const [activeCafeId, setActiveCafeId] = useState<string | null>(mappableCafes[0]?.id ?? null);
+  const [activeCafeId, setActiveCafeId] = useState<string | null>(null);
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
@@ -242,8 +242,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     );
   }, [mappableCafes, userLocation]);
 
-  const activeCafe =
-    mappableCafes.find((cafe) => cafe.id === activeCafeId) ?? mappableCafes[0] ?? hydratedCafes[0] ?? null;
+  const activeCafe = activeCafeId
+    ? mappableCafes.find((cafe) => cafe.id === activeCafeId) ??
+      hydratedCafes.find((cafe) => cafe.id === activeCafeId) ??
+      null
+    : null;
   const activeCoffeeProfile = useMemo(
     () => getCoffeeProfileBySlug(coffeeProfileState?.profileSlug),
     [coffeeProfileState?.profileSlug],
@@ -628,6 +631,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
   useEffect(() => {
     if (mappableCafes.length === 0) {
+      setActiveCafeId(null);
+      return;
+    }
+
+    if (!userLocation && !hasExplicitCafeSelectionRef.current) {
       setActiveCafeId(null);
       return;
     }
@@ -1693,179 +1701,179 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   </div>
                 </>
-              ) : (
+              ) : activeCafe ? (
                 <>
-              <div className="diesel-selection-head">
-                <div className="diesel-selection-meta">
-                  <span>{activeCafe.city}</span>
-                  <span>{activeDistance ? formatDistance(activeDistance) : activeCafe.countryCode}</span>
-                </div>
-                <div className="diesel-selection-score">
-                  <strong>{activeRating ?? "New"}</strong>
-                  <span>
-                    {activeCafe.reviewSummary.reviewCount > 0
-                      ? `${activeCafe.reviewSummary.reviewCount} reviews`
-                      : "No reviews yet"}
-                  </span>
-                </div>
-              </div>
+                  <div className="diesel-selection-head">
+                    <div className="diesel-selection-meta">
+                      <span>{activeCafe.city}</span>
+                      <span>{activeDistance ? formatDistance(activeDistance) : activeCafe.countryCode}</span>
+                    </div>
+                    <div className="diesel-selection-score">
+                      <strong>{activeRating ?? "New"}</strong>
+                      <span>
+                        {activeCafe.reviewSummary.reviewCount > 0
+                          ? `${activeCafe.reviewSummary.reviewCount} reviews`
+                          : "No reviews yet"}
+                      </span>
+                    </div>
+                  </div>
 
-              <div className="diesel-selection-copy">
-                <strong>{activeCafe.name}</strong>
-                <p>{activeCafe.summary}</p>
-              </div>
+                  <div className="diesel-selection-copy">
+                    <strong>{activeCafe.name}</strong>
+                    <p>{activeCafe.summary}</p>
+                  </div>
 
-              {activeCoffeeProfile || activeTrustMentions.length > 0 || activeTrustQuote ? (
-                <div className="diesel-selection-trust">
-                  {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
-                  {activeTrustMentions.length > 0 ? (
-                    <div className="diesel-selection-trust-head">
-                      <span>People mention</span>
-                      <strong>{activeTrustMentions.join(" + ")}</strong>
+                  {activeCoffeeProfile || activeTrustMentions.length > 0 || activeTrustQuote ? (
+                    <div className="diesel-selection-trust">
+                      {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
+                      {activeTrustMentions.length > 0 ? (
+                        <div className="diesel-selection-trust-head">
+                          <span>People mention</span>
+                          <strong>{activeTrustMentions.join(" + ")}</strong>
+                        </div>
+                      ) : null}
+                      {activeTrustQuote ? (
+                        <p className="diesel-selection-trust-quote">“{activeTrustQuote}”</p>
+                      ) : null}
                     </div>
                   ) : null}
-                  {activeTrustQuote ? (
-                    <p className="diesel-selection-trust-quote">“{activeTrustQuote}”</p>
+
+                  {activeTags.length > 0 ? (
+                    <div className="diesel-selection-tags">
+                      {activeTags.map((tag) => (
+                        <span key={tag} className="diesel-selection-tag">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   ) : null}
-                </div>
-              ) : null}
 
-            {activeTags.length > 0 ? (
-              <div className="diesel-selection-tags">
-                {activeTags.map((tag) => (
-                  <span key={tag} className="diesel-selection-tag">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
+                  <div className="diesel-selection-footer">
+                    <span>{activeCafe.address}</span>
+                  </div>
 
-              <div className="diesel-selection-footer">
-                <span>{activeCafe.address}</span>
-              </div>
+                  <div className="diesel-selection-actions">
+                    <div className="diesel-selection-actions-main">
+                      {directionsHref ? (
+                        <a
+                          className="diesel-selection-primary diesel-selection-primary-main control-primary"
+                          href={directionsHref}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Directions
+                        </a>
+                      ) : null}
+                      <Link className="diesel-selection-secondary diesel-selection-secondary-main control-chip" href={`/cafes/${activeCafe.slug}`}>
+                        Details
+                      </Link>
+                      <button
+                        className={`diesel-selection-icon-button${isActiveCafeSaved ? " active" : ""}`}
+                        type="button"
+                        onClick={() => toggleFavoriteCafe(activeCafe.id)}
+                        aria-label={isActiveCafeSaved ? "Remove from saved cafes" : "Save cafe"}
+                      >
+                        <span aria-hidden="true">{isActiveCafeSaved ? "♥" : "♡"}</span>
+                      </button>
+                      <button
+                        className="diesel-selection-icon-button"
+                        type="button"
+                        onClick={() => openReviewModal({ type: "cafe", cafe: activeCafe })}
+                        aria-label="Leave a review"
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="diesel-selection-actions">
-              <div className="diesel-selection-actions-main">
-                {directionsHref ? (
-                  <a
-                    className="diesel-selection-primary diesel-selection-primary-main control-primary"
-                    href={directionsHref}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Directions
-                    </a>
-                ) : null}
-                <Link className="diesel-selection-secondary diesel-selection-secondary-main control-chip" href={`/cafes/${activeCafe.slug}`}>
-                  Details
-                </Link>
-                <button
-                  className={`diesel-selection-icon-button${isActiveCafeSaved ? " active" : ""}`}
-                  type="button"
-                  onClick={() => toggleFavoriteCafe(activeCafe.id)}
-                  aria-label={isActiveCafeSaved ? "Remove from saved cafes" : "Save cafe"}
-                >
-                  <span aria-hidden="true">{isActiveCafeSaved ? "♥" : "♡"}</span>
-                </button>
-                <button
-                  className="diesel-selection-icon-button"
-                  type="button"
-                  onClick={() => activeCafe && openReviewModal({ type: "cafe", cafe: activeCafe })}
-                  aria-label="Leave a review"
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+                  <div className="diesel-sheet-toolbar">
+                    <div className="diesel-sheet-state-switcher" role="tablist" aria-label="Sheet size">
+                      <button
+                        className={`diesel-sheet-state-pill${sheetState === "collapsed" ? " active" : ""}`}
+                        type="button"
+                        onClick={() => setSheetState("collapsed")}
+                        aria-label="Compact card"
+                        title="Compact card"
+                      >
+                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-card" aria-hidden="true">
+                          <span />
+                        </span>
+                      </button>
+                      <button
+                        className={`diesel-sheet-state-pill${sheetState === "half" ? " active" : ""}`}
+                        type="button"
+                        onClick={() => setSheetState("half")}
+                        aria-label="Browse list"
+                        title="Browse list"
+                      >
+                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-list" aria-hidden="true">
+                          <span />
+                          <span />
+                        </span>
+                      </button>
+                      <button
+                        className={`diesel-sheet-state-pill${sheetState === "full" ? " active" : ""}`}
+                        type="button"
+                        onClick={() => setSheetState("full")}
+                        aria-label="Open full sheet"
+                        title="Open full sheet"
+                      >
+                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-full" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
+                        </span>
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="diesel-sheet-toolbar">
-                <div className="diesel-sheet-state-switcher" role="tablist" aria-label="Sheet size">
-                  <button
-                    className={`diesel-sheet-state-pill${sheetState === "collapsed" ? " active" : ""}`}
-                    type="button"
-                    onClick={() => setSheetState("collapsed")}
-                    aria-label="Compact card"
-                    title="Compact card"
-                  >
-                    <span className="diesel-sheet-state-icon diesel-sheet-state-icon-card" aria-hidden="true">
-                      <span />
-                    </span>
-                  </button>
-                  <button
-                    className={`diesel-sheet-state-pill${sheetState === "half" ? " active" : ""}`}
-                    type="button"
-                    onClick={() => setSheetState("half")}
-                    aria-label="Browse list"
-                    title="Browse list"
-                  >
-                    <span className="diesel-sheet-state-icon diesel-sheet-state-icon-list" aria-hidden="true">
-                      <span />
-                      <span />
-                    </span>
-                  </button>
-                  <button
-                    className={`diesel-sheet-state-pill${sheetState === "full" ? " active" : ""}`}
-                    type="button"
-                    onClick={() => setSheetState("full")}
-                    aria-label="Open full sheet"
-                    title="Open full sheet"
-                  >
-                    <span className="diesel-sheet-state-icon diesel-sheet-state-icon-full" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                    </span>
-                  </button>
-                </div>
-              </div>
+                  <div className="diesel-sheet-results">
+                    {rankedCafes.map((cafe) => {
+                      const cafeRating =
+                        cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
+                      const cafeTags = cafe.tags.slice(0, 2);
+                      const isActive = cafe.id === activeCafe.id;
+                      const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
 
-              <div className="diesel-sheet-results">
-                {rankedCafes.map((cafe) => {
-                  const cafeRating =
-                    cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
-                  const cafeTags = cafe.tags.slice(0, 2);
-                  const isActive = cafe.id === activeCafe.id;
-                  const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
-
-                  return (
-                    <button
-                      key={cafe.id}
-                      className={`diesel-result-row${isActive ? " active" : ""}`}
-                      type="button"
-                      onClick={() => {
-                        selectCafe(cafe.id, {
-                          explicit: true,
-                          pan: true,
-                          nextSheetState: sheetState === "full" ? "half" : sheetState,
-                        });
-                      }}
-                    >
-                      <div className="diesel-result-row-main">
-                        <div className="diesel-result-row-copy">
-                          <strong>
-                            {cafe.name}
-                            {favoriteCafeIds.includes(cafe.id) ? <span className="diesel-saved-dot" aria-hidden="true" /> : null}
-                          </strong>
-                          <span>
-                            {[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null, ...cafeTags]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        </div>
-                        <div className="diesel-result-row-score">
-                          <strong>{cafeRating}</strong>
-                          <span>{cafe.reviewSummary.reviewCount} reviews</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                      return (
+                        <button
+                          key={cafe.id}
+                          className={`diesel-result-row${isActive ? " active" : ""}`}
+                          type="button"
+                          onClick={() => {
+                            selectCafe(cafe.id, {
+                              explicit: true,
+                              pan: true,
+                              nextSheetState: sheetState === "full" ? "half" : sheetState,
+                            });
+                          }}
+                        >
+                          <div className="diesel-result-row-main">
+                            <div className="diesel-result-row-copy">
+                              <strong>
+                                {cafe.name}
+                                {favoriteCafeIds.includes(cafe.id) ? <span className="diesel-saved-dot" aria-hidden="true" /> : null}
+                              </strong>
+                              <span>
+                                {[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null, ...cafeTags]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </div>
+                            <div className="diesel-result-row-score">
+                              <strong>{cafeRating}</strong>
+                              <span>{cafe.reviewSummary.reviewCount} reviews</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </>
-              )}
+              ) : null}
             </section>
           </>
         ) : null}
