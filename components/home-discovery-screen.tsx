@@ -698,6 +698,17 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsTopPicksOpen(true);
   }
 
+  function openTastePanel() {
+    if (activeCoffeeProfile) {
+      setIsSearchOpen(false);
+      setIsTopPicksOpen(true);
+      setTopPickLens("for-you");
+      return;
+    }
+
+    openProfiler();
+  }
+
   function closeTopPicks() {
     setIsTopPicksOpen(false);
   }
@@ -1033,7 +1044,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             <strong>{locationCopy.label}</strong>
           </button>
 
-          <div className="diesel-topbar-actions">
+          <div className="diesel-topbar-actions diesel-action-cluster" aria-label="Map actions">
             <button
               className="diesel-action-icon control-chip"
               aria-label="Center on my location"
@@ -1046,32 +1057,40 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               </svg>
             </button>
             <button
-              className="diesel-action-chip control-chip"
+              className={`diesel-action-icon control-chip${isTopPicksOpen && topPickLens !== "for-you" ? " active" : ""}`}
               type="button"
               aria-label="Open top picks"
               onClick={openTopPicks}
+              title="Top picks"
             >
-              Top picks
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="m12 3 2.85 5.78 6.38.93-4.61 4.49 1.09 6.35L12 17.56l-5.71 3 1.09-6.35-4.61-4.49 6.38-.93L12 3Z" />
+              </svg>
             </button>
             <button
-              className="diesel-action-chip control-chip"
+              className={`diesel-action-icon control-chip${isProfilerOpen || (isTopPicksOpen && topPickLens === "for-you") ? " active" : ""}`}
               type="button"
               aria-label={activeCoffeeProfile ? "Open your taste profile" : "Open coffee profiler"}
-              onClick={activeCoffeeProfile ? openTopPicks : openProfiler}
+              onClick={openTastePanel}
+              title={activeCoffeeProfile ? "Your taste" : "Coffee profiler"}
             >
-              {activeCoffeeProfile ? "Your taste" : "Profiler"}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z" />
+                <path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" />
+                <path d="M7 4h6" />
+              </svg>
             </button>
             <button
-              className="diesel-action-chip control-chip"
+              className={`diesel-action-icon control-chip${isSearchOpen ? " active" : ""}`}
               type="button"
               aria-label="Search coffee shops"
               onClick={openSearch}
+              title="Search"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="11" cy="11" r="6.5" />
                 <path d="m16 16 4.5 4.5" />
               </svg>
-              Search
             </button>
           </div>
         </div>
