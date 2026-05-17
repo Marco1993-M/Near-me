@@ -580,6 +580,19 @@ img {
   min-width: 0;
 }
 
+.diesel-action-cluster {
+  gap: 0.45rem;
+  padding: 0.22rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background:
+    var(--glass-sheen),
+    var(--glass-surface);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
 .map-radius-shell {
   position: fixed;
   top: calc(max(1rem, env(safe-area-inset-top)) + 3.45rem);
@@ -647,6 +660,14 @@ img {
   padding: 0;
   border-radius: 999px;
   color: var(--near-me-ink);
+}
+
+.diesel-action-icon.active {
+  border-color: rgba(31, 106, 56, 0.18);
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.38) 0%, rgba(199, 245, 211, 0.18) 100%),
+    rgba(255, 255, 252, 0.78);
+  color: #1f6a38;
 }
 
 .diesel-action-chip:hover,
@@ -3096,33 +3117,32 @@ img {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-right: 0.1rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .diesel-topbar::-webkit-scrollbar {
-    display: none;
+    overflow: visible;
   }
 
   .diesel-location-chip {
     order: 0;
-    flex: 0 0 auto;
-    min-width: fit-content;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .diesel-topbar-actions {
     display: flex !important;
     flex: 0 0 auto;
-    justify-content: flex-start;
+    justify-content: flex-end;
     margin-left: auto;
-    min-width: max-content;
+    min-width: auto;
   }
 
-  .diesel-action-chip {
-    flex: 0 0 auto;
+  .diesel-action-cluster {
+    gap: 0.35rem;
+    padding: 0.18rem;
+  }
+
+  .diesel-action-icon {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
   }
 
   .map-profile-floating-card {
