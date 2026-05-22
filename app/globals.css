@@ -685,6 +685,105 @@ img {
   pointer-events: auto;
 }
 
+.map-intro-shell {
+  position: fixed;
+  top: calc(4.95rem + env(safe-area-inset-top));
+  left: 1rem;
+  right: 1rem;
+  z-index: 5001;
+  pointer-events: auto;
+}
+
+.map-intro-card {
+  display: grid;
+  gap: 0.8rem;
+  width: min(100%, 31rem);
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(31, 106, 56, 0.12);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.2) 0%, rgba(255, 255, 252, 0.9) 100%),
+    rgba(255, 255, 252, 0.84);
+  box-shadow: var(--glass-highlight), 0 24px 48px rgba(20, 32, 24, 0.16);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.map-intro-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.map-intro-kicker {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.map-intro-kicker span {
+  color: rgba(20, 32, 24, 0.5);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-intro-kicker strong {
+  color: var(--near-me-ink);
+  font-size: 0.84rem;
+}
+
+.map-intro-dismiss {
+  min-height: 1.9rem;
+  padding: 0 0.78rem;
+  border: 1px solid rgba(20, 32, 24, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 252, 0.62);
+  color: rgba(20, 32, 24, 0.62);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.map-intro-copy {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.map-intro-copy strong {
+  color: var(--near-me-ink);
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.map-intro-copy p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.68);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.map-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.map-intro-primary,
+.map-intro-secondary {
+  min-height: 2.7rem;
+}
+
+.map-intro-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
 .map-search-panel {
   display: grid;
   gap: 0.75rem;
