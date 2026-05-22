@@ -150,6 +150,7 @@ function buildOptimisticReviewState(
 
 export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const pathname = usePathname();
+  const [isIntroVisible, setIsIntroVisible] = useState(false);
   const [localReviewStateByCafeId, setLocalReviewStateByCafeId] = useState<
     Record<string, { reviewSummary: CafeReviewSummary; trustPreview: CafeTrustPreview }>
   >({});
@@ -434,35 +435,25 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       return typeof distance === "number" && distance <= selectedRadiusKm;
     });
   }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
-  const nearestKnownCafes = useMemo(() => {
-    if (!userLocation) {
-      return cafesByDistance.slice(0, 3);
-    }
-
-    return cafesByDistance
-      .filter((cafe) => {
-        const distance = cafeDistances.get(cafe.id);
-        return typeof distance === "number" && distance > selectedRadiusKm;
-      })
-      .slice(0, 3);
-  }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
   const nextRadiusKm = radiusOptionsKm.find((radiusKm) => radiusKm > selectedRadiusKm) ?? null;
   const hasNoRadiusMatches = Boolean(userLocation) && cafesWithinRadius.length === 0;
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
+  const shouldShowIntro =
+    isIntroVisible &&
+    !isOverlayOpen &&
+    sheetState === "collapsed" &&
+    !hasNoRadiusMatches &&
+    !activeFallbackPlace;
   const emptyStateTitle =
     fallbackPlaces.length > 0
       ? `No Near Me picks in ${selectedRadiusKm} km`
-      : nearestKnownCafes.length > 0
-        ? `No specialty spots in ${selectedRadiusKm} km`
-        : "We have not mapped this area yet";
+      : `No specialty spots in ${selectedRadiusKm} km`;
   const emptyStateBody =
     fallbackPlaces.length > 0
       ? "We found a few nearby options, but they are not yet verified by Near Me."
-      : nearestKnownCafes.length > 0
-        ? "Nothing in the current radius yet, but there are still good options a little farther out."
-        : "This area looks empty in our database right now. You can widen the search or help put this town on Near Me.";
+      : "Nothing in the current radius yet. Expand the search or help put this area on Near Me.";
   useEffect(() => {
     if (!userLocation) {
       setFallbackPlaces([]);
@@ -575,6 +566,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       hasExplicitCafeSelectionRef.current = true;
     }
 
+    dismissIntro();
     setActiveFallbackId(null);
     setActiveCafeId(cafeId);
 
@@ -594,6 +586,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     },
   ) {
     hasExplicitCafeSelectionRef.current = false;
+    dismissIntro();
     setActiveCafeId(null);
     setActiveFallbackId(placeId);
     setSheetState("collapsed");
@@ -664,13 +657,16 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           }) ?? null
         : null;
 
-    const suggestedCafe = inRadiusCafe ?? cafesByDistance[0] ?? mappableCafes[0] ?? null;
-
-    if (!suggestedCafe) {
+    if (!userLocation) {
       return;
     }
 
-    setActiveCafeId((current) => (current === suggestedCafe.id ? current : suggestedCafe.id));
+    if (!inRadiusCafe) {
+      setActiveCafeId(null);
+      return;
+    }
+
+    setActiveCafeId((current) => (current === inRadiusCafe.id ? current : inRadiusCafe.id));
   }, [
     activeCafeId,
     cafeDistances,
@@ -679,6 +675,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     selectedRadiusKm,
     userLocation,
   ]);
+
+  useEffect(() => {
+    const hasDismissedIntro = window.sessionStorage.getItem("near-me-home-intro-dismissed") === "1";
+    setIsIntroVisible(!hasDismissedIntro);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -691,7 +692,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     };
   }, []);
 
+  function dismissIntro() {
+    setIsIntroVisible(false);
+    window.sessionStorage.setItem("near-me-home-intro-dismissed", "1");
+  }
+
   function openSearch() {
+    dismissIntro();
     setIsTopPicksOpen(false);
     setIsSearchOpen(true);
   }
@@ -702,11 +709,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }
 
   function openTopPicks() {
+    dismissIntro();
     setIsSearchOpen(false);
     setIsTopPicksOpen(true);
   }
 
   function openTastePanel() {
+    dismissIntro();
     if (activeCoffeeProfile) {
       setIsSearchOpen(false);
       setIsTopPicksOpen(true);
@@ -722,6 +731,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }
 
   function openAddShopModal(prefill?: { name?: string; area?: string; note?: string }) {
+    dismissIntro();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -744,6 +754,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }
 
   function openProfiler() {
+    dismissIntro();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     resetProfiler();
@@ -1126,6 +1137,67 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </div>
         </div>
 
+        {shouldShowIntro ? (
+          <div className="map-intro-shell fade-slide-in">
+            <section className="map-intro-card" aria-label="Near Me introduction">
+              <div className="map-intro-head">
+                <div className="map-intro-kicker">
+                  <span>Near Me</span>
+                  <strong>Specialty-first coffee discovery</strong>
+                </div>
+                <button
+                  className="map-intro-dismiss"
+                  type="button"
+                  onClick={dismissIntro}
+                  aria-label="Dismiss introduction"
+                >
+                  Later
+                </button>
+              </div>
+
+              <div className="map-intro-copy">
+                <strong>Find specialty coffee that fits your taste</strong>
+                <p>
+                  Skip the generic chains. Near Me helps you discover thoughtful coffee spots
+                  nearby and learn what kind of coffee you actually enjoy.
+                </p>
+              </div>
+
+              <div className="map-intro-actions">
+                <button
+                  className="map-intro-primary control-primary"
+                  type="button"
+                  onClick={() => {
+                    dismissIntro();
+                    setLocateRequestToken((value) => value + 1);
+                  }}
+                  disabled={locationState === "requesting"}
+                >
+                  {locationState === "requesting"
+                    ? "Finding location..."
+                    : canRetryLocation
+                      ? "Retry location"
+                      : "Use my location"}
+                </button>
+                <button className="map-intro-secondary control-chip" type="button" onClick={openTastePanel}>
+                  {activeCoffeeProfile ? "Open my taste" : "Take coffee profile"}
+                </button>
+              </div>
+
+              <div className="map-intro-meta">
+                <span>Specialty-first picks, not generic chain coffee</span>
+                <span>
+                  {userLocation
+                    ? cafesWithinRadius.length > 0
+                      ? `${cafesWithinRadius.length} spots inside ${selectedRadiusKm} km`
+                      : `No verified spots inside ${selectedRadiusKm} km yet`
+                    : "5 quick questions to unlock taste-aware picks"}
+                </span>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         {isSearchOpen ? (
           <div className="map-search-shell fade-slide-in">
             <section className="map-search-panel" role="dialog" aria-modal="false" aria-label="Search cafes">
@@ -1463,7 +1535,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
         {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
           <>
-            {activeCoffeeProfile && !isOverlayOpen && !activeFallbackPlace && !hasNoRadiusMatches ? (
+            {activeCoffeeProfile && !shouldShowIntro && !isOverlayOpen && !activeFallbackPlace && !hasNoRadiusMatches ? (
               <div className="map-profile-floating-card fade-slide-in">
                 <CoffeeProfileCard onRetake={openProfiler} variant="floating" />
               </div>
@@ -1572,42 +1644,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                               </div>
                               <span className="diesel-empty-state-row-score">
                                 {formatDistance(place.distanceKm)}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {!activeFallbackPlace && fallbackState !== "loading" && nearestKnownCafes.length > 0 ? (
-                    <div className="diesel-empty-state-nearest">
-                      <span>Closest Near Me picks</span>
-                      <div className="diesel-empty-state-list">
-                        {nearestKnownCafes.map((cafe) => {
-                          const cafeDistance = cafeDistances.get(cafe.id);
-
-                          return (
-                            <button
-                              key={cafe.id}
-                              className="diesel-empty-state-row"
-                              type="button"
-                              onClick={() =>
-                                selectCafe(cafe.id, {
-                                  explicit: true,
-                                  pan: true,
-                                  nextSheetState: "collapsed",
-                                })
-                              }
-                            >
-                              <div className="diesel-empty-state-row-copy">
-                                <strong>{cafe.name}</strong>
-                                <span>{[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null].filter(Boolean).join(" · ")}</span>
-                              </div>
-                              <span className="diesel-empty-state-row-score">
-                                {cafe.reviewSummary.reviewCount > 0
-                                  ? cafe.reviewSummary.averageRating.toFixed(1)
-                                  : "New"}
                               </span>
                             </button>
                           );
