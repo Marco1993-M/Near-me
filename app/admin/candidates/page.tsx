@@ -1,5 +1,6 @@
 import { approveCandidate, ignoreCandidate } from "@/app/admin/candidates/actions";
 import { isValidAdminToken } from "@/lib/admin";
+import { getCandidateTrustSnapshot } from "@/lib/candidate-trust";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
@@ -147,6 +148,7 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
             const sourceCode = sourceCodeById.get(candidate.source_id) ?? "unknown";
             const note = latestReview?.note ?? payload.note ?? "";
             const tags = latestReview?.tags ?? [];
+            const trust = getCandidateTrustSnapshot(payload);
 
             return (
               <section
@@ -181,6 +183,23 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
                   <span style={{ color: "rgba(20,32,24,0.62)", fontSize: "0.9rem" }}>
                     {[candidate.raw_address, candidate.raw_city, candidate.raw_country_code].filter(Boolean).join(" · ")}
                   </span>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.25rem" }}>
+                    <span
+                      style={{
+                        padding: "0.2rem 0.55rem",
+                        borderRadius: 999,
+                        background: "rgba(199,245,211,0.35)",
+                        fontSize: "0.76rem",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {trust.stageLabel}
+                    </span>
+                    <span style={{ color: "rgba(20,32,24,0.66)", fontSize: "0.84rem" }}>
+                      {trust.reviewCount} review{trust.reviewCount === 1 ? "" : "s"} · {trust.supporterCount} supporter{trust.supporterCount === 1 ? "" : "s"}
+                      {trust.averageRating ? ` · ${trust.averageRating.toFixed(1)}` : ""}
+                    </span>
+                  </div>
                   {latestReview ? (
                     <div style={{ display: "grid", gap: "0.3rem", marginTop: "0.35rem" }}>
                       <span style={{ color: "rgba(20,32,24,0.5)", fontSize: "0.76rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
@@ -208,6 +227,9 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
                         </div>
                       ) : null}
                     </div>
+                  ) : null}
+                  {trust.latestNote && !latestReview ? (
+                    <p style={{ margin: 0, color: "rgba(20,32,24,0.72)", lineHeight: 1.5 }}>{trust.latestNote}</p>
                   ) : null}
                 </div>
 
