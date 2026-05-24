@@ -1581,12 +1581,60 @@ img {
   top: calc(5rem + env(safe-area-inset-top));
   z-index: 5000;
   pointer-events: none;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
-.map-profile-floating-card .coffee-profile-card {
+.map-profile-floating-expanded {
   pointer-events: auto;
   width: min(100%, 22rem);
   box-shadow: var(--glass-highlight), 0 16px 34px rgba(20, 32, 24, 0.12);
+  transition:
+    opacity 260ms ease,
+    transform 320ms ease;
+}
+
+.map-profile-floating-expanded .coffee-profile-card {
+  box-shadow: var(--glass-highlight), 0 16px 34px rgba(20, 32, 24, 0.12);
+}
+
+.map-profile-floating-button {
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  min-width: 2.85rem;
+  height: 2.85rem;
+  margin-left: auto;
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity 240ms ease,
+    transform 300ms ease;
+}
+
+.map-profile-floating-card.compact {
+  justify-content: flex-end;
+}
+
+.map-profile-floating-card.compact .map-profile-floating-expanded {
+  opacity: 0;
+  transform: scale(0.78) translateY(-0.35rem);
+  pointer-events: none;
+}
+
+.map-profile-floating-card.compact .map-profile-floating-button {
+  pointer-events: auto;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.map-profile-floating-card.expanded .map-profile-floating-button {
+  opacity: 0;
+  transform: scale(0.72);
 }
 
 .coffee-profile-card {
