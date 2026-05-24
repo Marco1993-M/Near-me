@@ -17,8 +17,16 @@ export type CandidateTrustSnapshot = {
   topTags: string[];
   latestNote: string | null;
   supporterCount: number;
+  totalSignals: number;
+  targetSignals: number;
   stageLabel: string;
+  progressLabel: string;
+  ruleLabel: string;
 };
+
+export const NEAR_ME_CANDIDATE_TARGET_SIGNALS = 4;
+export const NEAR_ME_CANDIDATE_RULE_LABEL =
+  "Official Near Me review starts after 4 trust signals from local reviews and supporter submissions.";
 
 function titleizeTag(value: string) {
   return value
@@ -56,11 +64,15 @@ export function getCandidateTrustSnapshot(payload: CandidatePayload | null | und
   const totalSignals = reviews.length + supportCount;
 
   const stageLabel =
-    totalSignals >= 4
+    totalSignals >= NEAR_ME_CANDIDATE_TARGET_SIGNALS
       ? "Ready for Near Me review"
       : totalSignals >= 2
         ? "Building trust"
         : "Early local signal";
+  const progressLabel =
+    totalSignals >= NEAR_ME_CANDIDATE_TARGET_SIGNALS
+      ? `${NEAR_ME_CANDIDATE_TARGET_SIGNALS}/${NEAR_ME_CANDIDATE_TARGET_SIGNALS} trust signals collected`
+      : `${totalSignals}/${NEAR_ME_CANDIDATE_TARGET_SIGNALS} trust signals collected`;
 
   return {
     reviewCount: reviews.length,
@@ -68,6 +80,10 @@ export function getCandidateTrustSnapshot(payload: CandidatePayload | null | und
     topTags,
     latestNote,
     supporterCount: supportCount,
+    totalSignals,
+    targetSignals: NEAR_ME_CANDIDATE_TARGET_SIGNALS,
     stageLabel,
+    progressLabel,
+    ruleLabel: NEAR_ME_CANDIDATE_RULE_LABEL,
   };
 }
