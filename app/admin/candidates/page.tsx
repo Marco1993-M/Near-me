@@ -200,6 +200,9 @@ export default async function CandidatesPage({ searchParams }: CandidatesPagePro
                       {trust.averageRating ? ` · ${trust.averageRating.toFixed(1)}` : ""}
                     </span>
                   </div>
+                  <p style={{ margin: "0.1rem 0 0", color: "rgba(20,32,24,0.62)", fontSize: "0.82rem", lineHeight: 1.5 }}>
+                    <strong>{trust.progressLabel}.</strong> {trust.ruleLabel}
+                  </p>
                   {latestReview ? (
                     <div style={{ display: "grid", gap: "0.3rem", marginTop: "0.35rem" }}>
                       <span style={{ color: "rgba(20,32,24,0.5)", fontSize: "0.76rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
