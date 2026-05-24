@@ -126,6 +126,40 @@ function formatDistance(distanceKm: number) {
   return `${Math.round(distanceKm)} km`;
 }
 
+function getFallbackTrustSummary(place: FallbackPlace) {
+  const trust = place.trust;
+
+  if (!trust) {
+    return {
+      title: "Early local signal",
+      body: "Not yet verified by Near Me. The first thoughtful review helps us understand whether this place belongs on the map.",
+      cta: "Be first to review",
+    };
+  }
+
+  if (trust.reviewCount >= 2 || trust.supporterCount >= 2) {
+    return {
+      title: trust.stageLabel,
+      body: `${trust.reviewCount} review${trust.reviewCount === 1 ? "" : "s"} and ${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} are already helping assess this place.`,
+      cta: "Add your review",
+    };
+  }
+
+  if (trust.reviewCount === 1) {
+    return {
+      title: trust.stageLabel,
+      body: "One local review is already in. Add yours to sharpen whether this place deserves a spot on Near Me.",
+      cta: "Add your review",
+    };
+  }
+
+  return {
+    title: trust.stageLabel,
+    body: `${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} have already flagged this place for Near Me review.`,
+    cta: "Review this place",
+  };
+}
+
 function buildOptimisticReviewState(
   cafe: Cafe,
   input: { rating: number; note: string; selectedTags: string[] },
@@ -527,14 +561,27 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         }),
       });
 
-      const payload = (await response.json()) as { success?: boolean; error?: string };
+      const payload = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        trust?: {
+          reviewCount: number;
+          supporterCount: number;
+          stageLabel: string;
+        };
+      };
 
       if (!response.ok || !payload.success) {
         throw new Error(payload.error || "Could not submit shop.");
       }
 
       setAddShopState("success");
-      setAddShopMessage("Shop sent for review. Thanks for helping grow Near Me.");
+      const trustLine = payload.trust
+        ? payload.trust.supporterCount > 1 || payload.trust.reviewCount > 0
+          ? `${payload.trust.stageLabel}. ${payload.trust.supporterCount} local supporters so far.`
+          : `${payload.trust.stageLabel}. You started the signal for this place.`
+        : "Shop sent for review. Thanks for helping grow Near Me.";
+      setAddShopMessage(trustLine);
       setReviewToast(`Shop submitted: ${addShopName.trim()}`);
 
       if (reviewToastTimeoutRef.current) {
@@ -1584,6 +1631,38 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             .join(" · ")}
                         </p>
                       </div>
+                      {activeFallbackPlace.trust ? (
+                        <div className="diesel-selection-trust diesel-selection-trust-fallback">
+                          <div className="diesel-selection-trust-head">
+                            <span>Trust loop</span>
+                            <strong>{activeFallbackPlace.trust.stageLabel}</strong>
+                          </div>
+                          <div className="diesel-selection-trust-grid">
+                            <div className="diesel-selection-trust-block">
+                              <span>Reviews in</span>
+                              <strong>
+                                {activeFallbackPlace.trust.reviewCount}
+                                {activeFallbackPlace.trust.averageRating
+                                  ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
+                                  : ""}
+                              </strong>
+                            </div>
+                            <div className="diesel-selection-trust-block">
+                              <span>Local supporters</span>
+                              <strong>{activeFallbackPlace.trust.supporterCount}</strong>
+                            </div>
+                          </div>
+                          {activeFallbackPlace.trust.topTags.length > 0 ? (
+                            <div className="diesel-selection-tags">
+                              {activeFallbackPlace.trust.topTags.map((tag) => (
+                                <span className="diesel-selection-tag" key={tag}>
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div className="diesel-selection-footer">
                         <span>{activeFallbackPlace.address}</span>
                       </div>
@@ -1601,7 +1680,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           type="button"
                           onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
                         >
-                          Be first to review
+                          {getFallbackTrustSummary(activeFallbackPlace).cta}
                         </button>
                         <button
                           className="diesel-selection-secondary control-chip"
@@ -1642,7 +1721,17 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             >
                               <div className="diesel-empty-state-row-copy">
                                 <strong>{place.name}</strong>
-                                <span>{[place.city, formatDistance(place.distanceKm), place.category].filter(Boolean).join(" · ")}</span>
+                                <span>
+                                  {[
+                                    place.city,
+                                    formatDistance(place.distanceKm),
+                                    place.trust?.reviewCount
+                                      ? `${place.trust.reviewCount} review${place.trust.reviewCount === 1 ? "" : "s"}`
+                                      : place.category,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
                               </div>
                               <span className="diesel-empty-state-row-score">
                                 {formatDistance(place.distanceKm)}
@@ -1683,8 +1772,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               ) : activeFallbackPlace ? (
                 <>
                   <div className="diesel-selection-copy diesel-empty-state-copy">
-                    <strong>Nearby option</strong>
-                    <p>Not yet verified by Near Me. Leave the first review to help us assess whether it belongs on the map.</p>
+                    <strong>{getFallbackTrustSummary(activeFallbackPlace).title}</strong>
+                    <p>{getFallbackTrustSummary(activeFallbackPlace).body}</p>
                   </div>
 
                   <div className="diesel-fallback-feature">
@@ -1704,6 +1793,32 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           .join(" · ")}
                       </p>
                     </div>
+                    {activeFallbackPlace.trust ? (
+                      <div className="diesel-selection-trust diesel-selection-trust-fallback">
+                        <div className="diesel-selection-trust-head">
+                          <span>Trust loop</span>
+                          <strong>{activeFallbackPlace.trust.stageLabel}</strong>
+                        </div>
+                        <div className="diesel-selection-trust-grid">
+                          <div className="diesel-selection-trust-block">
+                            <span>Reviews in</span>
+                            <strong>
+                              {activeFallbackPlace.trust.reviewCount}
+                              {activeFallbackPlace.trust.averageRating
+                                ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
+                                : ""}
+                            </strong>
+                          </div>
+                          <div className="diesel-selection-trust-block">
+                            <span>Local supporters</span>
+                            <strong>{activeFallbackPlace.trust.supporterCount}</strong>
+                          </div>
+                        </div>
+                        {activeFallbackPlace.trust.latestNote ? (
+                          <p className="diesel-selection-trust-quote">“{activeFallbackPlace.trust.latestNote}”</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="diesel-selection-footer">
                       <span>{activeFallbackPlace.address}</span>
                     </div>
@@ -1721,7 +1836,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         type="button"
                         onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
                       >
-                        Review this place
+                        {getFallbackTrustSummary(activeFallbackPlace).cta}
                       </button>
                       <button
                         className="diesel-selection-secondary control-chip"
