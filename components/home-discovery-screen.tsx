@@ -7,6 +7,7 @@ import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@
 import { CoffeeProfileCard } from "@/components/coffee-profile-card";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
+import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
 import {
   applyReviewToCoffeeProfileState,
   applyProfilerOptionScores,
@@ -140,7 +141,7 @@ function getFallbackTrustSummary(place: FallbackPlace) {
   if (trust.reviewCount >= 2 || trust.supporterCount >= 2) {
     return {
       title: trust.stageLabel,
-      body: `${trust.reviewCount} review${trust.reviewCount === 1 ? "" : "s"} and ${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} are already helping assess this place.`,
+      body: `${trust.reviewCount} review${trust.reviewCount === 1 ? "" : "s"} and ${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} are already helping assess this place. ${trust.progressLabel}.`,
       cta: "Add your review",
     };
   }
@@ -148,14 +149,14 @@ function getFallbackTrustSummary(place: FallbackPlace) {
   if (trust.reviewCount === 1) {
     return {
       title: trust.stageLabel,
-      body: "One local review is already in. Add yours to sharpen whether this place deserves a spot on Near Me.",
+      body: `One local review is already in. Add yours to sharpen whether this place deserves a spot on Near Me. ${trust.progressLabel}.`,
       cta: "Add your review",
     };
   }
 
   return {
     title: trust.stageLabel,
-    body: `${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} have already flagged this place for Near Me review.`,
+    body: `${trust.supporterCount} local supporter${trust.supporterCount === 1 ? "" : "s"} have already flagged this place for Near Me review. ${trust.progressLabel}.`,
     cta: "Review this place",
   };
 }
@@ -1631,38 +1632,44 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             .join(" · ")}
                         </p>
                       </div>
-                      {activeFallbackPlace.trust ? (
-                        <div className="diesel-selection-trust diesel-selection-trust-fallback">
-                          <div className="diesel-selection-trust-head">
-                            <span>Trust loop</span>
-                            <strong>{activeFallbackPlace.trust.stageLabel}</strong>
-                          </div>
-                          <div className="diesel-selection-trust-grid">
-                            <div className="diesel-selection-trust-block">
-                              <span>Reviews in</span>
-                              <strong>
-                                {activeFallbackPlace.trust.reviewCount}
-                                {activeFallbackPlace.trust.averageRating
-                                  ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
-                                  : ""}
-                              </strong>
-                            </div>
-                            <div className="diesel-selection-trust-block">
-                              <span>Local supporters</span>
-                              <strong>{activeFallbackPlace.trust.supporterCount}</strong>
-                            </div>
-                          </div>
-                          {activeFallbackPlace.trust.topTags.length > 0 ? (
-                            <div className="diesel-selection-tags">
-                              {activeFallbackPlace.trust.topTags.map((tag) => (
-                                <span className="diesel-selection-tag" key={tag}>
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
+                      <div className="diesel-selection-trust diesel-selection-trust-fallback">
+                        <div className="diesel-selection-trust-head">
+                          <span>Trust loop</span>
+                          <strong>{activeFallbackPlace.trust?.stageLabel ?? "Early local signal"}</strong>
                         </div>
-                      ) : null}
+                        <div className="diesel-selection-trust-rule">
+                          <strong>{activeFallbackPlace.trust?.progressLabel ?? "0/4 trust signals collected"}</strong>
+                          <span>{activeFallbackPlace.trust?.ruleLabel ?? NEAR_ME_CANDIDATE_RULE_LABEL}</span>
+                        </div>
+                        {activeFallbackPlace.trust ? (
+                          <>
+                            <div className="diesel-selection-trust-grid">
+                              <div className="diesel-selection-trust-block">
+                                <span>Reviews in</span>
+                                <strong>
+                                  {activeFallbackPlace.trust.reviewCount}
+                                  {activeFallbackPlace.trust.averageRating
+                                    ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
+                                    : ""}
+                                </strong>
+                              </div>
+                              <div className="diesel-selection-trust-block">
+                                <span>Local supporters</span>
+                                <strong>{activeFallbackPlace.trust.supporterCount}</strong>
+                              </div>
+                            </div>
+                            {activeFallbackPlace.trust.topTags.length > 0 ? (
+                              <div className="diesel-selection-tags">
+                                {activeFallbackPlace.trust.topTags.map((tag) => (
+                                  <span className="diesel-selection-tag" key={tag}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </div>
                       <div className="diesel-selection-footer">
                         <span>{activeFallbackPlace.address}</span>
                       </div>
@@ -1793,32 +1800,38 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           .join(" · ")}
                       </p>
                     </div>
-                    {activeFallbackPlace.trust ? (
-                      <div className="diesel-selection-trust diesel-selection-trust-fallback">
-                        <div className="diesel-selection-trust-head">
-                          <span>Trust loop</span>
-                          <strong>{activeFallbackPlace.trust.stageLabel}</strong>
-                        </div>
-                        <div className="diesel-selection-trust-grid">
-                          <div className="diesel-selection-trust-block">
-                            <span>Reviews in</span>
-                            <strong>
-                              {activeFallbackPlace.trust.reviewCount}
-                              {activeFallbackPlace.trust.averageRating
-                                ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
-                                : ""}
-                            </strong>
-                          </div>
-                          <div className="diesel-selection-trust-block">
-                            <span>Local supporters</span>
-                            <strong>{activeFallbackPlace.trust.supporterCount}</strong>
-                          </div>
-                        </div>
-                        {activeFallbackPlace.trust.latestNote ? (
-                          <p className="diesel-selection-trust-quote">“{activeFallbackPlace.trust.latestNote}”</p>
-                        ) : null}
+                    <div className="diesel-selection-trust diesel-selection-trust-fallback">
+                      <div className="diesel-selection-trust-head">
+                        <span>Trust loop</span>
+                        <strong>{activeFallbackPlace.trust?.stageLabel ?? "Early local signal"}</strong>
                       </div>
-                    ) : null}
+                      <div className="diesel-selection-trust-rule">
+                        <strong>{activeFallbackPlace.trust?.progressLabel ?? "0/4 trust signals collected"}</strong>
+                        <span>{activeFallbackPlace.trust?.ruleLabel ?? NEAR_ME_CANDIDATE_RULE_LABEL}</span>
+                      </div>
+                      {activeFallbackPlace.trust ? (
+                        <>
+                          <div className="diesel-selection-trust-grid">
+                            <div className="diesel-selection-trust-block">
+                              <span>Reviews in</span>
+                              <strong>
+                                {activeFallbackPlace.trust.reviewCount}
+                                {activeFallbackPlace.trust.averageRating
+                                  ? ` · ${activeFallbackPlace.trust.averageRating.toFixed(1)}`
+                                  : ""}
+                              </strong>
+                            </div>
+                            <div className="diesel-selection-trust-block">
+                              <span>Local supporters</span>
+                              <strong>{activeFallbackPlace.trust.supporterCount}</strong>
+                            </div>
+                          </div>
+                          {activeFallbackPlace.trust.latestNote ? (
+                            <p className="diesel-selection-trust-quote">“{activeFallbackPlace.trust.latestNote}”</p>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
                     <div className="diesel-selection-footer">
                       <span>{activeFallbackPlace.address}</span>
                     </div>
