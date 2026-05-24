@@ -72,6 +72,10 @@ export type FallbackPlace = {
     topTags: string[];
     latestNote: string | null;
     supporterCount: number;
+    totalSignals: number;
+    targetSignals: number;
     stageLabel: string;
+    progressLabel: string;
+    ruleLabel: string;
   } | null;
 };
