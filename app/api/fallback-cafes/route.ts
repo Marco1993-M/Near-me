@@ -1,6 +1,9 @@
 import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
+import { getCandidateTrustSnapshot } from "@/lib/candidate-trust";
+import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { siteConfig } from "@/lib/site";
+import { getSupabaseServerClient } from "@/lib/supabase";
 import type { FallbackPlace } from "@/types/cafe";
 
 type OverpassElement = {
@@ -14,6 +17,14 @@ type OverpassElement = {
   };
   tags?: Record<string, string | undefined>;
 };
+
+const EXCLUDED_FALLBACK_NAME_PATTERNS = [
+  /\bstarbucks\b/i,
+  /\bvida e caff[eè]\b/i,
+  /\bmugg\s*&\s*bean\b/i,
+  /\bwoolworths\b/i,
+  /\bbootlegger\b/i,
+];
 
 function getDistanceInKm(
   from: { latitude: number; longitude: number },
@@ -78,22 +89,27 @@ function toFallbackPlace(
 ): FallbackPlace | null {
   const latitude = element.lat ?? element.center?.lat;
   const longitude = element.lon ?? element.center?.lon;
+  const name = element.tags?.name;
 
-  if (!latitude || !longitude || !element.tags?.name) {
+  if (!latitude || !longitude || !name) {
+    return null;
+  }
+
+  if (EXCLUDED_FALLBACK_NAME_PATTERNS.some((pattern) => pattern.test(name))) {
     return null;
   }
 
   return {
     id: `${element.type}-${element.id}`,
     source: "osm-overpass",
-    name: element.tags.name,
+    name,
     address: buildAddress(element.tags),
     city: getCity(element.tags),
     category: getCategory(element.tags),
     latitude,
     longitude,
     distanceKm: getDistanceInKm(userLocation, { latitude, longitude }),
-    website: element.tags.website ?? null,
+    website: element.tags?.website ?? null,
   };
 }
 
@@ -157,6 +173,7 @@ export async function GET(request: Request) {
   const latitude = Number(searchParams.get("lat"));
   const longitude = Number(searchParams.get("lng"));
   const requestedRadiusKm = Number(searchParams.get("radiusKm") ?? "3");
+  const clampedRadiusKm = Math.min(Math.max(requestedRadiusKm, 1), 10);
   const radiusMeters = Math.min(Math.max(Math.round(Math.max(requestedRadiusKm * 4, 15) * 1000), 15000), 50000);
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
@@ -166,9 +183,54 @@ export async function GET(request: Request) {
   try {
     const roundedLatitude = Number(latitude.toFixed(3));
     const roundedLongitude = Number(longitude.toFixed(3));
-    const places = await getFallbackPlaces(roundedLatitude, roundedLongitude, radiusMeters);
+    const places = (await getFallbackPlaces(roundedLatitude, roundedLongitude, radiusMeters))
+      .filter((place) => place.distanceKm <= clampedRadiusKm)
+      .slice(0, 8);
 
-    return NextResponse.json({ places });
+    const supabase = getSupabaseServerClient();
+    if (!supabase || places.length === 0) {
+      return NextResponse.json({ places });
+    }
+
+    const { data: sourceRow } = await supabase
+      .from(CANONICAL_TABLES.placeSources)
+      .select("id")
+      .eq("code", "osm-overpass")
+      .maybeSingle();
+
+    if (!sourceRow?.id) {
+      return NextResponse.json({ places });
+    }
+
+    const { data: sourcePlaces } = await supabase
+      .from(CANONICAL_TABLES.sourcePlaces)
+      .select("external_id, payload")
+      .eq("source_id", sourceRow.id)
+      .in("external_id", places.map((place) => place.id))
+      .neq("match_status", "ignored");
+
+    const trustByExternalId = new Map(
+      (sourcePlaces ?? []).map((sourcePlace) => [
+        sourcePlace.external_id,
+        getCandidateTrustSnapshot(
+          sourcePlace.payload && typeof sourcePlace.payload === "object"
+            ? (sourcePlace.payload as {
+                reviews?: Array<{ rating?: number; note?: string; tags?: string[] }>;
+                latest_review?: { rating?: number; note?: string; tags?: string[] } | null;
+                support_count?: number;
+                support_notes?: string[];
+              })
+            : null,
+        ),
+      ]),
+    );
+
+    const placesWithTrust = places.map((place) => ({
+      ...place,
+      trust: trustByExternalId.get(place.id) ?? null,
+    }));
+
+    return NextResponse.json({ places: placesWithTrust });
   } catch {
     return NextResponse.json({ places: [] }, { status: 200 });
   }

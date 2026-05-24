@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCandidateTrustSnapshot } from "@/lib/candidate-trust";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { getSupabaseServerClient } from "@/lib/supabase";
 
@@ -157,5 +158,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Could not save fallback review." }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  const trust = getCandidateTrustSnapshot(nextPayload);
+  return NextResponse.json({ success: true, trust });
 }
