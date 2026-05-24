@@ -66,4 +66,12 @@ export type FallbackPlace = {
   longitude: number;
   distanceKm: number;
   website: string | null;
+  trust?: {
+    reviewCount: number;
+    averageRating: number | null;
+    topTags: string[];
+    latestNote: string | null;
+    supporterCount: number;
+    stageLabel: string;
+  } | null;
 };
