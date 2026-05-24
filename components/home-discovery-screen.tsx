@@ -23,6 +23,7 @@ import {
   subscribeToCoffeeProfile,
 } from "@/lib/coffee-profiler";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
+import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import { siteConfig } from "@/lib/site";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -324,6 +325,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeTags = activeCafe?.tags.slice(0, 3) ?? [];
   const activeTrustMentions = activeCafe?.trustPreview.topMentions.slice(0, 2) ?? [];
   const activeTrustQuote = activeCafe?.trustPreview.recentQuote ?? null;
+  const activeDecisionGuide = activeCafe ? getCafeDecisionGuide(activeCafe) : null;
   const activeRating =
     activeCafe && activeCafe.reviewSummary.reviewCount > 0
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
@@ -1756,12 +1758,24 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
                   <div className="diesel-selection-copy">
                     <strong>{activeCafe.name}</strong>
-                    <p>{activeCafe.summary}</p>
+                    <p>{activeDecisionGuide?.trustSummary ?? activeCafe.summary}</p>
                   </div>
 
-                  {activeCoffeeProfile || activeTrustMentions.length > 0 || activeTrustQuote ? (
+                  {activeCoffeeProfile || activeDecisionGuide || activeTrustMentions.length > 0 || activeTrustQuote ? (
                     <div className="diesel-selection-trust">
                       {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
+                      {activeDecisionGuide ? (
+                        <div className="diesel-selection-trust-grid">
+                          <div className="diesel-selection-trust-block">
+                            <span>Best for</span>
+                            <strong>{activeDecisionGuide.bestFor}</strong>
+                          </div>
+                          <div className="diesel-selection-trust-block">
+                            <span>Order first</span>
+                            <strong>{activeDecisionGuide.order}</strong>
+                          </div>
+                        </div>
+                      ) : null}
                       {activeTrustMentions.length > 0 ? (
                         <div className="diesel-selection-trust-head">
                           <span>People mention</span>
@@ -1770,6 +1784,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       ) : null}
                       {activeTrustQuote ? (
                         <p className="diesel-selection-trust-quote">“{activeTrustQuote}”</p>
+                      ) : null}
+                      {activeDecisionGuide?.trustBullets.length ? (
+                        <div className="diesel-selection-trust-list">
+                          {activeDecisionGuide.trustBullets.slice(0, 2).map((bullet) => (
+                            <span key={bullet}>{bullet}</span>
+                          ))}
+                        </div>
                       ) : null}
                     </div>
                   ) : null}

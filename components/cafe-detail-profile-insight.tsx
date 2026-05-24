@@ -2,6 +2,7 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import type { Cafe } from "@/types/cafe";
+import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import {
   getCafeProfileMatch,
   getCoffeeProfileBySlug,
@@ -43,6 +44,7 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
 
   const match = getCafeProfileMatch(cafe, profile, profileState);
   const confidence = getCoffeeProfileConfidence(profileState);
+  const decisionGuide = getCafeDecisionGuide(cafe);
 
   return (
     <article className="cafe-detail-profile-insight">
@@ -53,6 +55,7 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
       <p>
         <strong>{profile.name}</strong> looks like a {match.label.toLowerCase()} here.
         {match.reasons.length > 0 ? ` Near Me is seeing signals like ${match.reasons.join(" and ")}.` : ""}
+        {` ${decisionGuide.bestForDetail}`}
       </p>
       <div className="cafe-detail-profile-insight-meta">
         <span>{confidence} profile</span>
