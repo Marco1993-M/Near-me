@@ -164,6 +164,29 @@ function buildTrustPreview(input: {
   };
 }
 
+function deriveReviewSummary(
+  row: Pick<CafeRow, "review_count" | "average_rating">,
+  reviews: CanonicalReviewRow[],
+) {
+  const ratings = reviews
+    .map((review) => Number(review.rating))
+    .filter((rating) => Number.isFinite(rating) && rating > 0);
+
+  if (reviews.length > 0 && ratings.length > 0) {
+    return {
+      reviewCount: reviews.length,
+      averageRating: Number(
+        (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1),
+      ),
+    };
+  }
+
+  return {
+    reviewCount: Number(row.review_count ?? 0),
+    averageRating: Number(row.average_rating ?? 0),
+  };
+}
+
 function chunkValues<T>(values: T[], size = SUPABASE_IN_CHUNK_SIZE) {
   const chunks: T[][] = [];
 
@@ -396,8 +419,9 @@ async function fetchCanonicalCafeBundleUncached(): Promise<CanonicalCafeBundle |
         return null;
       }
 
-      const reviewCount = Number(row.review_count ?? 0);
-      const averageRating = Number(row.average_rating ?? 0);
+      const reviewSummary = deriveReviewSummary(row, reviewsByCafeId.get(row.id) ?? []);
+      const reviewCount = reviewSummary.reviewCount;
+      const averageRating = reviewSummary.averageRating;
       const roasters = Array.from(new Set(roastersByCafeId.get(row.id) ?? []));
       const drinks = normalizeDrinks(drinksByCafeId.get(row.id) ?? []);
       const tags = buildCafeTags({
@@ -433,10 +457,7 @@ async function fetchCanonicalCafeBundleUncached(): Promise<CanonicalCafeBundle |
         tags,
         photo: row.photo_url,
         summary,
-        reviewSummary: {
-          averageRating,
-          reviewCount,
-        },
+        reviewSummary,
         trustPreview,
       } satisfies Cafe;
     })
