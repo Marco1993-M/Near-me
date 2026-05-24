@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import { getCityHighlights, getCityStaticParams, getFeaturedCafes } from "@/lib/cafes";
 
 export const revalidate = 300;
@@ -47,14 +49,25 @@ export default async function CityPage({ params }: CityPageProps) {
   const matchingCafes = featuredCafes.filter(
     (cafe) => cafe.city.toLowerCase().replace(/\s+/g, "-") === slug,
   );
+  const rankedByRating = [...matchingCafes].sort(
+    (left, right) =>
+      right.reviewSummary.averageRating - left.reviewSummary.averageRating ||
+      right.reviewSummary.reviewCount - left.reviewSummary.reviewCount,
+  );
+  const cityGuideSpots = [
+    rankedByRating[0] ?? null,
+    matchingCafes.find((cafe) => cafe.tags.includes("Roaster-led")) ?? null,
+    matchingCafes.find((cafe) => cafe.tags.includes("Quiet")) ?? null,
+    matchingCafes.find((cafe) => cafe.drinks.some((drink) => /cortado|flat white|espresso/i.test(drink))) ?? null,
+  ].filter((cafe, index, cafes): cafe is NonNullable<typeof cafe> => Boolean(cafe) && cafes.findIndex((item) => item?.id === cafe?.id) === index);
 
   return (
     <main className="section-stack">
       <section className="panel section-card">
         <h1>{cityName}</h1>
         <p>
-          City pages will become a major SEO and traveler surface in V2. They support
-          destination-first discovery when users search manually instead of sharing location.
+          A specialty-first coffee guide for {cityName}, built to help you skip generic listings
+          and make a smarter first coffee stop.
         </p>
         {cityHighlight ? (
           <div className="tag-row">
@@ -66,18 +79,49 @@ export default async function CityPage({ params }: CityPageProps) {
         ) : null}
       </section>
 
+      {cityGuideSpots.length > 0 ? (
+        <section className="panel section-card">
+          <h2>How we would start in {cityName}</h2>
+          <ul className="route-list">
+            {cityGuideSpots.map((cafe) => {
+              const guide = getCafeDecisionGuide(cafe);
+
+              return (
+                <li className="route-item" key={cafe.id}>
+                  <div>
+                    <strong>{cafe.name}</strong>
+                    <span>{guide.trustSummary}</span>
+                    <span>{guide.bestFor}</span>
+                  </div>
+                  <Link href={`/cafes/${cafe.slug}`}>Open</Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="panel section-card">
-        <h2>Cafes currently surfaced</h2>
+        <h2>Specialty cafes in {cityName}</h2>
         <ul className="route-list">
           {matchingCafes.length > 0 ? (
             matchingCafes.map((cafe) => (
-              <li className="route-item" key={cafe.id}>
-                <div>
-                  <strong>{cafe.name}</strong>
-                  <span>{cafe.summary}</span>
-                </div>
-                <a href={`/cafes/${cafe.slug}`}>Open</a>
-              </li>
+              (() => {
+                const guide = getCafeDecisionGuide(cafe);
+
+                return (
+                  <li className="route-item" key={cafe.id}>
+                    <div>
+                      <strong>{cafe.name}</strong>
+                      <span>{guide.trustSummary}</span>
+                      <span>
+                        {guide.order} · {guide.bestFor}
+                      </span>
+                    </div>
+                    <Link href={`/cafes/${cafe.slug}`}>Open</Link>
+                  </li>
+                );
+              })()
             ))
           ) : (
             <li className="route-item">

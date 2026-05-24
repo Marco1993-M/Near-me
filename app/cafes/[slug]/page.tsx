@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CafeDetailProfileInsight } from "@/components/cafe-detail-profile-insight";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
+import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import { getCafeBySlug, getCafeStaticParams, getCafeTrustSignalsBySlug } from "@/lib/cafes";
 
 export const revalidate = 300;
@@ -84,6 +85,7 @@ export default async function CafePage({ params }: CafePageProps) {
     cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
   const topTags = trustSignals?.topTags ?? [];
   const recentReviews = trustSignals?.recentReviews ?? [];
+  const decisionGuide = getCafeDecisionGuide(cafe, trustSignals);
   const leadingTags = topTags.length > 0 ? topTags : cafe.tags.slice(0, 4);
   const trustSummary = (() => {
     const parts = [
@@ -167,7 +169,7 @@ export default async function CafePage({ params }: CafePageProps) {
 
             <div className="diesel-selection-copy">
               <h1 className="cafe-detail-title">{cafe.name}</h1>
-              <p>{trustSummary}</p>
+              <p>{decisionGuide.trustSummary}</p>
             </div>
 
             <ProfileMatchPill cafe={cafe} variant="card" />
@@ -176,15 +178,15 @@ export default async function CafePage({ params }: CafePageProps) {
             <div className="cafe-detail-quick-grid">
               <article className="cafe-detail-quick-card">
                 <span>Why go</span>
-                <strong>{leadingTags[0] ?? "Good coffee"}</strong>
+                <strong>{decisionGuide.trustTitle}</strong>
               </article>
               <article className="cafe-detail-quick-card">
                 <span>Order</span>
-                <strong>{cafe.drinks[0] ?? "House coffee"}</strong>
+                <strong>{decisionGuide.order}</strong>
               </article>
               <article className="cafe-detail-quick-card">
-                <span>Roaster</span>
-                <strong>{cafe.roasters[0] ?? "Local selection"}</strong>
+                <span>Best for</span>
+                <strong>{decisionGuide.bestFor}</strong>
               </article>
             </div>
 
@@ -214,8 +216,19 @@ export default async function CafePage({ params }: CafePageProps) {
               </article>
 
               <article className="cafe-detail-section">
+                <h2>Why Near Me would send you here</h2>
+                <div className="cafe-detail-guide-list">
+                  {decisionGuide.trustBullets.map((bullet) => (
+                    <div className="cafe-detail-guide-row" key={bullet}>
+                      <strong>{bullet}</strong>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="cafe-detail-section">
                 <h2>Quick read</h2>
-                <p>{cafe.summary}</p>
+                <p>{trustSummary}</p>
               </article>
 
               <article className="cafe-detail-section" id="reviews">
@@ -236,11 +249,18 @@ export default async function CafePage({ params }: CafePageProps) {
               <article className="cafe-detail-section">
                 <h2>Popular drinks</h2>
                 <p>{cafe.drinks.length > 0 ? cafe.drinks.join(", ") : "No drink trends yet."}</p>
+                <p className="cafe-detail-section-note">{decisionGuide.orderDetail}</p>
               </article>
 
               <article className="cafe-detail-section">
                 <h2>Roasters</h2>
                 <p>{cafe.roasters.length > 0 ? cafe.roasters.join(", ") : "Roaster details coming soon."}</p>
+              </article>
+
+              <article className="cafe-detail-section">
+                <h2>Best for</h2>
+                <p>{decisionGuide.bestForDetail}</p>
+                <p className="cafe-detail-section-note">{decisionGuide.travelFit}</p>
               </article>
 
               <article className="cafe-detail-section">
@@ -278,6 +298,7 @@ export default async function CafePage({ params }: CafePageProps) {
                     ? "Check the cafe website before heading out for current hours, menu changes, or seasonal drinks."
                     : "Availability, menu focus, and opening hours can shift, so it is worth checking before making the trip."}
                 </p>
+                <p className="cafe-detail-section-note">{decisionGuide.reviewHook}</p>
               </article>
             </div>
           </section>
