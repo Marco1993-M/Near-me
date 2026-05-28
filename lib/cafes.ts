@@ -500,7 +500,7 @@ const getCanonicalCafeBundle = cache(
   unstable_cache(
     async () => fetchCanonicalCafeBundleUncached(),
     ["canonical-cafe-bundle"],
-    { revalidate: 300 },
+    { revalidate: 3600 },
   ),
 );
 
@@ -596,7 +596,7 @@ const getCafeTrustSignalsBySlugCached = unstable_cache(
     };
   },
   ["cafe-trust-signals-by-slug"],
-  { revalidate: 300 },
+  { revalidate: 3600 },
 );
 
 export function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
