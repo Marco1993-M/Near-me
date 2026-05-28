@@ -5,7 +5,7 @@ import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import { getCafeBySlug, getCafeStaticParams, getCafeTrustSignalsBySlug } from "@/lib/cafes";
 
-export const revalidate = 300;
+export const revalidate = 21600;
 
 type CafePageProps = {
   params: Promise<{

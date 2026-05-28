@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import { getCityHighlights, getCityStaticParams, getFeaturedCafes } from "@/lib/cafes";
 
-export const revalidate = 300;
+export const revalidate = 21600;
 
 type CityPageProps = {
   params: Promise<{

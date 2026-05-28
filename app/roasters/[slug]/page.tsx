@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const revalidate = 300;
+export const revalidate = 21600;
 
 type RoasterPageProps = {
   params: Promise<{

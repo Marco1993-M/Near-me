@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export default async function TopPage() {
   const cafes = await getFeaturedCafes();

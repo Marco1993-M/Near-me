@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 type SearchPageProps = {
   searchParams: Promise<{
     q?: string;
   }>;
 };
-
-export const revalidate = 300;
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const { q = "" } = await searchParams;
