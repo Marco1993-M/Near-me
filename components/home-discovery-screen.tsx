@@ -290,10 +290,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [addShopNote, setAddShopNote] = useState("");
   const [addShopState, setAddShopState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [addShopMessage, setAddShopMessage] = useState("");
-  const [isTasteDockCollapsed, setIsTasteDockCollapsed] = useState(false);
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
-  const tasteDockTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
   const previousRadiusKmRef = useRef(selectedRadiusKm);
 
@@ -503,12 +501,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     sheetState === "collapsed" &&
     !hasNoRadiusMatches &&
     !activeFallbackPlace;
-  const shouldShowFloatingTaste =
-    Boolean(activeCoffeeProfile) &&
-    !shouldShowIntro &&
-    !isOverlayOpen &&
-    !activeFallbackPlace &&
-    !hasNoRadiusMatches;
   const emptyStateTitle =
     fallbackPlaces.length > 0
       ? `No Near Me picks in ${selectedRadiusKm} km`
@@ -815,42 +807,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!shouldShowFloatingTaste) {
-      if (tasteDockTimeoutRef.current) {
-        window.clearTimeout(tasteDockTimeoutRef.current);
-        tasteDockTimeoutRef.current = null;
-      }
-      return;
-    }
-
-    const hasSeenCollapsedTasteDock =
-      window.sessionStorage.getItem("near-me-taste-dock-collapsed") === "1";
-
-    if (hasSeenCollapsedTasteDock) {
-      setIsTasteDockCollapsed(true);
-      return;
-    }
-
-    setIsTasteDockCollapsed(false);
-    tasteDockTimeoutRef.current = window.setTimeout(() => {
-      setIsTasteDockCollapsed(true);
-      window.sessionStorage.setItem("near-me-taste-dock-collapsed", "1");
-      tasteDockTimeoutRef.current = null;
-    }, 3200);
-
     return () => {
-      if (tasteDockTimeoutRef.current) {
-        window.clearTimeout(tasteDockTimeoutRef.current);
-        tasteDockTimeoutRef.current = null;
-      }
-    };
-  }, [activeCoffeeProfile?.shortName, shouldShowFloatingTaste]);
-
-  useEffect(() => {
-    return () => {
-      if (tasteDockTimeoutRef.current) {
-        window.clearTimeout(tasteDockTimeoutRef.current);
-      }
       if (reviewSuccessTimeoutRef.current) {
         window.clearTimeout(reviewSuccessTimeoutRef.current);
       }
@@ -1920,28 +1877,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
         {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
           <>
-            {shouldShowFloatingTaste ? (
-              <div
-                className={`map-profile-floating-card fade-slide-in${isTasteDockCollapsed ? " compact" : " expanded"}`}
-              >
-                <div className="map-profile-floating-expanded">
-                  <CoffeeProfileCard onRetake={openProfiler} variant="floating" />
-                </div>
-                <button
-                  className="map-profile-floating-button control-chip"
-                  type="button"
-                  onClick={openTastePanel}
-                  aria-label={`Open your ${activeCoffeeProfile?.shortName ?? "taste"} profile`}
-                  title={activeCoffeeProfile ? `${activeCoffeeProfile.shortName} taste profile` : "Coffee profiler"}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                    <path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z" />
-                    <path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" />
-                    <path d="M7 4h6" />
-                  </svg>
-                </button>
-              </div>
-            ) : null}
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
               aria-live="polite"
