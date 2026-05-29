@@ -837,6 +837,7 @@ img {
   gap: 0.8rem;
   width: 100%;
   max-height: 100%;
+  min-height: 0;
   overflow: hidden;
   padding: 0.95rem;
   border-radius: 24px;
@@ -925,6 +926,8 @@ img {
   max-height: min(22rem, calc(100dvh - 13rem - env(safe-area-inset-bottom)));
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding-right: 0.15rem;
   scrollbar-width: none;
 }
@@ -976,6 +979,7 @@ img {
 
 .coffee-journal-results {
   max-height: min(24rem, calc(100dvh - 14rem - env(safe-area-inset-bottom)));
+  min-height: 0;
 }
 
 .coffee-journal-entry-head {
@@ -1255,6 +1259,10 @@ img {
   width: min(100%, 32rem);
   display: grid;
   gap: 1rem;
+  max-height: min(42rem, calc(100dvh - 2rem - env(safe-area-inset-top)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 1rem;
   border-radius: 28px;
   border: 1px solid var(--glass-border);
@@ -1264,6 +1272,11 @@ img {
   box-shadow: var(--glass-highlight), 0 24px 60px rgba(20, 32, 24, 0.16);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
+  scrollbar-width: none;
+}
+
+.profiler-sheet::-webkit-scrollbar {
+  display: none;
 }
 
 .profiler-head {
