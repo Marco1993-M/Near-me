@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@/types/cafe";
 import { CoffeeProfileCard } from "@/components/coffee-profile-card";
+import { CoffeeJournalPanel } from "@/components/coffee-journal-panel";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
+import { addCoffeeJournalEntry } from "@/lib/coffee-journal";
 import {
   applyReviewToCoffeeProfileState,
   applyProfilerOptionScores,
@@ -39,6 +41,10 @@ type HomeDiscoveryScreenProps = {
 };
 
 type ReviewTarget =
+  | { type: "cafe"; cafe: Cafe }
+  | { type: "fallback"; place: FallbackPlace };
+
+type JournalTarget =
   | { type: "cafe"; cafe: Cafe }
   | { type: "fallback"; place: FallbackPlace };
 
@@ -74,7 +80,28 @@ const reviewTags = [
   "Specialty coffee",
   "Quiet",
 ];
+const journalTags = [
+  "Bright",
+  "Sweet",
+  "Chocolatey",
+  "Fruity",
+  "Floral",
+  "Smooth",
+  "Bold",
+  "Clean",
+] as const;
 const radiusOptionsKm = [1, 3, 5, 10];
+
+const journalTagHints: Record<(typeof journalTags)[number], string> = {
+  Bright: "Bright usually means lively acidity rather than bitterness.",
+  Sweet: "Sweet often means caramel, honey, or ripe fruit balance in the cup.",
+  Chocolatey: "Chocolatey usually points to deeper, comfort-led sweetness and body.",
+  Fruity: "Fruity can mean berry, citrus, tropical, or stone-fruit notes.",
+  Floral: "Floral coffees can feel lighter, aromatic, and tea-like.",
+  Smooth: "Smooth often means the cup feels rounded with no harsh edge.",
+  Bold: "Bold usually means more intensity, roast depth, or espresso punch.",
+  Clean: "Clean usually means distinct flavors and less muddiness in the cup.",
+};
 
 function slugifyReviewTag(value: string) {
   return value
@@ -225,6 +252,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isJournalEntryOpen, setIsJournalEntryOpen] = useState(false);
   const [isAddShopOpen, setIsAddShopOpen] = useState(false);
   const [profilerQuestionIndex, setProfilerQuestionIndex] = useState(0);
   const [profilerScores, setProfilerScores] = useState(defaultProfilerScores);
@@ -240,6 +269,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewToast, setReviewToast] = useState<string | null>(null);
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
+  const [journalTarget, setJournalTarget] = useState<JournalTarget | null>(null);
+  const [journalRating, setJournalRating] = useState(7);
+  const [journalDrink, setJournalDrink] = useState<string | null>(null);
+  const [journalNote, setJournalNote] = useState("");
+  const [selectedJournalTags, setSelectedJournalTags] = useState<string[]>([]);
+  const [journalMessage, setJournalMessage] = useState("");
+  const [journalState, setJournalState] = useState<"idle" | "success" | "error">("idle");
   const [fallbackPlaces, setFallbackPlaces] = useState<FallbackPlace[]>([]);
   const [fallbackState, setFallbackState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [addShopName, setAddShopName] = useState("");
@@ -374,7 +410,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : null;
   const isActiveCafeSaved = activeCafe ? favoriteCafeIds.includes(activeCafe.id) : false;
   const canRetryLocation = locationState === "denied" || locationState === "unavailable";
-  const isOverlayOpen = isSearchOpen || isTopPicksOpen || isProfilerOpen || isAddShopOpen;
+  const isOverlayOpen =
+    isSearchOpen || isTopPicksOpen || isProfilerOpen || isJournalOpen || isJournalEntryOpen || isAddShopOpen;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!normalizedSearchQuery) {
@@ -499,6 +536,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     fallbackPlaces.length > 0
       ? "We found a few nearby options, but they are not yet verified by Near Me."
       : "Nothing in the current radius yet. Expand the search or help put this area on Near Me.";
+  const activeJournalHint =
+    selectedJournalTags.length > 0
+      ? journalTagHints[selectedJournalTags[selectedJournalTags.length - 1] as keyof typeof journalTagHints]
+      : "Add one or two simple descriptors and Near Me will slowly sharpen your coffee vocabulary.";
   useEffect(() => {
     if (!userLocation) {
       setFallbackPlaces([]);
@@ -803,12 +844,27 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
   function openTopPicks() {
     dismissIntro();
+    setIsJournalOpen(false);
     setIsSearchOpen(false);
     setIsTopPicksOpen(true);
   }
 
+  function openJournal() {
+    dismissIntro();
+    setIsSearchOpen(false);
+    setIsTopPicksOpen(false);
+    setIsProfilerOpen(false);
+    setIsAddShopOpen(false);
+    setIsJournalOpen(true);
+  }
+
+  function closeJournal() {
+    setIsJournalOpen(false);
+  }
+
   function openTastePanel() {
     dismissIntro();
+    setIsJournalOpen(false);
     if (activeCoffeeProfile) {
       setIsSearchOpen(false);
       setIsTopPicksOpen(true);
@@ -823,11 +879,80 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsTopPicksOpen(false);
   }
 
+  function resetJournalForm() {
+    setJournalRating(7);
+    setJournalDrink(null);
+    setJournalNote("");
+    setSelectedJournalTags([]);
+    setJournalMessage("");
+    setJournalState("idle");
+  }
+
+  function openJournalEntryModal(target?: JournalTarget) {
+    dismissIntro();
+    setIsJournalOpen(false);
+    setJournalTarget(target ?? (activeCafe ? { type: "cafe", cafe: activeCafe } : null));
+    resetJournalForm();
+    setIsJournalEntryOpen(true);
+  }
+
+  function closeJournalEntryModal() {
+    setIsJournalEntryOpen(false);
+    setJournalTarget(null);
+    setJournalMessage("");
+    setJournalState("idle");
+  }
+
+  function toggleJournalTag(tag: string) {
+    setSelectedJournalTags((current) =>
+      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag].slice(0, 3),
+    );
+  }
+
+  function handleJournalSubmit() {
+    if (!journalTarget) {
+      return;
+    }
+
+    if (!journalDrink) {
+      setJournalState("error");
+      setJournalMessage("Pick what you ordered first.");
+      return;
+    }
+
+    const entry = addCoffeeJournalEntry({
+      cafe: journalTarget.type === "cafe" ? journalTarget.cafe : null,
+      place: journalTarget.type === "fallback" ? journalTarget.place : null,
+      drink: journalDrink,
+      rating: journalRating,
+      note: journalNote,
+      tags: selectedJournalTags,
+      source: "manual",
+    });
+
+    setJournalState("success");
+    setJournalMessage("Logged privately to your coffee journal.");
+    setReviewToast(`Journal saved: ${entry.cafeName}`);
+
+    if (reviewToastTimeoutRef.current) {
+      window.clearTimeout(reviewToastTimeoutRef.current);
+    }
+    reviewToastTimeoutRef.current = window.setTimeout(() => {
+      setReviewToast(null);
+      reviewToastTimeoutRef.current = null;
+    }, 2600);
+
+    window.setTimeout(() => {
+      closeJournalEntryModal();
+    }, 420);
+  }
+
   function openAddShopModal(prefill?: { name?: string; area?: string; note?: string }) {
     dismissIntro();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
+    setIsJournalOpen(false);
     setAddShopName(prefill?.name ?? searchQuery.trim());
     setAddShopArea(prefill?.area ?? "");
     setAddShopNote(prefill?.note ?? "");
@@ -850,6 +975,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     dismissIntro();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
+    setIsJournalOpen(false);
     resetProfiler();
     setIsProfilerOpen(true);
   }
@@ -1070,6 +1196,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }
 
     window.localStorage.setItem(duplicateKey, "1");
+    addCoffeeJournalEntry({
+      cafe: reviewTarget.type === "cafe" ? reviewTarget.cafe : null,
+      place: reviewTarget.type === "fallback" ? reviewTarget.place : null,
+      drink: reviewDrink,
+      rating: reviewRating,
+      note: reviewNote,
+      tags: selectedReviewTags,
+      source: "review",
+    });
     if (reviewTarget.type === "cafe") {
       setLocalReviewStateByCafeId((current) => ({
         ...current,
@@ -1200,6 +1335,20 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="m12 3 2.85 5.78 6.38.93-4.61 4.49 1.09 6.35L12 17.56l-5.71 3 1.09-6.35-4.61-4.49 6.38-.93L12 3Z" />
+              </svg>
+            </button>
+            <button
+              className={`diesel-action-icon control-chip${isJournalOpen || isJournalEntryOpen ? " active" : ""}`}
+              type="button"
+              aria-label="Open coffee journal"
+              onClick={openJournal}
+              title="Coffee journal"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M6 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
+                <path d="M6 4.5v15a2.5 2.5 0 0 1 2.5-2.5H18" />
+                <path d="M10 8h5" />
+                <path d="M10 11.5h5" />
               </svg>
             </button>
             <button
@@ -1488,6 +1637,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
           </div>
         ) : null}
 
+        {isJournalOpen ? (
+          <CoffeeJournalPanel
+            onClose={closeJournal}
+            onLogCurrent={activeCafe ? () => openJournalEntryModal({ type: "cafe", cafe: activeCafe }) : undefined}
+            currentCafeName={activeCafe?.name ?? null}
+          />
+        ) : null}
+
         {isProfilerOpen ? (
           <div className="profiler-backdrop fade-slide-in" onClick={closeProfiler}>
             <section
@@ -1620,6 +1777,120 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   disabled={addShopState === "submitting"}
                 >
                   {addShopState === "submitting" ? "Submitting..." : "Submit to Near Me"}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {journalTarget && isJournalEntryOpen ? (
+          <div className="profiler-backdrop fade-slide-in" onClick={closeJournalEntryModal}>
+            <section
+              className="profiler-sheet add-shop-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="journal-entry-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="profiler-head">
+                <div className="profiler-title-group">
+                  <span>Private coffee memory</span>
+                  <h2 id="journal-entry-title">Log this visit</h2>
+                </div>
+                <button className="map-search-close" type="button" onClick={closeJournalEntryModal} aria-label="Close journal entry">
+                  Close
+                </button>
+              </div>
+
+              <div className="profiler-question-block">
+                <strong>
+                  {journalTarget.type === "cafe" ? journalTarget.cafe.name : journalTarget.place.name}
+                </strong>
+                <span>
+                  This stays private to you. Use it to remember what you drank and quietly sharpen your coffee vocabulary.
+                </span>
+              </div>
+
+              <label className="review-modal-section">
+                <strong>How did it land?</strong>
+                <div className="review-slider-shell">
+                  <div className="review-slider-labels">
+                    <span>Forgettable</span>
+                    <strong>{journalRating}</strong>
+                    <span>Memorable</span>
+                  </div>
+                  <input
+                    className="review-slider-input"
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={journalRating}
+                    onChange={(event) => setJournalRating(Number(event.target.value))}
+                  />
+                </div>
+              </label>
+
+              <div className="review-modal-section">
+                <strong>What did you drink?</strong>
+                <div className="review-drink-grid">
+                  {reviewDrinkOptions.map((option) => {
+                    const isSelected = journalDrink === option.label;
+                    return (
+                      <button
+                        key={option.label}
+                        className={`review-drink-option${isSelected ? " active" : ""}`}
+                        type="button"
+                        onClick={() => setJournalDrink(option.label)}
+                      >
+                        <span>{option.label}</span>
+                        <small>{option.examples}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="review-modal-section">
+                <strong>How would you describe it?</strong>
+                <div className="review-tag-grid">
+                  {journalTags.map((tag) => {
+                    const isSelected = selectedJournalTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        className={`review-tag-chip${isSelected ? " active" : ""}`}
+                        type="button"
+                        onClick={() => toggleJournalTag(tag)}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="journal-tag-hint">{activeJournalHint}</p>
+              </div>
+
+              <label className="review-modal-section">
+                <strong>What stood out?</strong>
+                <textarea
+                  className="review-note-input"
+                  value={journalNote}
+                  onChange={(event) => setJournalNote(event.target.value)}
+                  placeholder="Creamy cortado, brighter than expected, great texture, maybe a little too dark..."
+                  rows={4}
+                />
+              </label>
+
+              {journalMessage ? (
+                <p className={`review-feedback review-feedback-${journalState}`}>{journalMessage}</p>
+              ) : null}
+
+              <div className="review-modal-actions">
+                <button className="review-secondary" type="button" onClick={closeJournalEntryModal}>
+                  Cancel
+                </button>
+                <button className="review-primary" type="button" onClick={handleJournalSubmit}>
+                  Save to journal
                 </button>
               </div>
             </section>
