@@ -963,6 +963,25 @@ img {
     rgba(255, 255, 252, 0.62);
 }
 
+.coffee-journal-hero-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.coffee-journal-orb {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), transparent 36%),
+    linear-gradient(145deg, rgba(31, 106, 56, 0.92), rgba(199, 245, 211, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 12px 22px rgba(20, 32, 24, 0.12);
+}
+
 .coffee-journal-hero-card span,
 .coffee-journal-summary-card span {
   color: rgba(20, 32, 24, 0.5);
@@ -998,7 +1017,8 @@ img {
 }
 
 .coffee-journal-summary-card strong {
-  font-size: 1rem;
+  font-size: 1.08rem;
+  letter-spacing: -0.03em;
 }
 
 .coffee-journal-pulse,
@@ -1042,11 +1062,82 @@ img {
   min-height: 0;
 }
 
+.coffee-journal-section {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.coffee-journal-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-inline: 0.2rem;
+}
+
+.coffee-journal-section-head span {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-section-head strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: rgba(199, 245, 211, 0.38);
+  color: #1f6a38;
+  font-size: 0.78rem;
+}
+
+.coffee-journal-section-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
 .coffee-journal-entry-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.8rem;
+}
+
+.coffee-journal-entry {
+  gap: 0.5rem;
+}
+
+.coffee-journal-entry-topline {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.coffee-journal-drink-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.46) 0%, rgba(199, 245, 211, 0.22) 100%),
+    rgba(255, 255, 252, 0.7);
+  border: 1px solid rgba(31, 106, 56, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.coffee-journal-drink-badge span {
+  color: #1f6a38;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .coffee-journal-entry-main {
@@ -1055,8 +1146,22 @@ img {
   min-width: 0;
 }
 
+.coffee-journal-entry-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
 .coffee-journal-entry-head strong {
   font-size: 0.92rem;
+}
+
+.coffee-journal-entry-date {
+  color: rgba(20, 32, 24, 0.46);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .coffee-journal-entry-head span,
@@ -1077,13 +1182,36 @@ img {
 
 .coffee-journal-entry-score {
   display: grid;
-  justify-items: end;
-  gap: 0.08rem;
+  justify-items: center;
+  gap: 0;
   flex-shrink: 0;
+  min-width: 3rem;
+  padding: 0.42rem 0.48rem 0.45rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 252, 0.72);
+  border: 1px solid rgba(20, 32, 24, 0.08);
 }
 
 .coffee-journal-entry-score strong {
-  font-size: 0.88rem;
+  color: #1f6a38;
+  font-size: 1.08rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.coffee-journal-entry-score span {
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.coffee-journal-entry-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: rgba(20, 32, 24, 0.46);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .map-top-pick-row {
