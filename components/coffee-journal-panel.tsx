@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import type { CSSProperties } from "react";
 import {
   getCoffeeJournalInsight,
   getStoredCoffeeJournal,
@@ -86,6 +87,11 @@ function getDrinkBadge(drink: string) {
   }
 }
 
+function getWheelColor(color: string, value: number) {
+  const fade = Math.round((1 - value) * 62);
+  return `color-mix(in srgb, ${color} ${100 - fade}%, rgba(255, 250, 242, 0.96))`;
+}
+
 export function CoffeeJournalPanel({
   onClose,
   onLogCurrent,
@@ -100,6 +106,21 @@ export function CoffeeJournalPanel({
   const insight = useMemo(() => getCoffeeJournalInsight(entries), [entries]);
   const leadingTags = insight.topTags.slice(0, 3);
   const journalSections = useMemo(() => getJournalSections(entries), [entries]);
+  const wheelGradient = useMemo(() => {
+    const total = insight.tasteWheel.length || 1;
+    return `conic-gradient(${insight.tasteWheel
+      .map((segment, index) => {
+        const start = (index / total) * 360;
+        const end = ((index + 1) / total) * 360;
+        const segmentColor = getWheelColor(segment.color, segment.value);
+        return `${segmentColor} ${start}deg ${end}deg`;
+      })
+      .join(", ")})`;
+  }, [insight.tasteWheel]);
+  const visibleWheelTags = insight.tasteWheel
+    .filter((segment) => segment.value >= 0.42)
+    .sort((left, right) => right.value - left.value)
+    .slice(0, 3);
 
   return (
     <div className="map-journal-shell fade-slide-in">
@@ -124,21 +145,55 @@ export function CoffeeJournalPanel({
 
           <section className="coffee-journal-hero" aria-label="Journal snapshot">
             <article className="coffee-journal-hero-card coffee-journal-hero-card-primary">
-              <div className="coffee-journal-hero-head">
-                <span>Current taste mood</span>
-                <div className="coffee-journal-orb" aria-hidden="true" />
-              </div>
-              <strong>{insight.tasteMood}</strong>
-              <p>{insight.favoriteDrink ? `${insight.favoriteDrink} is the current go-to.` : "Log a few drinks to sharpen this."}</p>
-              {leadingTags.length > 0 ? (
-                <div className="diesel-selection-tags">
-                  {leadingTags.map((tag) => (
-                    <span className="diesel-selection-tag" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
+              <div className="coffee-journal-hero-wheel">
+                <div className="coffee-journal-wheel-wrap">
+                  <div
+                    className="coffee-journal-wheel"
+                    style={
+                      {
+                        backgroundImage: wheelGradient,
+                        "--wheel-highlight": insight.tasteWheel[0]?.color ?? "#c7f5d3",
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  >
+                    <div className="coffee-journal-wheel-core">
+                      <span>Your taste</span>
+                      <strong>{insight.primaryTaste ?? "In progress"}</strong>
+                      <small>{insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening"}</small>
+                    </div>
+                  </div>
                 </div>
-              ) : null}
+
+                <div className="coffee-journal-hero-copy">
+                  <div className="coffee-journal-hero-head">
+                    <span>Taste read</span>
+                  </div>
+                  <strong>{insight.tasteMood}</strong>
+                  <p>{insight.favoriteDrink ? `${insight.favoriteDrink} is your current go-to.` : "Your strongest taste lanes will settle in as you log more cups."}</p>
+                </div>
+              </div>
+
+              <div className="coffee-journal-hero-footer">
+                <div className="coffee-journal-hero-note">
+                  <span>Right now</span>
+                  <strong>
+                    {insight.favoriteDrink
+                      ? `${insight.primaryTaste?.toLowerCase() ?? "coffee"} notes are leading your ${insight.favoriteDrink.toLowerCase()} habit.`
+                      : "Near Me is starting to map the styles you naturally return to."}
+                  </strong>
+                </div>
+
+                {leadingTags.length > 0 ? (
+                  <div className="diesel-selection-tags">
+                    {leadingTags.map((tag) => (
+                      <span className="diesel-selection-tag" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </article>
 
             <div className="coffee-journal-summary-grid">
@@ -157,36 +212,26 @@ export function CoffeeJournalPanel({
             </div>
           </section>
 
-          <section className="coffee-journal-spectrum" aria-label="Taste spectrum">
-            <div className="coffee-journal-spectrum-row">
-              <span>Comfort</span>
-              <div className="coffee-journal-spectrum-track">
-                <div
-                  className="coffee-journal-spectrum-dot"
-                  style={{ left: `${insight.tasteAxes.flavor * 100}%` }}
-                />
-              </div>
-              <span>Bright</span>
+          <section className="coffee-journal-spectrum" aria-label="Taste wheel notes">
+            <div className="coffee-journal-spectrum-head">
+              <span>Near Me wheel</span>
+              <strong>{insight.primaryTaste && insight.secondaryTaste ? `${insight.primaryTaste} + ${insight.secondaryTaste}` : insight.primaryTaste ?? "Still learning"}</strong>
             </div>
-            <div className="coffee-journal-spectrum-row">
-              <span>Light</span>
-              <div className="coffee-journal-spectrum-track">
-                <div
-                  className="coffee-journal-spectrum-dot"
-                  style={{ left: `${insight.tasteAxes.body * 100}%` }}
-                />
-              </div>
-              <span>Rich</span>
-            </div>
-            <div className="coffee-journal-spectrum-row">
-              <span>Classic</span>
-              <div className="coffee-journal-spectrum-track">
-                <div
-                  className="coffee-journal-spectrum-dot"
-                  style={{ left: `${insight.tasteAxes.exploration * 100}%` }}
-                />
-              </div>
-              <span>Curious</span>
+
+            <div className="coffee-journal-spectrum-grid">
+              {visibleWheelTags.map((segment) => (
+                <article className="coffee-journal-spectrum-card" key={segment.key}>
+                  <div
+                    className="coffee-journal-spectrum-swatch"
+                    style={{ backgroundColor: segment.color }}
+                    aria-hidden="true"
+                  />
+                  <div className="coffee-journal-spectrum-copy">
+                    <strong>{segment.label}</strong>
+                    <span>{Math.round(segment.value * 100)}% pull right now</span>
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
 
