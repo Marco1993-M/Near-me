@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CafeDetailJournalMemory } from "@/components/cafe-detail-journal-memory";
 import { CafeDetailProfileInsight } from "@/components/cafe-detail-profile-insight";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
@@ -173,6 +174,7 @@ export default async function CafePage({ params }: CafePageProps) {
             </div>
 
             <ProfileMatchPill cafe={cafe} variant="card" />
+            <CafeDetailJournalMemory cafeId={cafe.id} cafeName={cafe.name} />
             <CafeDetailProfileInsight cafe={cafe} />
 
             <div className="cafe-detail-quick-grid">

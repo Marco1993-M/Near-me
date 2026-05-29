@@ -1656,6 +1656,44 @@ img {
   line-height: 1.4;
 }
 
+.diesel-selection-journal-memory {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.78rem 0.82rem;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 106, 56, 0.1);
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.22) 0%, rgba(255, 255, 252, 0.42) 100%),
+    rgba(255, 255, 252, 0.48);
+}
+
+.diesel-selection-journal-memory-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.diesel-selection-journal-memory-head span {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diesel-selection-journal-memory-head strong {
+  color: #1f6a38;
+  font-size: 0.82rem;
+}
+
+.diesel-selection-journal-memory p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.68);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .diesel-selection-trust-rule {
   display: grid;
   gap: 0.14rem;
@@ -1894,6 +1932,29 @@ img {
     linear-gradient(180deg, rgba(199, 245, 211, 0.32) 0%, rgba(255, 255, 252, 0.54) 100%),
     rgba(255, 255, 252, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.cafe-detail-journal-memory {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(31, 106, 56, 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.22) 0%, rgba(255, 255, 252, 0.48) 100%),
+    rgba(255, 255, 252, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.cafe-detail-journal-memory .cafe-detail-profile-insight-head strong {
+  color: #225d3b;
+}
+
+.cafe-detail-journal-memory .cafe-detail-profile-insight-meta span {
+  padding: 0.34rem 0.58rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(31, 106, 56, 0.08);
 }
 
 .cafe-detail-profile-insight-head {
