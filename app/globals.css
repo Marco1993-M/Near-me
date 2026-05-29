@@ -513,14 +513,14 @@ img {
 .diesel-topbar {
   position: fixed;
   top: max(1rem, env(safe-area-inset-top));
-  left: 1rem;
-  right: 1rem;
+  left: 50%;
+  right: auto;
   width: auto;
-  transform: none;
+  transform: translateX(-50%);
   z-index: 5000;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.75rem;
   pointer-events: auto;
 }
@@ -571,7 +571,6 @@ img {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  margin-left: auto;
   min-width: 0;
 }
 
@@ -828,12 +827,15 @@ img {
   left: 1rem;
   right: 1rem;
   z-index: 5003;
+  display: flex;
   pointer-events: auto;
 }
 
 .map-journal-panel {
   display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 0.8rem;
+  width: 100%;
   max-height: 100%;
   overflow: hidden;
   padding: 0.95rem;
@@ -921,6 +923,7 @@ img {
   display: grid;
   gap: 0.55rem;
   max-height: min(22rem, calc(100dvh - 13rem - env(safe-area-inset-bottom)));
+  min-height: 0;
   overflow-y: auto;
   padding-right: 0.15rem;
   scrollbar-width: none;
@@ -1717,69 +1720,6 @@ img {
   color: rgba(20, 32, 24, 0.6);
   font-size: 0.74rem;
   line-height: 1.4;
-}
-
-.map-profile-floating-card {
-  position: fixed;
-  left: 1rem;
-  right: 1rem;
-  top: calc(5rem + env(safe-area-inset-top));
-  z-index: 5000;
-  pointer-events: none;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-}
-
-.map-profile-floating-expanded {
-  pointer-events: auto;
-  width: min(100%, 22rem);
-  box-shadow: var(--glass-highlight), 0 16px 34px rgba(20, 32, 24, 0.12);
-  transition:
-    opacity 260ms ease,
-    transform 320ms ease;
-}
-
-.map-profile-floating-expanded .coffee-profile-card {
-  box-shadow: var(--glass-highlight), 0 16px 34px rgba(20, 32, 24, 0.12);
-}
-
-.map-profile-floating-button {
-  pointer-events: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.85rem;
-  min-width: 2.85rem;
-  height: 2.85rem;
-  margin-left: auto;
-  border-radius: 999px;
-  opacity: 0;
-  transform: scale(0.72);
-  transition:
-    opacity 240ms ease,
-    transform 300ms ease;
-}
-
-.map-profile-floating-card.compact {
-  justify-content: flex-end;
-}
-
-.map-profile-floating-card.compact .map-profile-floating-expanded {
-  opacity: 0;
-  transform: scale(0.78) translateY(-0.35rem);
-  pointer-events: none;
-}
-
-.map-profile-floating-card.compact .map-profile-floating-button {
-  pointer-events: auto;
-  opacity: 1;
-  transform: scale(1);
-}
-
-.map-profile-floating-card.expanded .map-profile-floating-button {
-  opacity: 0;
-  transform: scale(0.72);
 }
 
 .coffee-profile-card {
@@ -3536,21 +3476,18 @@ img {
   .diesel-topbar {
     display: flex;
     align-items: center;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    transform: none;
     gap: 0.5rem;
     overflow: visible;
-  }
-
-  .diesel-location-chip {
-    order: 0;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .diesel-topbar-actions {
     display: flex !important;
     flex: 0 0 auto;
-    justify-content: flex-end;
-    margin-left: auto;
+    justify-content: center;
     min-width: auto;
   }
 
@@ -3596,11 +3533,6 @@ img {
   }
 
   .diesel-selection-card {
-    left: 1rem;
-    right: 1rem;
-  }
-
-  .map-profile-floating-card {
     left: 1rem;
     right: 1rem;
   }
@@ -3681,11 +3613,5 @@ img {
 
   .diesel-sheet-results {
     padding-right: 0.35rem;
-  }
-
-  .map-profile-floating-card {
-    left: auto;
-    right: 1.25rem;
-    top: 5.75rem;
   }
 }
