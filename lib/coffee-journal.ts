@@ -21,6 +21,11 @@ export type CoffeeJournalInsight = {
   cityCount: number;
   averageRating: number | null;
   tasteMood: string;
+  tasteAxes: {
+    flavor: number;
+    body: number;
+    exploration: number;
+  };
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
@@ -272,6 +277,9 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   const tagCounts = new Map<string, number>();
   const cities = new Set<string>();
   const ratings: number[] = [];
+  let flavorScore = 0;
+  let bodyScore = 0;
+  let explorationScore = 0;
 
   for (const entry of entries) {
     drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
@@ -281,9 +289,34 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     if (Number.isFinite(entry.rating) && entry.rating > 0) {
       ratings.push(entry.rating);
     }
+
+    if (entry.drink === "Filter") {
+      flavorScore += 1.1;
+      explorationScore += 0.9;
+    } else if (entry.drink === "Espresso") {
+      bodyScore += 0.8;
+    } else if (entry.drink === "Milk drink") {
+      bodyScore += 1;
+      flavorScore -= 0.2;
+    } else if (entry.drink === "Seasonal") {
+      explorationScore += 1;
+    } else if (entry.drink === "Cold") {
+      explorationScore += 0.4;
+    }
+
     for (const tag of entry.tags) {
       const normalized = tag.toLowerCase();
       tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
+
+      if (normalized === "bright" || normalized === "fruity" || normalized === "floral" || normalized === "clean") {
+        flavorScore += 1;
+      }
+      if (normalized === "chocolatey" || normalized === "smooth" || normalized === "sweet" || normalized === "bold") {
+        bodyScore += 1;
+      }
+      if (normalized === "fruity" || normalized === "floral" || normalized === "seasonal" || normalized === "clean") {
+        explorationScore += 0.7;
+      }
     }
   }
 
@@ -321,8 +354,16 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
       : strongestTag === "chocolatey" || strongestTag === "smooth" || strongestTag === "sweet"
         ? "At home later, you will probably enjoy balanced beans and gear that suits milk drinks and everyday espresso."
         : strongestTag === "bold"
-          ? "At home later, you will probably prefer punchier espresso setups and coffees with more body."
+        ? "At home later, you will probably prefer punchier espresso setups and coffees with more body."
           : "As your journal grows, Near Me can start suggesting beans and home setups that match your taste.";
+
+  const clampAxis = (value: number) => {
+    if (entries.length === 0) {
+      return 0.5;
+    }
+
+    return Math.max(0, Math.min(1, 0.5 + value / Math.max(entries.length * 2.6, 3)));
+  };
 
   return {
     entryCount: entries.length,
@@ -331,6 +372,11 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     cityCount: cities.size,
     averageRating,
     tasteMood,
+    tasteAxes: {
+      flavor: clampAxis(flavorScore - bodyScore * 0.35),
+      body: clampAxis(bodyScore - flavorScore * 0.15),
+      exploration: clampAxis(explorationScore),
+    },
     learningPrompt,
     glossaryTip,
     homeCue,
