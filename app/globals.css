@@ -950,6 +950,119 @@ img {
   position: relative;
 }
 
+.coffee-journal-hero-wheel {
+  display: grid;
+  grid-template-columns: minmax(0, 11.4rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.coffee-journal-wheel-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 10.7rem;
+  filter: drop-shadow(0 18px 32px rgba(91, 66, 39, 0.12));
+}
+
+.coffee-journal-wheel {
+  position: relative;
+  width: 9.8rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-size: cover;
+  transform: rotate(-16deg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 22px 36px rgba(20, 32, 24, 0.14);
+}
+
+.coffee-journal-wheel::before {
+  content: "";
+  position: absolute;
+  inset: -0.45rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.6), transparent 24%),
+    radial-gradient(circle at 74% 74%, rgba(255, 220, 168, 0.22), transparent 22%),
+    radial-gradient(circle at 24% 78%, rgba(215, 163, 133, 0.16), transparent 20%);
+  opacity: 0.9;
+  filter: blur(10px);
+  z-index: 0;
+}
+
+.coffee-journal-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 1.3rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.82), transparent 36%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(250, 246, 238, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 24px rgba(20, 32, 24, 0.08);
+}
+
+.coffee-journal-wheel {
+  outline: 1px solid rgba(255, 255, 255, 0.38);
+  outline-offset: 0.16rem;
+}
+
+.coffee-journal-wheel-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 1.1rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--wheel-highlight) 28%, rgba(255, 255, 255, 0.35));
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.coffee-journal-wheel-core {
+  position: absolute;
+  inset: 1.3rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.12rem;
+  padding: 0.9rem;
+  text-align: center;
+  transform: rotate(16deg);
+}
+
+.coffee-journal-wheel-core span,
+.coffee-journal-wheel-core small {
+  color: rgba(20, 32, 24, 0.52);
+  line-height: 1.2;
+}
+
+.coffee-journal-wheel-core span {
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-wheel-core strong {
+  color: var(--near-me-ink);
+  font-size: 0.98rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.coffee-journal-wheel-core small {
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.coffee-journal-hero-copy {
+  display: grid;
+  gap: 0.28rem;
+  align-content: center;
+}
+
 .coffee-journal-hero-card,
 .coffee-journal-summary-card,
 .coffee-journal-entry {
@@ -965,34 +1078,24 @@ img {
 }
 
 .coffee-journal-hero-card-primary {
-  gap: 0.35rem;
-  padding: 0.95rem 1rem;
+  gap: 0.7rem;
+  padding: 0.95rem 1rem 1rem;
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.42), transparent 28%),
-    linear-gradient(135deg, rgba(199, 245, 211, 0.38) 0%, rgba(255, 255, 255, 0.08) 65%),
-    rgba(255, 255, 252, 0.62);
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.48), transparent 28%),
+    radial-gradient(circle at 18% 20%, rgba(199, 245, 211, 0.24), transparent 32%),
+    radial-gradient(circle at 82% 84%, rgba(238, 214, 175, 0.18), transparent 28%),
+    linear-gradient(135deg, rgba(199, 245, 211, 0.22) 0%, rgba(255, 255, 255, 0.08) 65%),
+    rgba(255, 255, 252, 0.74);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 14px 30px rgba(20, 32, 24, 0.08);
+    0 16px 34px rgba(20, 32, 24, 0.09);
 }
 
 .coffee-journal-hero-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
-
-.coffee-journal-orb {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), transparent 36%),
-    linear-gradient(145deg, rgba(31, 106, 56, 0.92), rgba(199, 245, 211, 0.88));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    0 12px 22px rgba(20, 32, 24, 0.12);
+  justify-content: flex-start;
+  gap: 0.45rem;
 }
 
 .coffee-journal-hero-card span,
@@ -1012,15 +1115,47 @@ img {
 }
 
 .coffee-journal-hero-card-primary strong {
-  font-size: 1.18rem;
-  letter-spacing: -0.03em;
+  font-size: 1.28rem;
+  letter-spacing: -0.04em;
 }
 
 .coffee-journal-hero-card p {
   margin: 0;
-  color: rgba(20, 32, 24, 0.6);
-  font-size: 0.8rem;
-  line-height: 1.45;
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.coffee-journal-hero-footer {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 0.1rem;
+}
+
+.coffee-journal-hero-note {
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.72rem 0.78rem;
+  border-radius: 18px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.18)),
+    rgba(255, 255, 252, 0.64);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.coffee-journal-hero-note span {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-hero-note strong {
+  color: var(--near-me-ink);
+  font-size: 0.86rem;
+  line-height: 1.35;
 }
 
 .coffee-journal-summary-grid {
@@ -1060,40 +1195,68 @@ img {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-.coffee-journal-spectrum-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.65rem;
+.coffee-journal-spectrum-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.coffee-journal-spectrum-row span {
+.coffee-journal-spectrum-head span {
   color: rgba(20, 32, 24, 0.52);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.coffee-journal-spectrum-track {
-  position: relative;
-  height: 0.5rem;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(199, 245, 211, 0.28), rgba(36, 65, 45, 0.24) 50%, rgba(199, 245, 211, 0.82));
-  box-shadow: inset 0 1px 2px rgba(20, 32, 24, 0.08);
+.coffee-journal-spectrum-head strong {
+  color: var(--near-me-ink);
+  font-size: 0.88rem;
+  line-height: 1.2;
 }
 
-.coffee-journal-spectrum-dot {
-  position: absolute;
-  top: 50%;
-  width: 1rem;
-  height: 1rem;
+.coffee-journal-spectrum-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.coffee-journal-spectrum-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.68rem 0.72rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 252, 0.66);
+}
+
+.coffee-journal-spectrum-swatch {
+  width: 0.7rem;
+  height: 2rem;
   border-radius: 999px;
-  background: #fffffc;
-  border: 2px solid #24412d;
-  box-shadow: 0 6px 16px rgba(20, 32, 24, 0.16);
-  transform: translate(-50%, -50%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.coffee-journal-spectrum-copy {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.coffee-journal-spectrum-copy strong {
+  color: var(--near-me-ink);
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.coffee-journal-spectrum-copy span {
+  color: rgba(20, 32, 24, 0.54);
+  font-size: 0.7rem;
+  line-height: 1.3;
 }
 
 .coffee-journal-pulse,
@@ -3847,6 +4010,30 @@ img {
   }
 
   .coffee-journal-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coffee-journal-hero-wheel {
+    grid-template-columns: 1fr;
+  }
+
+  .coffee-journal-wheel-wrap {
+    min-height: 9.8rem;
+  }
+
+  .coffee-journal-wheel {
+    width: 9rem;
+  }
+
+  .coffee-journal-hero-copy {
+    text-align: center;
+  }
+
+  .coffee-journal-hero-head {
+    justify-content: center;
+  }
+
+  .coffee-journal-spectrum-grid {
     grid-template-columns: 1fr;
   }
 
