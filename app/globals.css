@@ -520,7 +520,7 @@ img {
   z-index: 5000;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 0.75rem;
   pointer-events: auto;
 }
@@ -824,6 +824,7 @@ img {
 .map-journal-shell {
   position: fixed;
   top: calc(4.9rem + env(safe-area-inset-top));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
   left: 1rem;
   right: 1rem;
   z-index: 5003;
@@ -833,6 +834,8 @@ img {
 .map-journal-panel {
   display: grid;
   gap: 0.8rem;
+  max-height: 100%;
+  overflow: hidden;
   padding: 0.95rem;
   border-radius: 24px;
   border: 1px solid var(--glass-border);
@@ -854,6 +857,8 @@ img {
 .map-top-picks-head-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.75rem;
 }
 
@@ -2094,7 +2099,15 @@ img {
   gap: 0.6rem;
   min-width: 0;
   flex: 1 1 auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+}
+
+.diesel-selection-actions-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .diesel-sheet-toolbar {
@@ -3563,6 +3576,10 @@ img {
 
   .diesel-selection-actions {
     gap: 0.5rem;
+  }
+
+  .diesel-selection-actions-icons {
+    margin-left: 0;
   }
 
   .diesel-selection-trust-grid {
