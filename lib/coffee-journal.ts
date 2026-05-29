@@ -2,6 +2,7 @@ import type { Cafe, FallbackPlace } from "@/types/cafe";
 
 export type CoffeeJournalEntry = {
   id: string;
+  reviewId?: string;
   cafeId: string | null;
   cafeName: string;
   city: string;
@@ -65,8 +66,8 @@ function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
     return [];
   }
 
-  return input
-    .map((entry) => {
+  const normalizedEntries = input
+    .map((entry): CoffeeJournalEntry | null => {
       if (!entry || typeof entry !== "object") {
         return null;
       }
@@ -78,6 +79,7 @@ function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
 
       return {
         id: candidate.id,
+        reviewId: typeof candidate.reviewId === "string" ? candidate.reviewId : undefined,
         cafeId: candidate.cafeId ?? null,
         cafeName: candidate.cafeName,
         city: candidate.city,
@@ -87,10 +89,12 @@ function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
         tags: Array.isArray(candidate.tags) ? candidate.tags.filter((tag): tag is string => typeof tag === "string") : [],
         createdAt: candidate.createdAt,
         source: candidate.source === "review" ? "review" : "manual",
-      } satisfies CoffeeJournalEntry;
+      };
     })
     .filter((entry): entry is CoffeeJournalEntry => Boolean(entry))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+  return normalizedEntries;
 }
 
 function readJournalRaw() {
@@ -206,6 +210,50 @@ export function addCoffeeJournalEntry(input: JournalInput) {
 
   setStoredCoffeeJournal([nextEntry, ...current].slice(0, 80));
   return nextEntry;
+}
+
+type ReviewJournalImport = {
+  reviewId: string;
+  cafeId: string | null;
+  cafeName: string;
+  city: string;
+  drink: string;
+  rating: number;
+  note: string;
+  tags?: string[];
+  createdAt: string;
+};
+
+export function syncReviewEntriesIntoCoffeeJournal(reviewEntries: ReviewJournalImport[]) {
+  const current = getStoredCoffeeJournal();
+  const existingReviewIds = new Set(
+    current
+      .map((entry) => entry.reviewId)
+      .filter((value): value is string => typeof value === "string" && value.length > 0),
+  );
+
+  const nextEntries = reviewEntries
+    .filter((entry) => !existingReviewIds.has(entry.reviewId))
+    .map((entry) => ({
+      id: `journal-review-${entry.reviewId}`,
+      reviewId: entry.reviewId,
+      cafeId: entry.cafeId,
+      cafeName: entry.cafeName,
+      city: entry.city,
+      drink: entry.drink,
+      rating: entry.rating,
+      note: entry.note.trim(),
+      tags: Array.isArray(entry.tags) ? entry.tags.filter(Boolean).slice(0, 5) : [],
+      createdAt: entry.createdAt,
+      source: "review" as const,
+    }));
+
+  if (nextEntries.length === 0) {
+    return current;
+  }
+
+  setStoredCoffeeJournal([...nextEntries, ...current].slice(0, 80));
+  return getStoredCoffeeJournal();
 }
 
 function titleize(value: string) {
