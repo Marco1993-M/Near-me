@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
-import { getCityHighlights, getCityStaticParams, getFeaturedCafes } from "@/lib/cafes";
+import { getCityHighlights, getCityStaticParams, getColdCafes } from "@/lib/cafes";
 
 export const revalidate = 21600;
 
@@ -37,7 +37,7 @@ export default async function CityPage({ params }: CityPageProps) {
   const { slug } = await params;
   const [cityHighlights, featuredCafes] = await Promise.all([
     getCityHighlights(),
-    getFeaturedCafes(),
+    getColdCafes(),
   ]);
   const cityHighlight = cityHighlights.find((city) => city.slug === slug);
   const cityName =
