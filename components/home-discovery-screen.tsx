@@ -293,6 +293,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
+  const hasRequestedInitialLocationRef = useRef(false);
   const previousRadiusKmRef = useRef(selectedRadiusKm);
 
   const coffeeProfileState = useSyncExternalStore(
@@ -807,6 +808,20 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   }, []);
 
   useEffect(() => {
+    if (hasRequestedInitialLocationRef.current) {
+      return;
+    }
+
+    if (userLocation || locationState === "granted" || locationState === "denied" || locationState === "unavailable") {
+      hasRequestedInitialLocationRef.current = true;
+      return;
+    }
+
+    hasRequestedInitialLocationRef.current = true;
+    setLocateRequestToken((current) => current + 1);
+  }, [locationState, userLocation]);
+
+  useEffect(() => {
     return () => {
       if (reviewSuccessTimeoutRef.current) {
         window.clearTimeout(reviewSuccessTimeoutRef.current);
@@ -1265,6 +1280,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         userLocation={userLocation}
         selectedRadiusKm={selectedRadiusKm}
         locateRequestToken={locateRequestToken}
+        autoLocateOnMount={false}
         onUserLocation={setUserLocation}
         onLocationStateChange={setLocationState}
       />
