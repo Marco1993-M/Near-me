@@ -45,7 +45,7 @@ export function CoffeeJournalPanel({
         <div className="map-top-picks-head">
           <div className="map-top-picks-title">
             <strong>Coffee journal</strong>
-            <span>Your private coffee memory, with quiet taste education built in.</span>
+            <span>Your private coffee memory.</span>
           </div>
           <div className="map-top-picks-head-actions">
             {onLogCurrent ? (
@@ -74,20 +74,11 @@ export function CoffeeJournalPanel({
           </article>
         </div>
 
-        <div className="coffee-journal-learning">
-          <article className="coffee-journal-learning-card">
-            <span>What Near Me is learning</span>
-            <strong>{insight.learningPrompt}</strong>
-          </article>
-          <article className="coffee-journal-learning-card">
-            <span>Quiet coffee lesson</span>
-            <strong>{insight.glossaryTip}</strong>
-          </article>
-          <article className="coffee-journal-learning-card">
-            <span>At-home cue</span>
-            <strong>{insight.homeCue}</strong>
-          </article>
-        </div>
+        <article className="coffee-journal-pulse">
+          <span>Quiet coffee lesson</span>
+          <strong>{insight.glossaryTip}</strong>
+          <p>{insight.learningPrompt}</p>
+        </article>
 
         <div className="map-top-picks-results coffee-journal-results">
           {entries.length > 0 ? (
@@ -131,6 +122,13 @@ export function CoffeeJournalPanel({
             </div>
           )}
         </div>
+
+        {entries.length > 0 ? (
+          <div className="coffee-journal-footer-note">
+            <span>At-home cue</span>
+            <strong>{insight.homeCue}</strong>
+          </div>
+        ) : null}
       </section>
     </div>
   );
