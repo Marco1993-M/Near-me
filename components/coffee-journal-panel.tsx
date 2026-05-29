@@ -38,6 +38,7 @@ export function CoffeeJournalPanel({
   );
 
   const insight = useMemo(() => getCoffeeJournalInsight(entries), [entries]);
+  const leadingTags = insight.topTags.slice(0, 3);
 
   return (
     <div className="map-journal-shell fade-slide-in">
@@ -59,25 +60,42 @@ export function CoffeeJournalPanel({
           </div>
         </div>
 
-        <div className="coffee-journal-summary-grid">
-          <article className="coffee-journal-summary-card">
-            <span>Entries</span>
-            <strong>{insight.entryCount}</strong>
+        <section className="coffee-journal-hero" aria-label="Journal snapshot">
+          <article className="coffee-journal-hero-card coffee-journal-hero-card-primary">
+            <span>Current taste mood</span>
+            <strong>{insight.tasteMood}</strong>
+            <p>{insight.favoriteDrink ? `Usually reaches for ${insight.favoriteDrink.toLowerCase()}.` : "Log a few drinks to sharpen this."}</p>
+            {leadingTags.length > 0 ? (
+              <div className="diesel-selection-tags">
+                {leadingTags.map((tag) => (
+                  <span className="diesel-selection-tag" key={tag}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </article>
-          <article className="coffee-journal-summary-card">
-            <span>Go-to drink</span>
-            <strong>{insight.favoriteDrink ?? "Still learning"}</strong>
-          </article>
-          <article className="coffee-journal-summary-card">
-            <span>Common notes</span>
-            <strong>{insight.topTags.length > 0 ? insight.topTags.slice(0, 2).join(" · ") : "Add a few tags"}</strong>
-          </article>
-        </div>
+
+          <div className="coffee-journal-summary-grid">
+            <article className="coffee-journal-summary-card">
+              <span>Entries</span>
+              <strong>{insight.entryCount}</strong>
+            </article>
+            <article className="coffee-journal-summary-card">
+              <span>Average score</span>
+              <strong>{insight.averageRating ? `${insight.averageRating}/10` : "No score yet"}</strong>
+            </article>
+            <article className="coffee-journal-summary-card">
+              <span>Cities</span>
+              <strong>{insight.cityCount}</strong>
+            </article>
+          </div>
+        </section>
 
         <article className="coffee-journal-pulse">
-          <span>Quiet coffee lesson</span>
-          <strong>{insight.glossaryTip}</strong>
-          <p>{insight.learningPrompt}</p>
+          <span>Near Me is learning</span>
+          <strong>{insight.learningPrompt}</strong>
+          <p>{insight.glossaryTip}</p>
         </article>
 
         <div className="map-top-picks-results coffee-journal-results">
@@ -85,7 +103,7 @@ export function CoffeeJournalPanel({
             entries.map((entry) => (
               <article className="coffee-journal-entry" key={entry.id}>
                 <div className="coffee-journal-entry-head">
-                  <div>
+                  <div className="coffee-journal-entry-main">
                     <strong>{entry.cafeName}</strong>
                     <span>
                       {[entry.city, entry.drink, formatRelativeDate(entry.createdAt)].filter(Boolean).join(" · ")}
@@ -96,16 +114,16 @@ export function CoffeeJournalPanel({
                     <span>{entry.source === "review" ? "Shared review" : "Private log"}</span>
                   </div>
                 </div>
-                {entry.note ? <p>{entry.note}</p> : null}
                 {entry.tags.length > 0 ? (
                   <div className="diesel-selection-tags">
-                    {entry.tags.map((tag) => (
+                    {entry.tags.slice(0, 3).map((tag) => (
                       <span className="diesel-selection-tag" key={`${entry.id}-${tag}`}>
                         {tag}
                       </span>
                     ))}
                   </div>
                 ) : null}
+                {entry.note ? <p>{entry.note}</p> : null}
               </article>
             ))
           ) : (
