@@ -496,17 +496,25 @@ async function fetchCanonicalCafeBundleUncached(): Promise<CanonicalCafeBundle |
   };
 }
 
-const getCanonicalCafeBundle = cache(
+const getHotCanonicalCafeBundle = cache(
   unstable_cache(
     async () => fetchCanonicalCafeBundleUncached(),
-    ["canonical-cafe-bundle"],
+    ["canonical-cafe-bundle-hot"],
     { revalidate: 3600 },
+  ),
+);
+
+const getColdCanonicalCafeBundle = cache(
+  unstable_cache(
+    async () => fetchCanonicalCafeBundleUncached(),
+    ["canonical-cafe-bundle-cold"],
+    { revalidate: 86400 },
   ),
 );
 
 export const getFeaturedCafes = cache(async () => {
   try {
-    const bundle = await getCanonicalCafeBundle();
+    const bundle = await getHotCanonicalCafeBundle();
 
     if (!bundle || bundle.cafes.length === 0) {
       return [];
@@ -524,7 +532,8 @@ export const getFeaturedCafes = cache(async () => {
 });
 
 export const getCafeBySlug = cache(async (slug: string) => {
-  const cafes = await getFeaturedCafes();
+  const bundle = await getColdCanonicalCafeBundle();
+  const cafes = bundle?.cafes ?? [];
   return cafes.find((cafe) => cafe.slug === slug) ?? null;
 });
 
@@ -596,7 +605,7 @@ const getCafeTrustSignalsBySlugCached = unstable_cache(
     };
   },
   ["cafe-trust-signals-by-slug"],
-  { revalidate: 3600 },
+  { revalidate: 21600 },
 );
 
 export function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
@@ -605,7 +614,7 @@ export function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignal
 
 export const getCityHighlights = cache(async () => {
   try {
-    const bundle = await getCanonicalCafeBundle();
+    const bundle = await getColdCanonicalCafeBundle();
 
     if (!bundle || bundle.cityHighlights.length === 0) {
       return [];
@@ -617,12 +626,23 @@ export const getCityHighlights = cache(async () => {
   }
 });
 
+export const getColdCafes = cache(async () => {
+  try {
+    const bundle = await getColdCanonicalCafeBundle();
+    return bundle?.cafes ?? [];
+  } catch {
+    return [];
+  }
+});
+
 export const getCafeStaticParams = cache(async () => {
-  const cafes = await getFeaturedCafes();
+  const bundle = await getColdCanonicalCafeBundle();
+  const cafes = bundle?.cafes ?? [];
   return cafes.map((cafe) => ({ slug: cafe.slug }));
 });
 
 export const getCityStaticParams = cache(async () => {
-  const cities = await getCityHighlights();
+  const bundle = await getColdCanonicalCafeBundle();
+  const cities = bundle?.cityHighlights ?? [];
   return cities.map((city) => ({ slug: city.slug }));
 });
