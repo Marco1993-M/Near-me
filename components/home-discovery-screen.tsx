@@ -14,6 +14,7 @@ import {
   getCafeJournalMemory,
   getStoredCoffeeJournal,
   getStoredCoffeeJournalServerSnapshot,
+  syncReviewEntriesIntoCoffeeJournal,
   subscribeToCoffeeJournal,
 } from "@/lib/coffee-journal";
 import {
@@ -372,40 +373,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     return [activeCafe, ...cafesByDistance.filter((cafe) => cafe.id !== activeCafe.id)];
   }, [activeCafe, cafesByDistance]);
-  const locationCopy = useMemo(() => {
-    if (locationState === "granted" && userLocation) {
-      return {
-        caption: "Location on",
-        label: "Near Me",
-      };
-    }
-
-    if (locationState === "requesting") {
-      return {
-        caption: "Finding",
-        label: "Your area",
-      };
-    }
-
-    if (locationState === "denied") {
-      return {
-        caption: "Location off",
-        label: activeCafe?.city ?? "Search instead",
-      };
-    }
-
-    if (locationState === "unavailable") {
-      return {
-        caption: "Location unavailable",
-        label: activeCafe?.city ?? "Explore map",
-      };
-    }
-
-    return {
-      caption: "Showing",
-      label: activeCafe?.city ?? "Near Me",
-    };
-  }, [activeCafe?.city, locationState, userLocation]);
   const activeTags = activeCafe?.tags.slice(0, 3) ?? [];
   const activeTrustMentions = activeCafe?.trustPreview.topMentions.slice(0, 2) ?? [];
   const activeTrustQuote = activeCafe?.trustPreview.recentQuote ?? null;
@@ -599,6 +566,59 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     return () => controller.abort();
   }, [selectedRadiusKm, userLocation]);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+
+    if (!supabase || typeof window === "undefined") {
+      return;
+    }
+
+    const anonId = getAnonymousReviewerId();
+    const knownCafes = new Map(hydratedCafes.map((cafe) => [cafe.id, cafe] as const));
+    let cancelled = false;
+
+    void supabase
+      .from(CANONICAL_TABLES.reviews)
+      .select("id,cafe_id,rating,note,drink,created_at")
+      .eq("anon_id", anonId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (cancelled || error || !data?.length) {
+          return;
+        }
+
+        const reviewEntries = data
+          .map((review) => {
+            const cafe = knownCafes.get(review.cafe_id);
+
+            if (!cafe || !review.drink) {
+              return null;
+            }
+
+            return {
+              reviewId: review.id,
+              cafeId: review.cafe_id,
+              cafeName: cafe.name,
+              city: cafe.city,
+              drink: review.drink,
+              rating: review.rating,
+              note: review.note ?? "",
+              createdAt: review.created_at,
+            };
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+        if (reviewEntries.length > 0) {
+          syncReviewEntriesIntoCoffeeJournal(reviewEntries);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydratedCafes]);
 
   async function handleAddShopSubmit() {
     if (!addShopName.trim()) {
@@ -1301,26 +1321,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         ) : null}
 
         <div className="diesel-topbar fade-slide-in">
-          <button
-            className="diesel-location-chip control-chip"
-            type="button"
-            onClick={canRetryLocation ? () => setLocateRequestToken((value) => value + 1) : undefined}
-            aria-label={canRetryLocation ? "Retry location access" : "Current location status"}
-            title={canRetryLocation ? "Retry location" : locationCopy.label}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M12 21s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10Z" />
-              <circle cx="12" cy="11" r="2.5" />
-            </svg>
-            <strong>{canRetryLocation ? "Retry location" : locationCopy.label}</strong>
-          </button>
-
           <div className="diesel-topbar-actions diesel-action-cluster" aria-label="Map actions">
             <button
               className="diesel-action-icon control-chip"
-              aria-label="Center on my location"
+              aria-label={canRetryLocation ? "Retry location access" : "Center on my location"}
               type="button"
               onClick={() => setLocateRequestToken((value) => value + 1)}
+              title={canRetryLocation ? "Retry location" : "Use my location"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M12 21s6-4.35 6-10a6 6 0 1 0-12 0c0 5.65 6 10 6 10Z" />
@@ -2325,36 +2332,38 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       <Link className="diesel-selection-secondary diesel-selection-secondary-main control-chip" href={`/cafes/${activeCafe.slug}`}>
                         Details
                       </Link>
-                      <button
-                        className={`diesel-selection-icon-button${isActiveCafeSaved ? " active" : ""}`}
-                        type="button"
-                        onClick={() => toggleFavoriteCafe(activeCafe.id)}
-                        aria-label={isActiveCafeSaved ? "Remove from saved cafes" : "Save cafe"}
-                      >
-                        <span aria-hidden="true">{isActiveCafeSaved ? "♥" : "♡"}</span>
-                      </button>
-                      <button
-                        className="diesel-selection-icon-button"
-                        type="button"
-                        onClick={() => openReviewModal({ type: "cafe", cafe: activeCafe })}
-                        aria-label="Leave a review"
-                      >
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <path d="M12 20h9" />
-                          <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
-                        </svg>
-                      </button>
-                      <button
-                        className="diesel-selection-icon-button"
-                        type="button"
-                        onClick={() => openJournalEntryModal({ type: "cafe", cafe: activeCafe })}
-                        aria-label="Log this visit privately"
-                      >
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                          <path d="M6 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
-                          <path d="M6 4.5v15a2.5 2.5 0 0 1 2.5-2.5H18" />
-                        </svg>
-                      </button>
+                      <div className="diesel-selection-actions-icons">
+                        <button
+                          className={`diesel-selection-icon-button${isActiveCafeSaved ? " active" : ""}`}
+                          type="button"
+                          onClick={() => toggleFavoriteCafe(activeCafe.id)}
+                          aria-label={isActiveCafeSaved ? "Remove from saved cafes" : "Save cafe"}
+                        >
+                          <span aria-hidden="true">{isActiveCafeSaved ? "♥" : "♡"}</span>
+                        </button>
+                        <button
+                          className="diesel-selection-icon-button"
+                          type="button"
+                          onClick={() => openReviewModal({ type: "cafe", cafe: activeCafe })}
+                          aria-label="Leave a review"
+                        >
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                          </svg>
+                        </button>
+                        <button
+                          className="diesel-selection-icon-button"
+                          type="button"
+                          onClick={() => openJournalEntryModal({ type: "cafe", cafe: activeCafe })}
+                          aria-label="Log this visit privately"
+                        >
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <path d="M6 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
+                            <path d="M6 4.5v15a2.5 2.5 0 0 1 2.5-2.5H18" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
