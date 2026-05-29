@@ -22,6 +22,15 @@ export type CoffeeJournalInsight = {
   homeCue: string;
 };
 
+export type CafeJournalMemory = {
+  visitCount: number;
+  averageRating: number | null;
+  lastDrink: string | null;
+  topTags: string[];
+  latestNote: string | null;
+  latestVisitedAt: string | null;
+};
+
 export const COFFEE_JOURNAL_STORAGE_KEY = "near-me-coffee-journal";
 export const COFFEE_JOURNAL_EVENT = "near-me-coffee-journal-updated";
 
@@ -251,5 +260,53 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     learningPrompt,
     glossaryTip,
     homeCue,
+  };
+}
+
+export function getCafeJournalMemory(
+  entries: CoffeeJournalEntry[],
+  input: { cafeId?: string | null; cafeName: string },
+): CafeJournalMemory | null {
+  const matchingEntries = entries.filter((entry) =>
+    input.cafeId ? entry.cafeId === input.cafeId : entry.cafeName.toLowerCase() === input.cafeName.toLowerCase(),
+  );
+
+  if (matchingEntries.length === 0) {
+    return null;
+  }
+
+  const ratings = matchingEntries
+    .map((entry) => Number(entry.rating))
+    .filter((rating) => Number.isFinite(rating) && rating > 0);
+  const averageRating =
+    ratings.length > 0
+      ? Number((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1))
+      : null;
+  const drinkCounts = new Map<string, number>();
+  const tagCounts = new Map<string, number>();
+
+  for (const entry of matchingEntries) {
+    drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
+    for (const tag of entry.tags) {
+      const normalized = tag.toLowerCase();
+      tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
+    }
+  }
+
+  const lastDrink = matchingEntries[0]?.drink ?? null;
+  const latestNote = matchingEntries[0]?.note?.trim() || null;
+  const latestVisitedAt = matchingEntries[0]?.createdAt ?? null;
+  const topTags = Array.from(tagCounts.entries())
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    .slice(0, 3)
+    .map(([tag]) => titleize(tag));
+
+  return {
+    visitCount: matchingEntries.length,
+    averageRating,
+    lastDrink,
+    topTags,
+    latestNote,
+    latestVisitedAt,
   };
 }
