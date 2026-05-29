@@ -302,17 +302,26 @@ export function DiscoveryMap({
   const userRadiusRef = useRef<import("leaflet").Circle | null>(null);
   const hasAutoFramedRef = useRef(false);
   const selectedRadiusKmRef = useRef(selectedRadiusKm);
+  const locateRequestTokenRef = useRef(locateRequestToken);
 
   useEffect(() => {
     selectedRadiusKmRef.current = selectedRadiusKm;
   }, [selectedRadiusKm]);
 
+  useEffect(() => {
+    locateRequestTokenRef.current = locateRequestToken;
+  }, [locateRequestToken]);
+
   const locateUser = useCallback(() => {
     const L = leafletRef.current;
     const map = mapRef.current;
 
-    if (!L || !map || !navigator.geolocation) {
+    if (!navigator.geolocation) {
       onLocationStateChange?.("unavailable");
+      return;
+    }
+
+    if (!L || !map) {
       return;
     }
 
@@ -413,8 +422,12 @@ export function DiscoveryMap({
       setMapZoom(map.getZoom());
       setIsMapReady(true);
 
-      if (autoLocateOnMount && navigator.geolocation) {
-        locateUser();
+      if ((autoLocateOnMount || locateRequestTokenRef.current > 0) && navigator.geolocation) {
+        window.setTimeout(() => {
+          if (!cancelled) {
+            locateUser();
+          }
+        }, 0);
       }
     });
 
@@ -434,12 +447,12 @@ export function DiscoveryMap({
   }, [autoLocateOnMount, locateUser]);
 
   useEffect(() => {
-    if (locateRequestToken === 0) {
+    if (locateRequestToken === 0 || !isMapReady) {
       return;
     }
 
     locateUser();
-  }, [locateRequestToken, locateUser]);
+  }, [isMapReady, locateRequestToken, locateUser]);
 
   useEffect(() => {
     const L = leafletRef.current;
