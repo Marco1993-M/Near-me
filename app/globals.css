@@ -832,8 +832,8 @@ img {
 }
 
 .map-journal-panel {
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 0.8rem;
   width: 100%;
   max-height: 100%;
@@ -850,6 +850,12 @@ img {
   box-shadow: var(--glass-highlight), 0 24px 48px rgba(20, 32, 24, 0.16);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.coffee-journal-static {
+  display: grid;
+  gap: 0.8rem;
+  flex: 0 0 auto;
 }
 
 .map-top-picks-head {
@@ -925,7 +931,7 @@ img {
 .map-top-picks-results {
   display: grid;
   gap: 0.55rem;
-  max-height: min(22rem, calc(100dvh - 13rem - env(safe-area-inset-bottom)));
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
