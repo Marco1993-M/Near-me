@@ -73,7 +73,7 @@ const LAUNCH_EXCLUDED_NAME_PATTERNS = [
   /\bvida e caff[eè]\b/i,
   /\bmugg\s*&\s*bean\b/i,
   /\bwoolworths\b/i,
-  /\bbootlegger\b/i,
+  /\bbootleggers?\b/i,
 ];
 const LAUNCH_EXCLUDED_CITY_NAMES = new Set(["Unknown City"]);
 
