@@ -18,6 +18,9 @@ export type CoffeeJournalInsight = {
   entryCount: number;
   favoriteDrink: string | null;
   topTags: string[];
+  cityCount: number;
+  averageRating: number | null;
+  tasteMood: string;
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
@@ -267,9 +270,17 @@ function titleize(value: string) {
 export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
+  const cities = new Set<string>();
+  const ratings: number[] = [];
 
   for (const entry of entries) {
     drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
+    if (entry.city.trim()) {
+      cities.add(entry.city.trim().toLowerCase());
+    }
+    if (Number.isFinite(entry.rating) && entry.rating > 0) {
+      ratings.push(entry.rating);
+    }
     for (const tag of entry.tags) {
       const normalized = tag.toLowerCase();
       tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
@@ -282,8 +293,20 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .slice(0, 3)
     .map(([tag]) => titleize(tag));
+  const averageRating =
+    ratings.length > 0 ? Number((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)) : null;
 
   const strongestTag = Array.from(tagCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const tasteMood =
+    strongestTag === "fruity" || strongestTag === "bright" || strongestTag === "floral"
+      ? "Bright explorer"
+      : strongestTag === "chocolatey" || strongestTag === "smooth" || strongestTag === "sweet"
+        ? "Comfort seeker"
+        : strongestTag === "bold"
+          ? "Espresso chaser"
+          : favoriteDrink === "Filter"
+            ? "Curious sipper"
+            : "Taste in progress";
   const glossaryTip =
     (strongestTag ? glossaryByTag[strongestTag] : null) ??
     "Your journal gets more useful when you describe what you felt in the cup, not just whether it was good.";
@@ -305,6 +328,9 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     entryCount: entries.length,
     favoriteDrink,
     topTags,
+    cityCount: cities.size,
+    averageRating,
+    tasteMood,
     learningPrompt,
     glossaryTip,
     homeCue,
