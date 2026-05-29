@@ -936,14 +936,13 @@ img {
   display: none;
 }
 
-.coffee-journal-summary-grid {
+.coffee-journal-hero {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
+.coffee-journal-hero-card,
 .coffee-journal-summary-card,
-.coffee-journal-learning-card,
 .coffee-journal-entry {
   display: grid;
   gap: 0.18rem;
@@ -956,8 +955,16 @@ img {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
-.coffee-journal-summary-card span,
-.coffee-journal-learning-card span {
+.coffee-journal-hero-card-primary {
+  gap: 0.35rem;
+  padding: 0.95rem 1rem;
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.28) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(255, 255, 252, 0.62);
+}
+
+.coffee-journal-hero-card span,
+.coffee-journal-summary-card span {
   color: rgba(20, 32, 24, 0.5);
   font-size: 0.7rem;
   font-weight: 700;
@@ -965,16 +972,33 @@ img {
   text-transform: uppercase;
 }
 
-.coffee-journal-summary-card strong,
-.coffee-journal-learning-card strong {
+.coffee-journal-hero-card strong,
+.coffee-journal-summary-card strong {
   color: var(--near-me-ink);
   font-size: 0.88rem;
   line-height: 1.4;
 }
 
-.coffee-journal-learning {
+.coffee-journal-hero-card-primary strong {
+  font-size: 1.1rem;
+  letter-spacing: -0.03em;
+}
+
+.coffee-journal-hero-card p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.6);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.coffee-journal-summary-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
+}
+
+.coffee-journal-summary-card strong {
+  font-size: 1rem;
 }
 
 .coffee-journal-pulse,
@@ -1025,6 +1049,12 @@ img {
   gap: 0.8rem;
 }
 
+.coffee-journal-entry-main {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
 .coffee-journal-entry-head strong {
   font-size: 0.92rem;
 }
@@ -1039,6 +1069,10 @@ img {
 
 .coffee-journal-entry p {
   margin: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .coffee-journal-entry-score {
