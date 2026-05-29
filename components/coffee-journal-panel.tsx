@@ -128,11 +128,7 @@ export function CoffeeJournalPanel({
               <div className="coffee-journal-orb" aria-hidden="true" />
             </div>
             <strong>{insight.tasteMood}</strong>
-            <p>
-              {insight.favoriteDrink
-                ? `Usually reaches for ${insight.favoriteDrink.toLowerCase()} and scores around ${insight.averageRating ?? "?"}/10.`
-                : "Log a few drinks to sharpen this."}
-            </p>
+            <p>{insight.favoriteDrink ? `${insight.favoriteDrink} is the current go-to.` : "Log a few drinks to sharpen this."}</p>
             {leadingTags.length > 0 ? (
               <div className="diesel-selection-tags">
                 {leadingTags.map((tag) => (
@@ -160,10 +156,42 @@ export function CoffeeJournalPanel({
           </div>
         </section>
 
+        <section className="coffee-journal-spectrum" aria-label="Taste spectrum">
+          <div className="coffee-journal-spectrum-row">
+            <span>Comfort</span>
+            <div className="coffee-journal-spectrum-track">
+              <div
+                className="coffee-journal-spectrum-dot"
+                style={{ left: `${insight.tasteAxes.flavor * 100}%` }}
+              />
+            </div>
+            <span>Bright</span>
+          </div>
+          <div className="coffee-journal-spectrum-row">
+            <span>Light</span>
+            <div className="coffee-journal-spectrum-track">
+              <div
+                className="coffee-journal-spectrum-dot"
+                style={{ left: `${insight.tasteAxes.body * 100}%` }}
+              />
+            </div>
+            <span>Rich</span>
+          </div>
+          <div className="coffee-journal-spectrum-row">
+            <span>Classic</span>
+            <div className="coffee-journal-spectrum-track">
+              <div
+                className="coffee-journal-spectrum-dot"
+                style={{ left: `${insight.tasteAxes.exploration * 100}%` }}
+              />
+            </div>
+            <span>Curious</span>
+          </div>
+        </section>
+
         <article className="coffee-journal-pulse">
           <span>Near Me is learning</span>
           <strong>{insight.learningPrompt}</strong>
-          <p>{insight.glossaryTip}</p>
         </article>
 
         <div className="map-top-picks-results coffee-journal-results">
@@ -241,8 +269,8 @@ export function CoffeeJournalPanel({
 
         {entries.length > 0 ? (
           <div className="coffee-journal-footer-note">
-            <span>At-home cue</span>
-            <strong>{insight.homeCue}</strong>
+            <span>Quiet coffee lesson</span>
+            <strong>{insight.glossaryTip}</strong>
           </div>
         ) : null}
       </section>
