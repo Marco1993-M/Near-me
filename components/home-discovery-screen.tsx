@@ -11,6 +11,12 @@ import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
 import { addCoffeeJournalEntry } from "@/lib/coffee-journal";
 import {
+  getCafeJournalMemory,
+  getStoredCoffeeJournal,
+  getStoredCoffeeJournalServerSnapshot,
+  subscribeToCoffeeJournal,
+} from "@/lib/coffee-journal";
+import {
   applyReviewToCoffeeProfileState,
   applyProfilerOptionScores,
   coffeeProfilerQuestions,
@@ -300,6 +306,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     getFavoriteCafeIds,
     getFavoriteCafeIdsServerSnapshot,
   );
+  const journalEntries = useSyncExternalStore(
+    subscribeToCoffeeJournal,
+    getStoredCoffeeJournal,
+    getStoredCoffeeJournalServerSnapshot,
+  );
 
   const cafeDistances = useMemo(() => {
     if (!userLocation) {
@@ -399,6 +410,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeTrustMentions = activeCafe?.trustPreview.topMentions.slice(0, 2) ?? [];
   const activeTrustQuote = activeCafe?.trustPreview.recentQuote ?? null;
   const activeDecisionGuide = activeCafe ? getCafeDecisionGuide(activeCafe) : null;
+  const activeJournalMemory = activeCafe
+    ? getCafeJournalMemory(journalEntries, { cafeId: activeCafe.id, cafeName: activeCafe.name })
+    : null;
   const activeRating =
     activeCafe && activeCafe.reviewSummary.reviewCount > 0
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
@@ -2264,6 +2278,34 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   ) : null}
 
+                  {activeJournalMemory ? (
+                    <div className="diesel-selection-journal-memory">
+                      <div className="diesel-selection-journal-memory-head">
+                        <span>Logged before</span>
+                        <strong>
+                          {activeJournalMemory.visitCount} visit{activeJournalMemory.visitCount === 1 ? "" : "s"}
+                        </strong>
+                      </div>
+                      <p>
+                        {activeJournalMemory.lastDrink
+                          ? `Last time you had a ${activeJournalMemory.lastDrink.toLowerCase()} here`
+                          : "You have logged this place before."}
+                        {activeJournalMemory.averageRating
+                          ? ` and scored it ${activeJournalMemory.averageRating}/10.`
+                          : "."}
+                      </p>
+                      {activeJournalMemory.topTags.length > 0 ? (
+                        <div className="diesel-selection-tags">
+                          {activeJournalMemory.topTags.slice(0, 2).map((tag) => (
+                            <span key={tag} className="diesel-selection-tag">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   <div className="diesel-selection-footer">
                     <span>{activeCafe.address}</span>
                   </div>
@@ -2300,6 +2342,17 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                           <path d="M12 20h9" />
                           <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                        </svg>
+                      </button>
+                      <button
+                        className="diesel-selection-icon-button"
+                        type="button"
+                        onClick={() => openJournalEntryModal({ type: "cafe", cafe: activeCafe })}
+                        aria-label="Log this visit privately"
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <path d="M6 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
+                          <path d="M6 4.5v15a2.5 2.5 0 0 1 2.5-2.5H18" />
                         </svg>
                       </button>
                     </div>
