@@ -338,6 +338,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     () => getCoffeeProfileBySlug(coffeeProfileState?.profileSlug),
     [coffeeProfileState?.profileSlug],
   );
+  const journalMatchByCafeId = useMemo(
+    () =>
+      new Map(
+        mappableCafes.map((cafe) => [cafe.id, getJournalCafeMatch(cafe, journalEntries)] as const),
+      ),
+    [journalEntries, mappableCafes],
+  );
   const cafesByDistance = useMemo(() => {
     if (!userLocation) {
       return mappableCafes;
@@ -352,8 +359,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       const rightPopularityBoost = Math.min(right.reviewSummary.reviewCount, 24) * 0.035;
       const leftRadiusBonus = leftDistance <= selectedRadiusKm ? 1.25 : -Math.min(leftDistance - selectedRadiusKm, 8) * 0.16;
       const rightRadiusBonus = rightDistance <= selectedRadiusKm ? 1.25 : -Math.min(rightDistance - selectedRadiusKm, 8) * 0.16;
-      const leftNearbyScore = leftRating + leftPopularityBoost + leftRadiusBonus - leftDistance * 0.22;
-      const rightNearbyScore = rightRating + rightPopularityBoost + rightRadiusBonus - rightDistance * 0.22;
+      const leftJournalBoost = (journalMatchByCafeId.get(left.id)?.score ?? 0) * 0.22;
+      const rightJournalBoost = (journalMatchByCafeId.get(right.id)?.score ?? 0) * 0.22;
+      const leftNearbyScore = leftRating + leftPopularityBoost + leftRadiusBonus + leftJournalBoost - leftDistance * 0.22;
+      const rightNearbyScore = rightRating + rightPopularityBoost + rightRadiusBonus + rightJournalBoost - rightDistance * 0.22;
 
       if (Math.abs(rightNearbyScore - leftNearbyScore) > 0.08) {
         return rightNearbyScore - leftNearbyScore;
@@ -365,7 +374,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
       return rightRating - leftRating;
     });
-  }, [cafeDistances, mappableCafes, selectedRadiusKm, userLocation]);
+  }, [cafeDistances, journalMatchByCafeId, mappableCafes, selectedRadiusKm, userLocation]);
   const rankedCafes = useMemo(() => {
     if (!activeCafe) {
       return cafesByDistance;
@@ -380,7 +389,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeJournalMemory = activeCafe
     ? getCafeJournalMemory(journalEntries, { cafeId: activeCafe.id, cafeName: activeCafe.name })
     : null;
-  const activeJournalMatch = activeCafe ? getJournalCafeMatch(activeCafe, journalEntries) : null;
+  const activeJournalMatch = activeCafe ? journalMatchByCafeId.get(activeCafe.id) ?? null : null;
   const activeRating =
     activeCafe && activeCafe.reviewSummary.reviewCount > 0
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
@@ -438,8 +447,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             const rightDistance = cafeDistances.get(right.id) ?? 999;
             const leftRadiusBonus = leftDistance <= selectedRadiusKm ? 0.8 : -Math.min(leftDistance - selectedRadiusKm, 8) * 0.08;
             const rightRadiusBonus = rightDistance <= selectedRadiusKm ? 0.8 : -Math.min(rightDistance - selectedRadiusKm, 8) * 0.08;
-            const leftJournalScore = getJournalCafeMatch(left, journalEntries)?.score ?? 0;
-            const rightJournalScore = getJournalCafeMatch(right, journalEntries)?.score ?? 0;
+            const leftJournalScore = journalMatchByCafeId.get(left.id)?.score ?? 0;
+            const rightJournalScore = journalMatchByCafeId.get(right.id)?.score ?? 0;
             const leftScore =
               (activeCoffeeProfile ? getCafeProfileMatchScore(left, activeCoffeeProfile, coffeeProfileState) : 0) +
               leftJournalScore * 1.2 +
@@ -456,7 +465,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : [];
 
     return { nearby, worthIt, work, forYou };
-  }, [activeCoffeeProfile, cafeDistances, coffeeProfileState, journalEntries, mappableCafes, rankedCafes, selectedRadiusKm]);
+  }, [activeCoffeeProfile, cafeDistances, coffeeProfileState, journalEntries.length, journalMatchByCafeId, mappableCafes, rankedCafes, selectedRadiusKm]);
   const activeTopPicks =
     topPickLens === "nearby"
       ? topPickGroups.nearby
@@ -1477,6 +1486,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
                     const cafeRating =
                       cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
+                    const searchJournalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
 
                     return (
                       <button
@@ -1499,6 +1509,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                               .filter(Boolean)
                               .join(" · ")}
                           </span>
+                          {searchJournalMatch ? (
+                            <span className="map-search-result-journal-fit">{searchJournalMatch.reason}</span>
+                          ) : null}
                         </div>
                         <div className="map-search-result-score">
                           <strong>{cafeRating}</strong>
@@ -1593,7 +1606,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   const profileMatch = activeCoffeeProfile
                     ? getCafeProfileMatch(cafe, activeCoffeeProfile, coffeeProfileState)
                     : null;
-                  const journalMatch = getJournalCafeMatch(cafe, journalEntries);
+                  const journalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
 
                   return (
                     <button
