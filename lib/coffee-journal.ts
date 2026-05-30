@@ -51,6 +51,12 @@ export type CafeJournalMemory = {
   latestVisitedAt: string | null;
 };
 
+export type JournalCafeMatch = {
+  score: number;
+  label: string;
+  reason: string;
+};
+
 export const COFFEE_JOURNAL_STORAGE_KEY = "near-me-coffee-journal";
 export const COFFEE_JOURNAL_EVENT = "near-me-coffee-journal-updated";
 
@@ -319,6 +325,31 @@ function getDrinkFamilyLabel(drink: string | null, tone: "title" | "sentence" = 
   return tone === "title" ? titleize(base) : base;
 }
 
+function getCafeDrinkFamilies(cafe: Cafe) {
+  const families = new Set<string>();
+
+  for (const drink of cafe.drinks) {
+    const normalized = drink.toLowerCase();
+    if (["espresso", "macchiato", "cortado", "ristretto", "americano"].includes(normalized)) {
+      families.add("Espresso");
+    }
+    if (["flat white", "cappuccino", "latte", "mocha", "iced latte"].includes(normalized)) {
+      families.add("Milk drink");
+    }
+    if (["filter", "pour over", "batch brew", "manual brew"].includes(normalized)) {
+      families.add("Filter");
+    }
+    if (["cold brew", "iced coffee", "iced latte"].includes(normalized)) {
+      families.add("Cold");
+    }
+    if (normalized.includes("seasonal") || normalized.includes("signature")) {
+      families.add("Seasonal");
+    }
+  }
+
+  return families;
+}
+
 export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
@@ -574,6 +605,77 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     learningPrompt,
     glossaryTip,
     homeCue,
+  };
+}
+
+export function getJournalCafeMatch(cafe: Cafe, entries: CoffeeJournalEntry[]): JournalCafeMatch | null {
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const insight = getCoffeeJournalInsight(entries);
+  const drinkFamilies = getCafeDrinkFamilies(cafe);
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (insight.favoriteDrink && drinkFamilies.has(insight.favoriteDrink)) {
+    score += 2.2;
+    const drinkLabel = getDrinkFamilyLabel(insight.favoriteDrink, "sentence");
+    if (drinkLabel) {
+      reasons.push(`Fits your usual ${drinkLabel}`);
+    }
+  }
+
+  const topWheel = insight.tasteWheel
+    .filter((segment) => segment.value >= 0.45)
+    .sort((left, right) => right.value - left.value)
+    .slice(0, 2);
+
+  for (const segment of topWheel) {
+    if (cafe.tags.some((tag) => tag.toLowerCase() === segment.label.toLowerCase())) {
+      score += 1.1;
+      reasons.push(`Matches your ${segment.label.toLowerCase()} lean`);
+    }
+  }
+
+  for (const tag of insight.topTags.slice(0, 2)) {
+    if (cafe.tags.some((cafeTag) => cafeTag.toLowerCase() === tag.toLowerCase())) {
+      score += 0.8;
+      reasons.push(`You often like ${tag.toLowerCase()} cups`);
+    }
+  }
+
+  if (insight.recentFavoriteDrink && drinkFamilies.has(insight.recentFavoriteDrink) && insight.recentFavoriteDrink !== insight.favoriteDrink) {
+    score += 0.7;
+    const recentLabel = getDrinkFamilyLabel(insight.recentFavoriteDrink, "sentence");
+    if (recentLabel) {
+      reasons.push(`Aligns with your recent ${recentLabel}`);
+    }
+  }
+
+  const reviewStrength = Math.min(cafe.reviewSummary.reviewCount, 18) * 0.04;
+  score += reviewStrength;
+
+  const roundedScore = Number(score.toFixed(2));
+  const label =
+    roundedScore >= 3.8
+      ? "Great fit for your journal"
+      : roundedScore >= 2.4
+        ? "Good fit for your journal"
+        : roundedScore >= 1.2
+          ? "Some overlap with your journal"
+          : "Early match for your journal";
+
+  const reason =
+    reasons[0] ??
+    (insight.primaryTaste
+      ? `Leans ${insight.primaryTaste.toLowerCase()}, which suits your recent taste`
+      : "Near Me is still learning your taste");
+
+  return {
+    score: roundedScore,
+    label,
+    reason,
   };
 }
 
