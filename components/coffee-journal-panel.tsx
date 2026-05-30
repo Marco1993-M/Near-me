@@ -169,6 +169,22 @@ export function CoffeeJournalPanel({
     .filter((segment) => segment.value >= 0.42)
     .sort((left, right) => right.value - left.value)
     .slice(0, 3);
+  const evolutionLanes = useMemo(() => {
+    const recentMap = new Map(insight.recentTasteWheel.map((segment) => [segment.key, segment.value]));
+
+    return insight.tasteWheel
+      .map((segment) => {
+        const recentValue = recentMap.get(segment.key) ?? 0;
+        const delta = Number((recentValue - segment.value).toFixed(2));
+        return {
+          ...segment,
+          recentValue,
+          delta,
+        };
+      })
+      .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta) || right.recentValue - left.recentValue)
+      .slice(0, 3);
+  }, [insight.recentTasteWheel, insight.tasteWheel]);
 
   return (
     <div className="map-journal-shell fade-slide-in">
@@ -322,6 +338,52 @@ export function CoffeeJournalPanel({
             <div className="coffee-journal-evolution-card">
               <strong>{insight.evolutionSummary}</strong>
               {insight.latestHighlight ? <span>Recent standout: {insight.latestHighlight}</span> : null}
+            </div>
+            <div className="coffee-journal-evolution-lanes">
+              {evolutionLanes.map((segment) => {
+                const trendLabel =
+                  segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
+
+                return (
+                  <article className="coffee-journal-evolution-lane" key={segment.key}>
+                    <div className="coffee-journal-evolution-lane-head">
+                      <div className="coffee-journal-evolution-lane-title">
+                        <span
+                          className="coffee-journal-evolution-lane-dot"
+                          style={{ backgroundColor: segment.color }}
+                          aria-hidden="true"
+                        />
+                        <strong>{segment.label}</strong>
+                      </div>
+                      <span>{trendLabel}</span>
+                    </div>
+                    <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
+                      <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
+                        <div
+                          className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
+                          style={{
+                            width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
+                            backgroundColor: segment.color,
+                          }}
+                        />
+                      </div>
+                      <div className="coffee-journal-evolution-bar-track">
+                        <div
+                          className="coffee-journal-evolution-bar-fill"
+                          style={{
+                            width: `${Math.max(12, Math.round(segment.value * 100))}%`,
+                            backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="coffee-journal-evolution-legend">
+                      <span>Recent</span>
+                      <span>All time</span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
 
