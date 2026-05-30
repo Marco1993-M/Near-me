@@ -298,6 +298,27 @@ function getMostFrequentLabel(map: Map<string, number>) {
   return Array.from(map.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
 }
 
+function getDrinkFamilyLabel(drink: string | null, tone: "title" | "sentence" = "title") {
+  if (!drink) {
+    return null;
+  }
+
+  const base =
+    drink === "Espresso"
+      ? "espresso-based drinks"
+      : drink === "Milk drink"
+        ? "milk drinks"
+        : drink === "Filter"
+          ? "filter coffees"
+          : drink === "Cold"
+            ? "cold coffees"
+            : drink === "Seasonal"
+              ? "seasonal drinks"
+              : drink.toLowerCase();
+
+  return tone === "title" ? titleize(base) : base;
+}
+
 export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
@@ -381,6 +402,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
 
   const favoriteDrink = getMostFrequentLabel(drinkCounts);
   const topCafe = getMostFrequentLabel(cafeCounts);
+  const favoriteDrinkFamily = getDrinkFamilyLabel(favoriteDrink, "sentence");
   const topTags = Array.from(tagCounts.entries())
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .slice(0, 3)
@@ -432,7 +454,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     "Your journal gets more useful when you describe what you felt in the cup, not just whether it was good.";
 
   const learningPrompt = favoriteDrink
-    ? `You keep returning to ${favoriteDrink.toLowerCase()}-style drinks. That is a strong clue for what Near Me should prioritize for you.`
+    ? `You keep returning to ${favoriteDrinkFamily}. That is a strong clue for what Near Me should prioritize for you.`
     : "A few more logs will help Near Me understand whether you lean brighter, smoother, or more espresso-forward.";
 
   const homeCue =
@@ -474,6 +496,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   }
 
   const recentFavoriteDrink = getMostFrequentLabel(recentDrinkCounts);
+  const recentFavoriteDrinkFamily = getDrinkFamilyLabel(recentFavoriteDrink, "sentence");
   const recentPrimaryKey =
     TASTE_WHEEL_META.map((item) => ({ key: item.key, score: recentWheelScores.get(item.key) ?? 0 }))
       .sort((left, right) => right.score - left.score)[0]?.key ?? null;
@@ -523,11 +546,11 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
         : null;
 
   const patternInsights = [
-    favoriteDrink ? `${favoriteDrink} is your strongest repeat order right now.` : null,
+    favoriteDrinkFamily ? `${titleize(favoriteDrinkFamily)} are your strongest repeat style right now.` : null,
     topCafe ? `${topCafe} is showing up most often in your journal.` : null,
     latestHighlight ? `${latestHighlight} is one of your standout recent cups.` : null,
     recentFavoriteDrink && recentFavoriteDrink !== favoriteDrink
-      ? `Lately you have been reaching for ${recentFavoriteDrink.toLowerCase()} more often.`
+      ? `Lately you have been reaching for ${recentFavoriteDrinkFamily} more often.`
       : null,
   ].filter((value): value is string => Boolean(value)).slice(0, 3);
 
