@@ -28,6 +28,13 @@ export type CoffeeJournalInsight = {
     value: number;
     color: string;
   }[];
+  recentTasteWheel: {
+    key: "chocolatey" | "nutty" | "bright" | "fruity" | "floral" | "bold";
+    label: string;
+    shortLabel: string;
+    value: number;
+    color: string;
+  }[];
   primaryTaste: string | null;
   secondaryTaste: string | null;
   topCafe: string | null;
@@ -96,6 +103,13 @@ const TASTE_WHEEL_META = [
 ] as const;
 
 type TasteWheelKey = (typeof TASTE_WHEEL_META)[number]["key"];
+type TasteWheelSegment = {
+  key: TasteWheelKey;
+  label: string;
+  shortLabel: string;
+  value: number;
+  color: string;
+};
 
 function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
   if (!Array.isArray(input)) {
@@ -350,17 +364,110 @@ function getCafeDrinkFamilies(cafe: Cafe) {
   return families;
 }
 
+function createWheelScoreMap() {
+  return new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
+}
+
+function applyDrinkWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<TasteWheelKey, number>) {
+  const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
+  const add = (key: TasteWheelKey, amount: number) => {
+    wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount * entryMultiplier);
+  };
+
+  if (entry.drink === "Filter") {
+    add("bright", 1);
+    add("fruity", 0.75);
+    add("floral", 0.55);
+  } else if (entry.drink === "Espresso") {
+    add("bold", 1);
+    add("chocolatey", 0.5);
+  } else if (entry.drink === "Milk drink") {
+    add("chocolatey", 1);
+    add("nutty", 0.75);
+    add("bold", 0.25);
+  } else if (entry.drink === "Seasonal") {
+    add("fruity", 0.5);
+    add("floral", 0.5);
+    add("bold", 0.25);
+  } else if (entry.drink === "Cold") {
+    add("bright", 0.5);
+    add("fruity", 0.5);
+  }
+}
+
+function applyTagWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<TasteWheelKey, number>) {
+  const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
+  const add = (key: TasteWheelKey, amount: number) => {
+    wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount * entryMultiplier);
+  };
+
+  for (const tag of entry.tags) {
+    const normalized = tag.toLowerCase();
+
+    if (normalized === "chocolatey") {
+      add("chocolatey", 1);
+    }
+    if (normalized === "nutty") {
+      add("nutty", 1);
+    }
+    if (normalized === "bright") {
+      add("bright", 1);
+    }
+    if (normalized === "fruity") {
+      add("fruity", 1);
+    }
+    if (normalized === "floral") {
+      add("floral", 1);
+    }
+    if (normalized === "bold") {
+      add("bold", 1);
+    }
+    if (normalized === "smooth") {
+      add("nutty", 0.75);
+      add("chocolatey", 0.5);
+    }
+    if (normalized === "sweet") {
+      add("chocolatey", 0.55);
+      add("nutty", 0.45);
+    }
+    if (normalized === "clean") {
+      add("bright", 0.5);
+      add("floral", 0.5);
+    }
+  }
+}
+
+function buildTasteWheel(wheelScores: Map<TasteWheelKey, number>) {
+  const sortedWheel = TASTE_WHEEL_META.map((item) => ({
+    ...item,
+    rawValue: wheelScores.get(item.key) ?? 0,
+  })).sort((left, right) => right.rawValue - left.rawValue);
+
+  const maxWheelValue = sortedWheel[0]?.rawValue ?? 0;
+  const tasteWheel: TasteWheelSegment[] = sortedWheel
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      shortLabel: item.shortLabel,
+      color: item.color,
+      value: maxWheelValue > 0 ? Number((item.rawValue / maxWheelValue).toFixed(2)) : 0.16,
+    }))
+    .sort(
+      (left, right) =>
+        TASTE_WHEEL_META.findIndex((item) => item.key === left.key) -
+        TASTE_WHEEL_META.findIndex((item) => item.key === right.key),
+    );
+
+  return { sortedWheel, tasteWheel };
+}
+
 export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
   const cafeCounts = new Map<string, number>();
   const cities = new Set<string>();
   const ratings: number[] = [];
-  const wheelScores = new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
-
-  const addWheelScore = (key: TasteWheelKey, amount: number) => {
-    wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount);
-  };
+  const wheelScores = createWheelScoreMap();
 
   for (const entry of entries) {
     drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
@@ -372,63 +479,13 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
       ratings.push(entry.rating);
     }
 
-    const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
-
-    if (entry.drink === "Filter") {
-      addWheelScore("bright", 1 * entryMultiplier);
-      addWheelScore("fruity", 0.75 * entryMultiplier);
-      addWheelScore("floral", 0.55 * entryMultiplier);
-    } else if (entry.drink === "Espresso") {
-      addWheelScore("bold", 1 * entryMultiplier);
-      addWheelScore("chocolatey", 0.5 * entryMultiplier);
-    } else if (entry.drink === "Milk drink") {
-      addWheelScore("chocolatey", 1 * entryMultiplier);
-      addWheelScore("nutty", 0.75 * entryMultiplier);
-      addWheelScore("bold", 0.25 * entryMultiplier);
-    } else if (entry.drink === "Seasonal") {
-      addWheelScore("fruity", 0.5 * entryMultiplier);
-      addWheelScore("floral", 0.5 * entryMultiplier);
-      addWheelScore("bold", 0.25 * entryMultiplier);
-    } else if (entry.drink === "Cold") {
-      addWheelScore("bright", 0.5 * entryMultiplier);
-      addWheelScore("fruity", 0.5 * entryMultiplier);
-    }
+    applyDrinkWheelScores(entry, wheelScores);
 
     for (const tag of entry.tags) {
       const normalized = tag.toLowerCase();
       tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
-
-      if (normalized === "chocolatey") {
-        addWheelScore("chocolatey", 1 * entryMultiplier);
-      }
-      if (normalized === "nutty") {
-        addWheelScore("nutty", 1 * entryMultiplier);
-      }
-      if (normalized === "bright") {
-        addWheelScore("bright", 1 * entryMultiplier);
-      }
-      if (normalized === "fruity") {
-        addWheelScore("fruity", 1 * entryMultiplier);
-      }
-      if (normalized === "floral") {
-        addWheelScore("floral", 1 * entryMultiplier);
-      }
-      if (normalized === "bold") {
-        addWheelScore("bold", 1 * entryMultiplier);
-      }
-      if (normalized === "smooth") {
-        addWheelScore("nutty", 0.75 * entryMultiplier);
-        addWheelScore("chocolatey", 0.5 * entryMultiplier);
-      }
-      if (normalized === "sweet") {
-        addWheelScore("chocolatey", 0.55 * entryMultiplier);
-        addWheelScore("nutty", 0.45 * entryMultiplier);
-      }
-      if (normalized === "clean") {
-        addWheelScore("bright", 0.5 * entryMultiplier);
-        addWheelScore("floral", 0.5 * entryMultiplier);
-      }
     }
+    applyTagWheelScores(entry, wheelScores);
   }
 
   const favoriteDrink = getMostFrequentLabel(drinkCounts);
@@ -442,24 +499,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     ratings.length > 0 ? Number((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)) : null;
 
   const strongestTag = Array.from(tagCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-  const sortedWheel = TASTE_WHEEL_META.map((item) => ({
-    ...item,
-    rawValue: wheelScores.get(item.key) ?? 0,
-  })).sort((left, right) => right.rawValue - left.rawValue);
-  const maxWheelValue = sortedWheel[0]?.rawValue ?? 0;
-  const tasteWheel = sortedWheel
-    .map((item) => ({
-      key: item.key,
-      label: item.label,
-      shortLabel: item.shortLabel,
-      color: item.color,
-      value: maxWheelValue > 0 ? Number((item.rawValue / maxWheelValue).toFixed(2)) : 0.16,
-    }))
-    .sort(
-      (left, right) =>
-        TASTE_WHEEL_META.findIndex((item) => item.key === left.key) -
-        TASTE_WHEEL_META.findIndex((item) => item.key === right.key),
-    );
+  const { sortedWheel, tasteWheel } = buildTasteWheel(wheelScores);
 
   const primaryTaste = sortedWheel[0]?.label ?? null;
   const secondaryTaste = (sortedWheel[1]?.rawValue ?? 0) > 0 ? sortedWheel[1]?.label ?? null : null;
@@ -500,56 +540,24 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   const recentEntries = entries.slice(0, Math.min(entries.length, 5));
   const earlierEntries = entries.slice(Math.min(entries.length, 5));
   const recentDrinkCounts = new Map<string, number>();
-  const recentWheelScores = new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
+  const recentWheelScores = createWheelScoreMap();
+  const earlierWheelScores = createWheelScoreMap();
   for (const entry of recentEntries) {
     recentDrinkCounts.set(entry.drink, (recentDrinkCounts.get(entry.drink) ?? 0) + 1);
-    if (entry.drink === "Filter") {
-      recentWheelScores.set("bright", (recentWheelScores.get("bright") ?? 0) + 1);
-      recentWheelScores.set("fruity", (recentWheelScores.get("fruity") ?? 0) + 0.75);
-      recentWheelScores.set("floral", (recentWheelScores.get("floral") ?? 0) + 0.55);
-    } else if (entry.drink === "Espresso") {
-      recentWheelScores.set("bold", (recentWheelScores.get("bold") ?? 0) + 1);
-    } else if (entry.drink === "Milk drink") {
-      recentWheelScores.set("chocolatey", (recentWheelScores.get("chocolatey") ?? 0) + 1);
-      recentWheelScores.set("nutty", (recentWheelScores.get("nutty") ?? 0) + 0.75);
-    }
-    for (const tag of entry.tags.map((tag) => tag.toLowerCase())) {
-      if (TASTE_WHEEL_META.some((item) => item.key === tag)) {
-        recentWheelScores.set(tag as TasteWheelKey, (recentWheelScores.get(tag as TasteWheelKey) ?? 0) + 1);
-      }
-      if (tag === "smooth" || tag === "sweet") {
-        recentWheelScores.set("chocolatey", (recentWheelScores.get("chocolatey") ?? 0) + 0.5);
-      }
-      if (tag === "clean") {
-        recentWheelScores.set("bright", (recentWheelScores.get("bright") ?? 0) + 0.5);
-      }
-    }
+    applyDrinkWheelScores(entry, recentWheelScores);
+    applyTagWheelScores(entry, recentWheelScores);
+  }
+  for (const entry of earlierEntries) {
+    applyDrinkWheelScores(entry, earlierWheelScores);
+    applyTagWheelScores(entry, earlierWheelScores);
   }
 
   const recentFavoriteDrink = getMostFrequentLabel(recentDrinkCounts);
   const recentFavoriteDrinkFamily = getDrinkFamilyLabel(recentFavoriteDrink, "sentence");
-  const recentPrimaryKey =
-    TASTE_WHEEL_META.map((item) => ({ key: item.key, score: recentWheelScores.get(item.key) ?? 0 }))
-      .sort((left, right) => right.score - left.score)[0]?.key ?? null;
-  const earlierPrimaryKey =
-    earlierEntries.length > 0
-      ? TASTE_WHEEL_META.map((item) => ({
-          key: item.key,
-          score: earlierEntries.reduce((sum, entry) => {
-            let next = sum;
-            if (entry.drink === "Filter" && (item.key === "bright" || item.key === "fruity" || item.key === "floral")) {
-              next += item.key === "bright" ? 1 : item.key === "fruity" ? 0.75 : 0.55;
-            }
-            if (entry.drink === "Espresso" && item.key === "bold") {
-              next += 1;
-            }
-            if (entry.drink === "Milk drink" && (item.key === "chocolatey" || item.key === "nutty")) {
-              next += item.key === "chocolatey" ? 1 : 0.75;
-            }
-            return next;
-          }, 0),
-        })).sort((left, right) => right.score - left.score)[0]?.key ?? null
-      : null;
+  const { sortedWheel: sortedRecentWheel, tasteWheel: recentTasteWheel } = buildTasteWheel(recentWheelScores);
+  const { sortedWheel: sortedEarlierWheel } = buildTasteWheel(earlierWheelScores);
+  const recentPrimaryKey = sortedRecentWheel[0]?.key ?? null;
+  const earlierPrimaryKey = sortedEarlierWheel[0]?.rawValue ? sortedEarlierWheel[0]?.key ?? null : null;
 
   const recentPrimaryLabel = TASTE_WHEEL_META.find((item) => item.key === recentPrimaryKey)?.label ?? null;
   const earlierPrimaryLabel = TASTE_WHEEL_META.find((item) => item.key === earlierPrimaryKey)?.label ?? null;
@@ -593,6 +601,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     averageRating,
     tasteMood,
     tasteWheel,
+    recentTasteWheel,
     primaryTaste,
     secondaryTaste,
     topCafe,
