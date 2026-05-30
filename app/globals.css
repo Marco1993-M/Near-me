@@ -1027,7 +1027,8 @@ img {
   place-items: center;
   align-content: center;
   gap: 0.12rem;
-  padding: 0.9rem;
+  padding: 0.85rem 0.72rem;
+  min-width: 0;
   text-align: center;
   transform: rotate(16deg);
 }
@@ -1047,14 +1048,20 @@ img {
 
 .coffee-journal-wheel-core strong {
   color: var(--near-me-ink);
-  font-size: 0.98rem;
-  line-height: 1.05;
+  font-size: var(--wheel-title-size, 0.98rem);
+  line-height: 1;
   letter-spacing: -0.04em;
+  max-width: 100%;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .coffee-journal-wheel-core small {
-  font-size: 0.62rem;
+  font-size: var(--wheel-subtitle-size, 0.62rem);
   font-weight: 600;
+  max-width: 100%;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .coffee-journal-hero-copy {
