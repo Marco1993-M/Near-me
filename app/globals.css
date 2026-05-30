@@ -1158,9 +1158,34 @@ img {
   line-height: 1.35;
 }
 
+.coffee-journal-milestone {
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.72rem 0.78rem;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 106, 56, 0.12);
+  background:
+    linear-gradient(135deg, rgba(199, 245, 211, 0.24), rgba(255, 255, 255, 0.18)),
+    rgba(255, 255, 252, 0.68);
+}
+
+.coffee-journal-milestone span {
+  color: #1f6a38;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-milestone strong {
+  color: var(--near-me-ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .coffee-journal-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -1257,6 +1282,47 @@ img {
   color: rgba(20, 32, 24, 0.54);
   font-size: 0.7rem;
   line-height: 1.3;
+}
+
+.coffee-journal-insights,
+.coffee-journal-evolution {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.82rem 0.9rem;
+  border: 1px solid rgba(20, 32, 24, 0.1);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%),
+    rgba(255, 255, 252, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.coffee-journal-insights-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.coffee-journal-insight-card,
+.coffee-journal-evolution-card {
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.72rem 0.78rem;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background: rgba(255, 255, 252, 0.66);
+}
+
+.coffee-journal-insight-card strong,
+.coffee-journal-evolution-card strong {
+  color: var(--near-me-ink);
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.coffee-journal-evolution-card span {
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.74rem;
+  line-height: 1.35;
 }
 
 .coffee-journal-pulse,
@@ -4011,7 +4077,7 @@ img {
   }
 
   .coffee-journal-summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .coffee-journal-hero-wheel {
