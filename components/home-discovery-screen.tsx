@@ -12,6 +12,7 @@ import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
 import { addCoffeeJournalEntry } from "@/lib/coffee-journal";
 import {
   getCafeJournalMemory,
+  getJournalCafeMatch,
   getStoredCoffeeJournal,
   getStoredCoffeeJournalServerSnapshot,
   syncReviewEntriesIntoCoffeeJournal,
@@ -379,6 +380,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeJournalMemory = activeCafe
     ? getCafeJournalMemory(journalEntries, { cafeId: activeCafe.id, cafeName: activeCafe.name })
     : null;
+  const activeJournalMatch = activeCafe ? getJournalCafeMatch(activeCafe, journalEntries) : null;
   const activeRating =
     activeCafe && activeCafe.reviewSummary.reviewCount > 0
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
@@ -429,19 +431,23 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         return rightScore - leftScore;
       })
       .slice(0, 6);
-    const forYou = activeCoffeeProfile
+    const forYou = activeCoffeeProfile || journalEntries.length > 0
       ? [...mappableCafes]
           .sort((left, right) => {
             const leftDistance = cafeDistances.get(left.id) ?? 999;
             const rightDistance = cafeDistances.get(right.id) ?? 999;
             const leftRadiusBonus = leftDistance <= selectedRadiusKm ? 0.8 : -Math.min(leftDistance - selectedRadiusKm, 8) * 0.08;
             const rightRadiusBonus = rightDistance <= selectedRadiusKm ? 0.8 : -Math.min(rightDistance - selectedRadiusKm, 8) * 0.08;
+            const leftJournalScore = getJournalCafeMatch(left, journalEntries)?.score ?? 0;
+            const rightJournalScore = getJournalCafeMatch(right, journalEntries)?.score ?? 0;
             const leftScore =
-              getCafeProfileMatchScore(left, activeCoffeeProfile, coffeeProfileState) +
+              (activeCoffeeProfile ? getCafeProfileMatchScore(left, activeCoffeeProfile, coffeeProfileState) : 0) +
+              leftJournalScore * 1.2 +
               leftRadiusBonus -
               leftDistance * 0.12;
             const rightScore =
-              getCafeProfileMatchScore(right, activeCoffeeProfile, coffeeProfileState) +
+              (activeCoffeeProfile ? getCafeProfileMatchScore(right, activeCoffeeProfile, coffeeProfileState) : 0) +
+              rightJournalScore * 1.2 +
               rightRadiusBonus -
               rightDistance * 0.12;
             return rightScore - leftScore;
@@ -450,7 +456,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       : [];
 
     return { nearby, worthIt, work, forYou };
-  }, [activeCoffeeProfile, cafeDistances, coffeeProfileState, mappableCafes, rankedCafes, selectedRadiusKm]);
+  }, [activeCoffeeProfile, cafeDistances, coffeeProfileState, journalEntries, mappableCafes, rankedCafes, selectedRadiusKm]);
   const activeTopPicks =
     topPickLens === "nearby"
       ? topPickGroups.nearby
@@ -476,10 +482,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             subtitle: "Quiet, laptop-friendly places to settle in",
           }
           : {
-            title: activeCoffeeProfile ? `For your ${activeCoffeeProfile.shortName} profile` : "Built for your taste",
+            title: activeCoffeeProfile ? `For your ${activeCoffeeProfile.shortName} profile` : "For your journal",
             subtitle: activeCoffeeProfile
-              ? `Recommendations shaped around ${activeCoffeeProfile.recommendedDrinks.join(", ")}`
-              : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
+              ? `Recommendations shaped around ${activeCoffeeProfile.recommendedDrinks.join(", ")} and your recent journal patterns`
+              : journalEntries.length > 0
+                ? "Recommendations shaped around the drinks and taste notes you keep coming back to"
+                : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
           };
   const cafesWithinRadius = useMemo(() => {
     if (!userLocation) {
@@ -1570,7 +1578,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               </div>
 
               <div className="map-top-picks-results">
-                {topPickLens === "for-you" && !activeCoffeeProfile ? (
+                {topPickLens === "for-you" && !activeCoffeeProfile && journalEntries.length === 0 ? (
                   <div className="map-top-picks-empty">
                     <strong>Unlock taste-aware picks</strong>
                     <span>Answer 5 fast questions and Near Me will learn the kind of specialty coffee you actually enjoy.</span>
@@ -1585,6 +1593,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   const profileMatch = activeCoffeeProfile
                     ? getCafeProfileMatch(cafe, activeCoffeeProfile, coffeeProfileState)
                     : null;
+                  const journalMatch = getJournalCafeMatch(cafe, journalEntries);
 
                   return (
                     <button
@@ -1611,6 +1620,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         {topPickLens === "for-you" && profileMatch ? (
                           <span className="map-top-pick-match">
                             {profileMatch.label} for your profile · {profileMatch.percentage}%
+                          </span>
+                        ) : topPickLens === "for-you" && journalMatch ? (
+                          <span className="map-top-pick-match">
+                            {journalMatch.label} · {journalMatch.reason}
                           </span>
                         ) : null}
                       </div>
@@ -1807,20 +1820,26 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
               <label className="review-modal-section">
                 <strong>How did it land?</strong>
-                <div className="review-slider-shell">
-                  <div className="review-slider-labels">
-                    <span>Forgettable</span>
+                <div className="review-score-slider-shell">
+                  <div className="review-score-slider-value" aria-live="polite">
+                    <span>Your score</span>
                     <strong>{journalRating}</strong>
-                    <span>Memorable</span>
                   </div>
                   <input
-                    className="review-slider-input"
+                    className="review-score-slider"
                     type="range"
-                    min={1}
-                    max={10}
+                    min="1"
+                    max="10"
+                    step="1"
                     value={journalRating}
                     onChange={(event) => setJournalRating(Number(event.target.value))}
+                    aria-label="Journal score from 1 to 10"
                   />
+                  <div className="review-score-slider-scale" aria-hidden="true">
+                    <span>1</span>
+                    <span>5</span>
+                    <span>10</span>
+                  </div>
                 </div>
               </label>
 
@@ -2192,9 +2211,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <p>{activeDecisionGuide?.trustSummary ?? activeCafe.summary}</p>
                   </div>
 
-                  {activeCoffeeProfile || activeDecisionGuide || activeTrustMentions.length > 0 || activeTrustQuote ? (
+                  {activeCoffeeProfile || activeJournalMatch || activeDecisionGuide || activeTrustMentions.length > 0 || activeTrustQuote ? (
                     <div className="diesel-selection-trust">
                       {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
+                      {activeJournalMatch ? (
+                        <div className="diesel-selection-trust-head">
+                          <span>{activeJournalMatch.label}</span>
+                          <strong>{activeJournalMatch.reason}</strong>
+                        </div>
+                      ) : null}
                       {activeDecisionGuide ? (
                         <div className="diesel-selection-trust-grid">
                           <div className="diesel-selection-trust-block">
