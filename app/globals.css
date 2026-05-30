@@ -1858,6 +1858,31 @@ img {
   line-height: 1.3;
 }
 
+.map-top-picks-journal-cue {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid rgba(31, 106, 56, 0.12);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(199, 245, 211, 0.2), rgba(255, 255, 255, 0.08) 70%),
+    rgba(255, 255, 252, 0.68);
+}
+
+.map-top-picks-journal-cue span {
+  color: #1f6a38;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-top-picks-journal-cue strong {
+  color: var(--near-me-ink);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .map-search-result-score {
   display: grid;
   justify-items: end;
@@ -2304,6 +2329,11 @@ img {
   gap: 0.8rem;
 }
 
+.diesel-selection-trust-head-journal {
+  display: grid;
+  gap: 0.12rem;
+}
+
 .diesel-selection-trust-head span {
   color: rgba(20, 32, 24, 0.48);
   font-size: 0.7rem;
@@ -2316,6 +2346,16 @@ img {
   color: var(--near-me-ink);
   font-size: 0.84rem;
   text-align: right;
+}
+
+.diesel-selection-trust-head-journal strong {
+  text-align: left;
+}
+
+.diesel-selection-trust-head-journal small {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.7rem;
+  line-height: 1.3;
 }
 
 .diesel-selection-trust-quote {
@@ -2921,6 +2961,13 @@ img {
   color: rgba(20, 32, 24, 0.58);
   font-size: 0.8rem;
   line-height: 1.35;
+}
+
+.diesel-result-row-journal-fit {
+  color: #1f6a38;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .diesel-result-row-score {
