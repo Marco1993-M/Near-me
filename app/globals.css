@@ -2482,11 +2482,21 @@ img {
   font-size: 1rem;
 }
 
+.cafe-detail-profile-insight-head-secondary {
+  padding-top: 0.2rem;
+  border-top: 1px solid rgba(31, 106, 56, 0.1);
+}
+
 .cafe-detail-profile-insight p {
   margin: 0;
   color: rgba(20, 32, 24, 0.68);
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+.cafe-detail-profile-insight-journal {
+  display: grid;
+  gap: 0.3rem;
 }
 
 .cafe-detail-profile-insight-meta {
