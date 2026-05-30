@@ -21,11 +21,15 @@ export type CoffeeJournalInsight = {
   cityCount: number;
   averageRating: number | null;
   tasteMood: string;
-  tasteAxes: {
-    flavor: number;
-    body: number;
-    exploration: number;
-  };
+  tasteWheel: {
+    key: "chocolatey" | "nutty" | "bright" | "fruity" | "floral" | "bold";
+    label: string;
+    shortLabel: string;
+    value: number;
+    color: string;
+  }[];
+  primaryTaste: string | null;
+  secondaryTaste: string | null;
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
@@ -68,6 +72,17 @@ const glossaryByTag: Record<string, string> = {
   sweet: "Sweet does not mean sugary; it often means caramel, honey, or ripe fruit balance.",
   clean: "Clean usually means the flavors feel separated and tidy rather than muddy.",
 };
+
+const TASTE_WHEEL_META = [
+  { key: "chocolatey", label: "Chocolatey", shortLabel: "Choc", color: "#7c4a2d" },
+  { key: "nutty", label: "Nutty", shortLabel: "Nut", color: "#b6844f" },
+  { key: "bright", label: "Bright", shortLabel: "Bright", color: "#f0c848" },
+  { key: "fruity", label: "Fruity", shortLabel: "Fruit", color: "#ef8d73" },
+  { key: "floral", label: "Floral", shortLabel: "Floral", color: "#d69adf" },
+  { key: "bold", label: "Bold", shortLabel: "Bold", color: "#62784b" },
+] as const;
+
+type TasteWheelKey = (typeof TASTE_WHEEL_META)[number]["key"];
 
 function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
   if (!Array.isArray(input)) {
@@ -277,9 +292,11 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   const tagCounts = new Map<string, number>();
   const cities = new Set<string>();
   const ratings: number[] = [];
-  let flavorScore = 0;
-  let bodyScore = 0;
-  let explorationScore = 0;
+  const wheelScores = new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
+
+  const addWheelScore = (key: TasteWheelKey, amount: number) => {
+    wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount);
+  };
 
   for (const entry of entries) {
     drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
@@ -290,32 +307,61 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
       ratings.push(entry.rating);
     }
 
+    const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
+
     if (entry.drink === "Filter") {
-      flavorScore += 1.1;
-      explorationScore += 0.9;
+      addWheelScore("bright", 1 * entryMultiplier);
+      addWheelScore("fruity", 0.75 * entryMultiplier);
+      addWheelScore("floral", 0.55 * entryMultiplier);
     } else if (entry.drink === "Espresso") {
-      bodyScore += 0.8;
+      addWheelScore("bold", 1 * entryMultiplier);
+      addWheelScore("chocolatey", 0.5 * entryMultiplier);
     } else if (entry.drink === "Milk drink") {
-      bodyScore += 1;
-      flavorScore -= 0.2;
+      addWheelScore("chocolatey", 1 * entryMultiplier);
+      addWheelScore("nutty", 0.75 * entryMultiplier);
+      addWheelScore("bold", 0.25 * entryMultiplier);
     } else if (entry.drink === "Seasonal") {
-      explorationScore += 1;
+      addWheelScore("fruity", 0.5 * entryMultiplier);
+      addWheelScore("floral", 0.5 * entryMultiplier);
+      addWheelScore("bold", 0.25 * entryMultiplier);
     } else if (entry.drink === "Cold") {
-      explorationScore += 0.4;
+      addWheelScore("bright", 0.5 * entryMultiplier);
+      addWheelScore("fruity", 0.5 * entryMultiplier);
     }
 
     for (const tag of entry.tags) {
       const normalized = tag.toLowerCase();
       tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
 
-      if (normalized === "bright" || normalized === "fruity" || normalized === "floral" || normalized === "clean") {
-        flavorScore += 1;
+      if (normalized === "chocolatey") {
+        addWheelScore("chocolatey", 1 * entryMultiplier);
       }
-      if (normalized === "chocolatey" || normalized === "smooth" || normalized === "sweet" || normalized === "bold") {
-        bodyScore += 1;
+      if (normalized === "nutty") {
+        addWheelScore("nutty", 1 * entryMultiplier);
       }
-      if (normalized === "fruity" || normalized === "floral" || normalized === "seasonal" || normalized === "clean") {
-        explorationScore += 0.7;
+      if (normalized === "bright") {
+        addWheelScore("bright", 1 * entryMultiplier);
+      }
+      if (normalized === "fruity") {
+        addWheelScore("fruity", 1 * entryMultiplier);
+      }
+      if (normalized === "floral") {
+        addWheelScore("floral", 1 * entryMultiplier);
+      }
+      if (normalized === "bold") {
+        addWheelScore("bold", 1 * entryMultiplier);
+      }
+      if (normalized === "smooth") {
+        addWheelScore("nutty", 0.75 * entryMultiplier);
+        addWheelScore("chocolatey", 0.5 * entryMultiplier);
+      }
+      if (normalized === "sweet") {
+        addWheelScore("chocolatey", 0.55 * entryMultiplier);
+        addWheelScore("nutty", 0.45 * entryMultiplier);
+      }
+      if (normalized === "clean") {
+        addWheelScore("bright", 0.5 * entryMultiplier);
+        addWheelScore("floral", 0.5 * entryMultiplier);
       }
     }
   }
@@ -330,12 +376,40 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     ratings.length > 0 ? Number((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)) : null;
 
   const strongestTag = Array.from(tagCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const sortedWheel = TASTE_WHEEL_META.map((item) => ({
+    ...item,
+    rawValue: wheelScores.get(item.key) ?? 0,
+  })).sort((left, right) => right.rawValue - left.rawValue);
+  const maxWheelValue = sortedWheel[0]?.rawValue ?? 0;
+  const tasteWheel = sortedWheel
+    .map((item) => ({
+      key: item.key,
+      label: item.label,
+      shortLabel: item.shortLabel,
+      color: item.color,
+      value: maxWheelValue > 0 ? Number((item.rawValue / maxWheelValue).toFixed(2)) : 0.16,
+    }))
+    .sort(
+      (left, right) =>
+        TASTE_WHEEL_META.findIndex((item) => item.key === left.key) -
+        TASTE_WHEEL_META.findIndex((item) => item.key === right.key),
+    );
+
+  const primaryTaste = sortedWheel[0]?.label ?? null;
+  const secondaryTaste = (sortedWheel[1]?.rawValue ?? 0) > 0 ? sortedWheel[1]?.label ?? null : null;
+  const primaryKey = sortedWheel[0]?.key ?? null;
+  const secondaryKey = sortedWheel[1]?.key ?? null;
+
   const tasteMood =
-    strongestTag === "fruity" || strongestTag === "bright" || strongestTag === "floral"
-      ? "Bright explorer"
-      : strongestTag === "chocolatey" || strongestTag === "smooth" || strongestTag === "sweet"
-        ? "Comfort seeker"
-        : strongestTag === "bold"
+    primaryKey === "bright" || primaryKey === "fruity" || primaryKey === "floral"
+      ? secondaryKey === "floral"
+        ? "Lively and delicate"
+        : "Bright explorer"
+      : primaryKey === "chocolatey" || primaryKey === "nutty"
+        ? secondaryKey === "bold"
+          ? "Comfort with punch"
+          : "Comfort seeker"
+        : primaryKey === "bold"
           ? "Espresso chaser"
           : favoriteDrink === "Filter"
             ? "Curious sipper"
@@ -349,21 +423,13 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     : "A few more logs will help Near Me understand whether you lean brighter, smoother, or more espresso-forward.";
 
   const homeCue =
-    strongestTag === "fruity" || strongestTag === "bright" || strongestTag === "floral"
+    primaryKey === "fruity" || primaryKey === "bright" || primaryKey === "floral"
       ? "At home later, you will probably enjoy cleaner brews, lighter roasts, and filter-friendly gear."
-      : strongestTag === "chocolatey" || strongestTag === "smooth" || strongestTag === "sweet"
+      : primaryKey === "chocolatey" || primaryKey === "nutty"
         ? "At home later, you will probably enjoy balanced beans and gear that suits milk drinks and everyday espresso."
-        : strongestTag === "bold"
-        ? "At home later, you will probably prefer punchier espresso setups and coffees with more body."
+        : primaryKey === "bold"
+          ? "At home later, you will probably prefer punchier espresso setups and coffees with more body."
           : "As your journal grows, Near Me can start suggesting beans and home setups that match your taste.";
-
-  const clampAxis = (value: number) => {
-    if (entries.length === 0) {
-      return 0.5;
-    }
-
-    return Math.max(0, Math.min(1, 0.5 + value / Math.max(entries.length * 2.6, 3)));
-  };
 
   return {
     entryCount: entries.length,
@@ -372,11 +438,9 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     cityCount: cities.size,
     averageRating,
     tasteMood,
-    tasteAxes: {
-      flavor: clampAxis(flavorScore - bodyScore * 0.35),
-      body: clampAxis(bodyScore - flavorScore * 0.15),
-      exploration: clampAxis(explorationScore),
-    },
+    tasteWheel,
+    primaryTaste,
+    secondaryTaste,
     learningPrompt,
     glossaryTip,
     homeCue,
