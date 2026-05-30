@@ -4,6 +4,12 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { Cafe } from "@/types/cafe";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
 import {
+  getJournalCafeMatch,
+  getStoredCoffeeJournal,
+  getStoredCoffeeJournalServerSnapshot,
+  subscribeToCoffeeJournal,
+} from "@/lib/coffee-journal";
+import {
   getCafeProfileMatch,
   getCoffeeProfileBySlug,
   getCoffeeProfileConfidence,
@@ -22,11 +28,21 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
     getStoredCoffeeProfileState,
     getStoredCoffeeProfileStateServerSnapshot,
   );
+  const journalEntries = useSyncExternalStore(
+    subscribeToCoffeeJournal,
+    getStoredCoffeeJournal,
+    getStoredCoffeeJournalServerSnapshot,
+  );
 
   const profile = useMemo(
     () => getCoffeeProfileBySlug(profileState?.profileSlug),
     [profileState?.profileSlug],
   );
+  const journalMatch = useMemo(
+    () => getJournalCafeMatch(cafe, journalEntries),
+    [cafe, journalEntries],
+  );
+  const decisionGuide = getCafeDecisionGuide(cafe);
 
   if (!profile || !profileState) {
     return (
@@ -38,13 +54,21 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
         <p>
           Take the Coffee Profiler on the map and Near Me will start explaining which cafes fit your taste best.
         </p>
+        {journalMatch ? (
+          <>
+            <div className="cafe-detail-profile-insight-head cafe-detail-profile-insight-head-secondary">
+              <span>Journal read</span>
+              <strong>{journalMatch.label}</strong>
+            </div>
+            <p>{journalMatch.reason}. Near Me is using your recent coffee memory to shape this recommendation.</p>
+          </>
+        ) : null}
       </article>
     );
   }
 
   const match = getCafeProfileMatch(cafe, profile, profileState);
   const confidence = getCoffeeProfileConfidence(profileState);
-  const decisionGuide = getCafeDecisionGuide(cafe);
 
   return (
     <article className="cafe-detail-profile-insight">
@@ -57,6 +81,15 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
         {match.reasons.length > 0 ? ` Near Me is seeing signals like ${match.reasons.join(" and ")}.` : ""}
         {` ${decisionGuide.bestForDetail}`}
       </p>
+      {journalMatch ? (
+        <div className="cafe-detail-profile-insight-journal">
+          <div className="cafe-detail-profile-insight-head cafe-detail-profile-insight-head-secondary">
+            <span>Journal read</span>
+            <strong>{journalMatch.label}</strong>
+          </div>
+          <p>{journalMatch.reason}. This is based on the drink styles and taste notes you keep returning to.</p>
+        </div>
+      ) : null}
       <div className="cafe-detail-profile-insight-meta">
         <span>{confidence} profile</span>
         <span>Best bets: {profile.recommendedDrinks.slice(0, 2).join(" · ")}</span>
