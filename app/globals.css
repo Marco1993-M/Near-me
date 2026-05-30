@@ -1930,6 +1930,10 @@ img {
     filter 180ms ease;
 }
 
+.diesel-selection-card::-webkit-scrollbar {
+  display: none;
+}
+
 .diesel-selection-card.search-muted {
   opacity: 0.58;
   transform: translateY(0.45rem);
@@ -1946,10 +1950,18 @@ img {
 
 .diesel-selection-card-half {
   max-height: min(34rem, calc(100dvh - 10rem - env(safe-area-inset-top)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
 .diesel-selection-card-full {
   max-height: min(42rem, calc(100dvh - 7.5rem - env(safe-area-inset-top)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
 .diesel-sheet-handle {
@@ -2703,13 +2715,8 @@ img {
 .diesel-sheet-results {
   display: grid;
   gap: 0.55rem;
-  overflow-y: auto;
+  overflow: visible;
   padding-right: 0.15rem;
-  scrollbar-width: none;
-}
-
-.diesel-sheet-results::-webkit-scrollbar {
-  display: none;
 }
 
 .diesel-selection-card-collapsed .diesel-sheet-results,
@@ -2748,11 +2755,11 @@ img {
 }
 
 .diesel-selection-card-half .diesel-sheet-results {
-  max-height: 10.5rem;
+  max-height: none;
 }
 
 .diesel-selection-card-full .diesel-sheet-results {
-  max-height: 19rem;
+  max-height: none;
 }
 
 .diesel-result-row {
