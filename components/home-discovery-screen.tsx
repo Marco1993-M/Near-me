@@ -11,6 +11,7 @@ import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
 import { addCoffeeJournalEntry } from "@/lib/coffee-journal";
 import {
+  getCoffeeJournalInsight,
   getCafeJournalMemory,
   getJournalCafeMatch,
   getStoredCoffeeJournal,
@@ -160,6 +161,30 @@ function formatDistance(distanceKm: number) {
   }
 
   return `${Math.round(distanceKm)} km`;
+}
+
+function getJournalDrinkFamilyLabel(drink: string | null) {
+  if (!drink) {
+    return null;
+  }
+
+  if (drink === "Espresso") {
+    return "espresso-based drinks";
+  }
+  if (drink === "Milk drink") {
+    return "milk drinks";
+  }
+  if (drink === "Filter") {
+    return "filter coffees";
+  }
+  if (drink === "Cold") {
+    return "cold coffees";
+  }
+  if (drink === "Seasonal") {
+    return "seasonal drinks";
+  }
+
+  return drink.toLowerCase();
 }
 
 function getFallbackTrustSummary(place: FallbackPlace) {
@@ -312,6 +337,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     getStoredCoffeeJournal,
     getStoredCoffeeJournalServerSnapshot,
   );
+  const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
 
   const cafeDistances = useMemo(() => {
     if (!userLocation) {
@@ -390,6 +416,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     ? getCafeJournalMemory(journalEntries, { cafeId: activeCafe.id, cafeName: activeCafe.name })
     : null;
   const activeJournalMatch = activeCafe ? journalMatchByCafeId.get(activeCafe.id) ?? null : null;
+  const journalDiscoveryCue =
+    journalEntries.length > 0
+      ? journalInsight.favoriteDrink
+        ? `Using your journal: ${journalInsight.primaryTaste?.toLowerCase() ?? "coffee"} lean and ${getJournalDrinkFamilyLabel(journalInsight.favoriteDrink) ?? "recent cups"}`
+        : journalInsight.primaryTaste
+          ? `Using your journal: ${journalInsight.primaryTaste.toLowerCase()} taste lean`
+          : null
+      : null;
   const activeRating =
     activeCafe && activeCafe.reviewSummary.reviewCount > 0
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
@@ -1510,7 +1544,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                               .join(" · ")}
                           </span>
                           {searchJournalMatch ? (
-                            <span className="map-search-result-journal-fit">{searchJournalMatch.reason}</span>
+                            <span className="map-search-result-journal-fit">
+                              For your journal · {searchJournalMatch.reason}
+                            </span>
                           ) : null}
                         </div>
                         <div className="map-search-result-score">
@@ -1558,6 +1594,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               </div>
 
               {activeCoffeeProfile ? <CoffeeProfileCard onRetake={openProfiler} /> : null}
+              {!activeCoffeeProfile && journalDiscoveryCue ? (
+                <div className="map-top-picks-journal-cue">
+                  <span>Using your journal</span>
+                  <strong>{journalDiscoveryCue.replace(/^Using your journal:\s*/i, "")}</strong>
+                </div>
+              ) : null}
 
               <div className="map-top-picks-switcher" role="tablist" aria-label="Top pick lenses">
                 <button
@@ -1634,9 +1676,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           <span className="map-top-pick-match">
                             {profileMatch.label} for your profile · {profileMatch.percentage}%
                           </span>
-                        ) : topPickLens === "for-you" && journalMatch ? (
+                        ) : journalMatch && (topPickLens === "for-you" || journalMatch.score >= 2.4) ? (
                           <span className="map-top-pick-match">
-                            {journalMatch.label} · {journalMatch.reason}
+                            {topPickLens === "for-you" ? journalMatch.label : "Journal fit"} · {journalMatch.reason}
                           </span>
                         ) : null}
                       </div>
@@ -2228,9 +2270,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <div className="diesel-selection-trust">
                       {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
                       {activeJournalMatch ? (
-                        <div className="diesel-selection-trust-head">
-                          <span>{activeJournalMatch.label}</span>
+                        <div className="diesel-selection-trust-head diesel-selection-trust-head-journal">
+                          <span>Based on your journal</span>
                           <strong>{activeJournalMatch.reason}</strong>
+                          <small>{activeJournalMatch.label}</small>
                         </div>
                       ) : null}
                       {activeDecisionGuide ? (
@@ -2404,6 +2447,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       const cafeTags = cafe.tags.slice(0, 2);
                       const isActive = cafe.id === activeCafe.id;
                       const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
+                      const rowJournalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
 
                       return (
                         <button
@@ -2429,6 +2473,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                                   .filter(Boolean)
                                   .join(" · ")}
                               </span>
+                              {rowJournalMatch && rowJournalMatch.score >= 2.4 ? (
+                                <span className="diesel-result-row-journal-fit">
+                                  Journal fit · {rowJournalMatch.reason}
+                                </span>
+                              ) : null}
                             </div>
                             <div className="diesel-result-row-score">
                               <strong>{cafeRating}</strong>
