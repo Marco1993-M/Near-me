@@ -193,6 +193,13 @@ export function CoffeeJournalPanel({
                     ))}
                   </div>
                 ) : null}
+
+                {insight.milestoneLabel ? (
+                  <div className="coffee-journal-milestone">
+                    <span>{insight.milestoneLabel}</span>
+                    {insight.milestoneProgress ? <strong>{insight.milestoneProgress}</strong> : null}
+                  </div>
+                ) : null}
               </div>
             </article>
 
@@ -208,6 +215,10 @@ export function CoffeeJournalPanel({
               <article className="coffee-journal-summary-card">
                 <span>Cities</span>
                 <strong>{insight.cityCount}</strong>
+              </article>
+              <article className="coffee-journal-summary-card">
+                <span>Repeat cafe</span>
+                <strong>{insight.topCafe ?? "Still learning"}</strong>
               </article>
             </div>
           </section>
@@ -232,6 +243,33 @@ export function CoffeeJournalPanel({
                   </div>
                 </article>
               ))}
+            </div>
+          </section>
+
+          {insight.patternInsights.length > 0 ? (
+            <section className="coffee-journal-insights" aria-label="Journal insights">
+              <div className="coffee-journal-spectrum-head">
+                <span>Pattern notes</span>
+                <strong>What Near Me is noticing</strong>
+              </div>
+              <div className="coffee-journal-insights-grid">
+                {insight.patternInsights.map((item) => (
+                  <article className="coffee-journal-insight-card" key={item}>
+                    <strong>{item}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <section className="coffee-journal-evolution" aria-label="Taste evolution">
+            <div className="coffee-journal-spectrum-head">
+              <span>Taste evolution</span>
+              <strong>{insight.recentFavoriteDrink ? `${insight.recentFavoriteDrink} lately` : "Still taking shape"}</strong>
+            </div>
+            <div className="coffee-journal-evolution-card">
+              <strong>{insight.evolutionSummary}</strong>
+              {insight.latestHighlight ? <span>Recent standout: {insight.latestHighlight}</span> : null}
             </div>
           </section>
 
