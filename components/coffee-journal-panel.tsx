@@ -111,6 +111,28 @@ function getDrinkFamilyLabel(drink: string | null) {
   return drink.toLowerCase();
 }
 
+function getWheelTitleSize(label: string | null) {
+  const length = label?.length ?? 0;
+  if (length >= 10) {
+    return "0.82rem";
+  }
+  if (length >= 8) {
+    return "0.9rem";
+  }
+  return "0.98rem";
+}
+
+function getWheelSubtitleSize(label: string | null) {
+  const length = label?.length ?? 0;
+  if (length >= 14) {
+    return "0.54rem";
+  }
+  if (length >= 10) {
+    return "0.58rem";
+  }
+  return "0.62rem";
+}
+
 function getWheelColor(color: string, value: number) {
   const fade = Math.round((1 - value) * 62);
   return `color-mix(in srgb, ${color} ${100 - fade}%, rgba(255, 250, 242, 0.96))`;
@@ -179,6 +201,10 @@ export function CoffeeJournalPanel({
                       {
                         backgroundImage: wheelGradient,
                         "--wheel-highlight": insight.tasteWheel[0]?.color ?? "#c7f5d3",
+                        "--wheel-title-size": getWheelTitleSize(insight.primaryTaste),
+                        "--wheel-subtitle-size": getWheelSubtitleSize(
+                          insight.secondaryTaste ? `${insight.secondaryTaste} lean` : null,
+                        ),
                       } as CSSProperties
                     }
                     aria-hidden="true"
