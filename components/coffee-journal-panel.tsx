@@ -73,11 +73,11 @@ function getJournalSections(entries: ReturnType<typeof getStoredCoffeeJournal>):
 function getDrinkBadge(drink: string) {
   switch (drink) {
     case "Espresso":
-      return { short: "ES", label: "Espresso lane" };
+      return { short: "ES", label: "Espresso-based" };
     case "Milk drink":
-      return { short: "MK", label: "Milk drink" };
+      return { short: "MK", label: "Milk-based" };
     case "Filter":
-      return { short: "FL", label: "Filter" };
+      return { short: "FL", label: "Filter coffee" };
     case "Cold":
       return { short: "CL", label: "Cold coffee" };
     case "Seasonal":
@@ -85,6 +85,30 @@ function getDrinkBadge(drink: string) {
     default:
       return { short: "CF", label: "Coffee" };
   }
+}
+
+function getDrinkFamilyLabel(drink: string | null) {
+  if (!drink) {
+    return null;
+  }
+
+  if (drink === "Espresso") {
+    return "espresso-based drinks";
+  }
+  if (drink === "Milk drink") {
+    return "milk drinks";
+  }
+  if (drink === "Filter") {
+    return "filter coffees";
+  }
+  if (drink === "Cold") {
+    return "cold coffees";
+  }
+  if (drink === "Seasonal") {
+    return "seasonal drinks";
+  }
+
+  return drink.toLowerCase();
 }
 
 function getWheelColor(color: string, value: number) {
@@ -106,6 +130,8 @@ export function CoffeeJournalPanel({
   const insight = useMemo(() => getCoffeeJournalInsight(entries), [entries]);
   const leadingTags = insight.topTags.slice(0, 3);
   const journalSections = useMemo(() => getJournalSections(entries), [entries]);
+  const favoriteDrinkFamily = getDrinkFamilyLabel(insight.favoriteDrink);
+  const recentDrinkFamily = getDrinkFamilyLabel(insight.recentFavoriteDrink);
   const wheelGradient = useMemo(() => {
     const total = insight.tasteWheel.length || 1;
     return `conic-gradient(${insight.tasteWheel
@@ -170,7 +196,7 @@ export function CoffeeJournalPanel({
                     <span>Taste read</span>
                   </div>
                   <strong>{insight.tasteMood}</strong>
-                  <p>{insight.favoriteDrink ? `${insight.favoriteDrink} is your current go-to.` : "Your strongest taste lanes will settle in as you log more cups."}</p>
+                  <p>{favoriteDrinkFamily ? `${favoriteDrinkFamily} are your current go-to.` : "Your strongest taste lanes will settle in as you log more cups."}</p>
                 </div>
               </div>
 
@@ -178,8 +204,8 @@ export function CoffeeJournalPanel({
                 <div className="coffee-journal-hero-note">
                   <span>Right now</span>
                   <strong>
-                    {insight.favoriteDrink
-                      ? `${insight.primaryTaste?.toLowerCase() ?? "coffee"} notes are leading your ${insight.favoriteDrink.toLowerCase()} habit.`
+                    {favoriteDrinkFamily
+                      ? `${insight.primaryTaste?.toLowerCase() ?? "coffee"} notes are leading what you enjoy in ${favoriteDrinkFamily}.`
                       : "Near Me is starting to map the styles you naturally return to."}
                   </strong>
                 </div>
@@ -265,7 +291,7 @@ export function CoffeeJournalPanel({
           <section className="coffee-journal-evolution" aria-label="Taste evolution">
             <div className="coffee-journal-spectrum-head">
               <span>Taste evolution</span>
-              <strong>{insight.recentFavoriteDrink ? `${insight.recentFavoriteDrink} lately` : "Still taking shape"}</strong>
+              <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
             </div>
             <div className="coffee-journal-evolution-card">
               <strong>{insight.evolutionSummary}</strong>
