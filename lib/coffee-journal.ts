@@ -30,6 +30,13 @@ export type CoffeeJournalInsight = {
   }[];
   primaryTaste: string | null;
   secondaryTaste: string | null;
+  topCafe: string | null;
+  recentFavoriteDrink: string | null;
+  milestoneLabel: string | null;
+  milestoneProgress: string | null;
+  evolutionSummary: string;
+  latestHighlight: string | null;
+  patternInsights: string[];
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
@@ -287,9 +294,14 @@ function titleize(value: string) {
     .join(" ");
 }
 
+function getMostFrequentLabel(map: Map<string, number>) {
+  return Array.from(map.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+}
+
 export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
+  const cafeCounts = new Map<string, number>();
   const cities = new Set<string>();
   const ratings: number[] = [];
   const wheelScores = new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
@@ -300,6 +312,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
 
   for (const entry of entries) {
     drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
+    cafeCounts.set(entry.cafeName, (cafeCounts.get(entry.cafeName) ?? 0) + 1);
     if (entry.city.trim()) {
       cities.add(entry.city.trim().toLowerCase());
     }
@@ -366,8 +379,8 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     }
   }
 
-  const favoriteDrink =
-    Array.from(drinkCounts.entries()).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const favoriteDrink = getMostFrequentLabel(drinkCounts);
+  const topCafe = getMostFrequentLabel(cafeCounts);
   const topTags = Array.from(tagCounts.entries())
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
     .slice(0, 3)
@@ -431,6 +444,93 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
           ? "At home later, you will probably prefer punchier espresso setups and coffees with more body."
           : "As your journal grows, Near Me can start suggesting beans and home setups that match your taste.";
 
+  const recentEntries = entries.slice(0, Math.min(entries.length, 5));
+  const earlierEntries = entries.slice(Math.min(entries.length, 5));
+  const recentDrinkCounts = new Map<string, number>();
+  const recentWheelScores = new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
+  for (const entry of recentEntries) {
+    recentDrinkCounts.set(entry.drink, (recentDrinkCounts.get(entry.drink) ?? 0) + 1);
+    if (entry.drink === "Filter") {
+      recentWheelScores.set("bright", (recentWheelScores.get("bright") ?? 0) + 1);
+      recentWheelScores.set("fruity", (recentWheelScores.get("fruity") ?? 0) + 0.75);
+      recentWheelScores.set("floral", (recentWheelScores.get("floral") ?? 0) + 0.55);
+    } else if (entry.drink === "Espresso") {
+      recentWheelScores.set("bold", (recentWheelScores.get("bold") ?? 0) + 1);
+    } else if (entry.drink === "Milk drink") {
+      recentWheelScores.set("chocolatey", (recentWheelScores.get("chocolatey") ?? 0) + 1);
+      recentWheelScores.set("nutty", (recentWheelScores.get("nutty") ?? 0) + 0.75);
+    }
+    for (const tag of entry.tags.map((tag) => tag.toLowerCase())) {
+      if (TASTE_WHEEL_META.some((item) => item.key === tag)) {
+        recentWheelScores.set(tag as TasteWheelKey, (recentWheelScores.get(tag as TasteWheelKey) ?? 0) + 1);
+      }
+      if (tag === "smooth" || tag === "sweet") {
+        recentWheelScores.set("chocolatey", (recentWheelScores.get("chocolatey") ?? 0) + 0.5);
+      }
+      if (tag === "clean") {
+        recentWheelScores.set("bright", (recentWheelScores.get("bright") ?? 0) + 0.5);
+      }
+    }
+  }
+
+  const recentFavoriteDrink = getMostFrequentLabel(recentDrinkCounts);
+  const recentPrimaryKey =
+    TASTE_WHEEL_META.map((item) => ({ key: item.key, score: recentWheelScores.get(item.key) ?? 0 }))
+      .sort((left, right) => right.score - left.score)[0]?.key ?? null;
+  const earlierPrimaryKey =
+    earlierEntries.length > 0
+      ? TASTE_WHEEL_META.map((item) => ({
+          key: item.key,
+          score: earlierEntries.reduce((sum, entry) => {
+            let next = sum;
+            if (entry.drink === "Filter" && (item.key === "bright" || item.key === "fruity" || item.key === "floral")) {
+              next += item.key === "bright" ? 1 : item.key === "fruity" ? 0.75 : 0.55;
+            }
+            if (entry.drink === "Espresso" && item.key === "bold") {
+              next += 1;
+            }
+            if (entry.drink === "Milk drink" && (item.key === "chocolatey" || item.key === "nutty")) {
+              next += item.key === "chocolatey" ? 1 : 0.75;
+            }
+            return next;
+          }, 0),
+        })).sort((left, right) => right.score - left.score)[0]?.key ?? null
+      : null;
+
+  const recentPrimaryLabel = TASTE_WHEEL_META.find((item) => item.key === recentPrimaryKey)?.label ?? null;
+  const earlierPrimaryLabel = TASTE_WHEEL_META.find((item) => item.key === earlierPrimaryKey)?.label ?? null;
+  const evolutionSummary =
+    recentPrimaryLabel && earlierPrimaryLabel && recentPrimaryLabel !== earlierPrimaryLabel
+      ? `Your recent cups are leaning more ${recentPrimaryLabel.toLowerCase()} than before.`
+      : recentPrimaryLabel
+        ? `Your recent cups are reinforcing a ${recentPrimaryLabel.toLowerCase()} lean.`
+        : "Your taste evolution will sharpen as you add a few more logs.";
+
+  const latestHighlight = entries.find((entry) => entry.rating >= 8)?.cafeName ?? topCafe;
+  const milestoneTargets = [5, 10, 20, 30];
+  const nextMilestone = milestoneTargets.find((target) => entries.length < target) ?? null;
+  const milestoneLabel =
+    entries.length >= 30
+      ? "Taste archive building"
+      : nextMilestone
+        ? `${entries.length}/${nextMilestone} cups logged`
+        : null;
+  const milestoneProgress =
+    entries.length >= 30
+      ? "You have enough history for real pattern spotting."
+      : nextMilestone
+        ? `${nextMilestone - entries.length} more logs until your next journal milestone.`
+        : null;
+
+  const patternInsights = [
+    favoriteDrink ? `${favoriteDrink} is your strongest repeat order right now.` : null,
+    topCafe ? `${topCafe} is showing up most often in your journal.` : null,
+    latestHighlight ? `${latestHighlight} is one of your standout recent cups.` : null,
+    recentFavoriteDrink && recentFavoriteDrink !== favoriteDrink
+      ? `Lately you have been reaching for ${recentFavoriteDrink.toLowerCase()} more often.`
+      : null,
+  ].filter((value): value is string => Boolean(value)).slice(0, 3);
+
   return {
     entryCount: entries.length,
     favoriteDrink,
@@ -441,6 +541,13 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     tasteWheel,
     primaryTaste,
     secondaryTaste,
+    topCafe,
+    recentFavoriteDrink,
+    milestoneLabel,
+    milestoneProgress,
+    evolutionSummary,
+    latestHighlight,
+    patternInsights,
     learningPrompt,
     glossaryTip,
     homeCue,
