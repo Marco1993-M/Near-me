@@ -838,7 +838,9 @@ img {
   width: 100%;
   max-height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0.95rem;
   border-radius: 24px;
   border: 1px solid var(--glass-border);
@@ -850,6 +852,11 @@ img {
   box-shadow: var(--glass-highlight), 0 24px 48px rgba(20, 32, 24, 0.16);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
+  scrollbar-width: none;
+}
+
+.map-journal-panel::-webkit-scrollbar {
+  display: none;
 }
 
 .coffee-journal-static {
@@ -931,17 +938,10 @@ img {
 .map-top-picks-results {
   display: grid;
   gap: 0.55rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
   padding-right: 0.15rem;
-  scrollbar-width: none;
-}
-
-.map-top-picks-results::-webkit-scrollbar {
-  display: none;
 }
 
 .coffee-journal-hero {
@@ -1303,7 +1303,8 @@ img {
 
 .coffee-journal-results {
   max-height: none;
-  min-height: 0;
+  min-height: auto;
+  padding-bottom: 0.3rem;
 }
 
 .coffee-journal-section {
