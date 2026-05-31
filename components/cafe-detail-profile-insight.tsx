@@ -49,10 +49,10 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
       <article className="cafe-detail-profile-insight">
         <div className="cafe-detail-profile-insight-head">
           <span>Taste match</span>
-          <strong>Unlock your profile</strong>
+          <strong>Start your taste setup</strong>
         </div>
         <p>
-          Take the Coffee Profiler on the map and Near Me will start explaining which cafes fit your taste best.
+          Start your taste setup on the map and Near Me will begin explaining which cafes fit you best.
         </p>
         {journalMatch ? (
           <>
@@ -91,7 +91,7 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
         </div>
       ) : null}
       <div className="cafe-detail-profile-insight-meta">
-        <span>{confidence} profile</span>
+        <span>{confidence} taste read</span>
         <span>Best bets: {profile.recommendedDrinks.slice(0, 2).join(" · ")}</span>
       </div>
     </article>

@@ -525,12 +525,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
             subtitle: "Quiet, laptop-friendly places to settle in",
           }
           : {
-            title: activeCoffeeProfile ? `For your ${activeCoffeeProfile.shortName} profile` : "For your journal",
+            title: activeCoffeeProfile ? `For your ${activeCoffeeProfile.shortName} taste` : "For your journal",
             subtitle: activeCoffeeProfile
               ? `Recommendations shaped around ${activeCoffeeProfile.recommendedDrinks.join(", ")} and your recent journal patterns`
               : journalEntries.length > 0
                 ? "Recommendations shaped around the drinks and taste notes you keep coming back to"
-                : "Take the 5-question Coffee Profiler to unlock taste-aware picks",
+                : "Start the 5-question taste setup to unlock taste-aware picks",
           };
   const cafesWithinRadius = useMemo(() => {
     if (!userLocation) {
@@ -1053,7 +1053,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       source: coffeeProfileState?.reviewCount ? "quiz+reviews" : "quiz",
     });
     setStoredCoffeeProfileState(nextProfileState);
-    setReviewToast(`Taste profile updated: ${resolveCoffeeProfile(nextScores).name}`);
+    setReviewToast(`Your taste is now leaning ${resolveCoffeeProfile(nextScores).name}`);
 
     if (reviewToastTimeoutRef.current) {
       window.clearTimeout(reviewToastTimeoutRef.current);
@@ -1382,13 +1382,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <path d="m12 3 2.85 5.78 6.38.93-4.61 4.49 1.09 6.35L12 17.56l-5.71 3 1.09-6.35-4.61-4.49 6.38-.93L12 3Z" />
               </svg>
             </button>
-            <button
-              className={`diesel-action-icon control-chip${isJournalOpen || isJournalEntryOpen ? " active" : ""}`}
-              type="button"
-              aria-label="Open coffee journal"
-              onClick={openJournal}
-              title="Coffee journal"
-            >
+              <button
+                className={`diesel-action-icon control-chip${isJournalOpen || isJournalEntryOpen ? " active" : ""}`}
+                type="button"
+                aria-label="Open your taste journal"
+                onClick={openJournal}
+                title="Your taste"
+              >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M6 4.5h9.5a2.5 2.5 0 0 1 2.5 2.5v12.5H8.5A2.5 2.5 0 0 0 6 22V4.5Z" />
                 <path d="M6 4.5v15a2.5 2.5 0 0 1 2.5-2.5H18" />
@@ -1396,13 +1396,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 <path d="M10 11.5h5" />
               </svg>
             </button>
-            <button
-              className={`diesel-action-icon control-chip${isProfilerOpen || (isTopPicksOpen && topPickLens === "for-you") ? " active" : ""}`}
-              type="button"
-              aria-label={activeCoffeeProfile ? "Open your taste profile" : "Open coffee profiler"}
-              onClick={openTastePanel}
-              title={activeCoffeeProfile ? "Your taste" : "Coffee profiler"}
-            >
+              <button
+                className={`diesel-action-icon control-chip${isProfilerOpen || (isTopPicksOpen && topPickLens === "for-you") ? " active" : ""}`}
+                type="button"
+                aria-label={activeCoffeeProfile ? "Open your taste" : "Start your taste setup"}
+                onClick={openTastePanel}
+                title={activeCoffeeProfile ? "Your taste" : "Taste setup"}
+              >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z" />
                 <path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16" />
@@ -1467,7 +1467,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       : "Use my location"}
                 </button>
                 <button className="map-intro-secondary control-chip" type="button" onClick={openTastePanel}>
-                  {activeCoffeeProfile ? "Open my taste" : "Take coffee profile"}
+                  {activeCoffeeProfile ? "Open my taste" : "Start your taste"}
                 </button>
               </div>
 
@@ -1585,7 +1585,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 </div>
                 <div className="map-top-picks-head-actions">
                   <button className="map-top-picks-profile-button" type="button" onClick={openProfiler}>
-                    {activeCoffeeProfile ? "Retake profile" : "Coffee profiler"}
+                    {activeCoffeeProfile ? "Retune taste" : "Taste setup"}
                   </button>
                   <button className="map-search-close" type="button" onClick={closeTopPicks} aria-label="Close top picks">
                     Close
@@ -1638,7 +1638,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <strong>Unlock taste-aware picks</strong>
                     <span>Answer 5 fast questions and Near Me will learn the kind of specialty coffee you actually enjoy.</span>
                     <button className="map-top-picks-cta" type="button" onClick={openProfiler}>
-                      Start Coffee Profiler
+                      Start taste setup
                     </button>
                   </div>
                 ) : activeTopPicks.length > 0 ? activeTopPicks.map((cafe, index) => {
@@ -1674,7 +1674,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         </span>
                         {topPickLens === "for-you" && profileMatch ? (
                           <span className="map-top-pick-match">
-                            {profileMatch.label} for your profile · {profileMatch.percentage}%
+                            {profileMatch.label} for your taste · {profileMatch.percentage}%
                           </span>
                         ) : journalMatch && (topPickLens === "for-you" || journalMatch.score >= 2.4) ? (
                           <span className="map-top-pick-match">
@@ -1691,7 +1691,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 }) : (
                   <div className="map-top-picks-empty">
                     <strong>No matching cafes yet</strong>
-                    <span>Try another lens or retake the profiler once you explore a bit more.</span>
+                    <span>Try another lens or retune your taste once you explore a bit more.</span>
                   </div>
                 )}
               </div>
@@ -1719,9 +1719,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               <div className="profiler-head">
                 <div className="profiler-title-group">
                   <span>{`Question ${profilerQuestionIndex + 1} of ${coffeeProfilerQuestions.length}`}</span>
-                  <h2 id="profiler-title">Coffee Profiler</h2>
+                  <h2 id="profiler-title">Your Taste Setup</h2>
                 </div>
-                <button className="map-search-close" type="button" onClick={closeProfiler} aria-label="Close profiler">
+                <button className="map-search-close" type="button" onClick={closeProfiler} aria-label="Close taste setup">
                   Close
                 </button>
               </div>
@@ -1864,14 +1864,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 </button>
               </div>
 
-              <div className="profiler-question-block">
-                <strong>
-                  {journalTarget.type === "cafe" ? journalTarget.cafe.name : journalTarget.place.name}
-                </strong>
-                <span>
-                  This stays private to you. Use it to remember what you drank and quietly sharpen your coffee vocabulary.
-                </span>
-              </div>
+                <div className="profiler-question-block">
+                  <strong>
+                    {journalTarget.type === "cafe" ? journalTarget.cafe.name : journalTarget.place.name}
+                  </strong>
+                  <span>
+                  This stays private to you. Use it to remember what you drank and quietly sharpen your taste memory.
+                  </span>
+                </div>
 
               <label className="review-modal-section">
                 <strong>How did it land?</strong>

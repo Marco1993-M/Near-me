@@ -188,12 +188,12 @@ export function CoffeeJournalPanel({
 
   return (
     <div className="map-journal-shell fade-slide-in">
-      <section className="map-journal-panel" role="dialog" aria-modal="false" aria-label="Coffee journal">
+      <section className="map-journal-panel" role="dialog" aria-modal="false" aria-label="Your taste">
         <div className="coffee-journal-static">
           <div className="map-top-picks-head">
             <div className="map-top-picks-title">
-              <strong>Coffee journal</strong>
-              <span>Your private coffee memory.</span>
+              <strong>Your taste</strong>
+              <span>Journal, taste memory, and how your coffee lean is evolving.</span>
             </div>
             <div className="map-top-picks-head-actions">
               {onLogCurrent ? (
@@ -201,7 +201,7 @@ export function CoffeeJournalPanel({
                   {currentCafeName ? `Log ${currentCafeName}` : "Log a visit"}
                 </button>
               ) : null}
-              <button className="map-search-close" type="button" onClick={onClose} aria-label="Close journal">
+              <button className="map-search-close" type="button" onClick={onClose} aria-label="Close your taste">
                 Close
               </button>
             </div>
