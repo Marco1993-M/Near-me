@@ -2277,16 +2277,16 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     ) : null}
                     {isCollapsedCard && (activeProfileMatch || activeJournalMatch) ? (
                       <div className="diesel-selection-match-nudge">
-                        <span>
+                        <span className="diesel-selection-match-nudge-value">
                           {activeProfileMatch
                             ? `${activeProfileMatch.percentage}% taste match`
                             : activeJournalMatch?.label ?? "Journal fit"}
                         </span>
-                        <strong>
+                        <span className="diesel-selection-match-nudge-copy">
                           {activeProfileMatch
                             ? activeProfileMatch.label
                             : activeJournalMatch?.reason ?? "Near Me is learning from your journal"}
-                        </strong>
+                        </span>
                       </div>
                     ) : null}
                     <p>
