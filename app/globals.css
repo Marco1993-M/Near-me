@@ -2156,15 +2156,18 @@ img {
   padding-left: 0.08rem;
 }
 
-.diesel-selection-match-nudge span {
+.diesel-selection-match-nudge-value {
+  display: block;
   color: #1f6a38;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
-.diesel-selection-match-nudge strong {
+.diesel-selection-match-nudge-copy {
+  display: block;
   color: rgba(20, 32, 24, 0.72);
   font-size: 0.78rem;
   line-height: 1.35;
