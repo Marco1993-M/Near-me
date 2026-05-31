@@ -2268,7 +2268,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <strong>{activeCafe.name}</strong>
                     {activeDecisionGuide ? (
                       <div className="diesel-selection-decision-badge">
-                        <span>Go if</span>
+                        <span className="diesel-selection-decision-kicker">Go if</span>
                         <strong>{activeDecisionGuide.trustTitle}</strong>
                       </div>
                     ) : null}
