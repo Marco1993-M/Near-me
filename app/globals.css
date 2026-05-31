@@ -2068,10 +2068,10 @@ img {
 }
 
 .diesel-selection-card-collapsed {
-  max-height: min(11.9rem, calc(100dvh - 8rem - env(safe-area-inset-top)));
+  max-height: min(13.6rem, calc(100dvh - 8rem - env(safe-area-inset-top)));
   gap: 0.5rem;
   padding-top: 0.8rem;
-  padding-bottom: 0.85rem;
+  padding-bottom: 1rem;
 }
 
 .diesel-selection-card-half {
