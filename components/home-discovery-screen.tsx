@@ -281,7 +281,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const [locationState, setLocationState] = useState<
     "idle" | "requesting" | "granted" | "denied" | "unavailable"
   >("idle");
-  const [sheetState, setSheetState] = useState<"collapsed" | "half" | "full">("collapsed");
+  const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
@@ -548,8 +548,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
   const isCollapsedCard = sheetState === "collapsed";
-  const isHalfCard = sheetState === "half";
-  const isFullCard = sheetState === "full";
+  const isExpandedCard = sheetState === "expanded";
   const shouldShowIntro =
     isIntroVisible &&
     !isOverlayOpen &&
@@ -737,7 +736,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     options?: {
       explicit?: boolean;
       pan?: boolean;
-      nextSheetState?: "collapsed" | "half" | "full";
+      nextSheetState?: "collapsed" | "expanded";
     },
   ) {
     const explicit = options?.explicit ?? true;
@@ -796,7 +795,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
     hasExplicitCafeSelectionRef.current = true;
     setActiveCafeId((current) => (current === matchedCafe.id ? current : matchedCafe.id));
-    setSheetState("half");
+    setSheetState("expanded");
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -1971,7 +1970,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
           <>
             <section
-              className={`diesel-selection-card diesel-selection-card-${sheetState}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
+              className={`diesel-selection-card diesel-selection-card-${sheetState === "expanded" ? "half" : "collapsed"}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
               aria-live="polite"
             >
               <button
@@ -1979,7 +1978,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 type="button"
                 onClick={() =>
                   setSheetState((current) =>
-                    current === "collapsed" ? "half" : current === "half" ? "full" : "collapsed",
+                    current === "collapsed" ? "expanded" : "collapsed",
                   )
                 }
                 aria-label={`Expand cafe sheet, currently ${sheetState}`}
@@ -2331,7 +2330,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   ) : null}
 
-                  {isFullCard && activeJournalMemory ? (
+                  {isExpandedCard && activeJournalMemory ? (
                     <div className="diesel-selection-journal-memory">
                       <div className="diesel-selection-journal-memory-head">
                         <span>Logged before</span>
@@ -2359,7 +2358,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   ) : null}
 
-                  {isHalfCard || isFullCard ? (
+                  {isExpandedCard ? (
                     <div className="diesel-selection-footer">
                       <span>{activeCafe.address}</span>
                     </div>
@@ -2415,97 +2414,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   </div>
 
-                  <div className="diesel-sheet-toolbar">
-                    <div className="diesel-sheet-state-switcher" role="tablist" aria-label="Sheet size">
-                      <button
-                        className={`diesel-sheet-state-pill${sheetState === "collapsed" ? " active" : ""}`}
-                        type="button"
-                        onClick={() => setSheetState("collapsed")}
-                        aria-label="Compact card"
-                        title="Compact card"
-                      >
-                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-card" aria-hidden="true">
-                          <span />
-                        </span>
-                      </button>
-                      <button
-                        className={`diesel-sheet-state-pill${sheetState === "half" ? " active" : ""}`}
-                        type="button"
-                        onClick={() => setSheetState("half")}
-                        aria-label="Browse list"
-                        title="Browse list"
-                      >
-                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-list" aria-hidden="true">
-                          <span />
-                          <span />
-                        </span>
-                      </button>
-                      <button
-                        className={`diesel-sheet-state-pill${sheetState === "full" ? " active" : ""}`}
-                        type="button"
-                        onClick={() => setSheetState("full")}
-                        aria-label="Open full sheet"
-                        title="Open full sheet"
-                      >
-                        <span className="diesel-sheet-state-icon diesel-sheet-state-icon-full" aria-hidden="true">
-                          <span />
-                          <span />
-                          <span />
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {(isHalfCard || isFullCard) ? (
-                  <div className="diesel-sheet-results">
-                    {rankedCafes.map((cafe) => {
-                      const cafeRating =
-                        cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
-                      const cafeTags = cafe.tags.slice(0, 2);
-                      const isActive = cafe.id === activeCafe.id;
-                      const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
-                      const rowJournalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
-
-                      return (
-                        <button
-                          key={cafe.id}
-                          className={`diesel-result-row${isActive ? " active" : ""}`}
-                          type="button"
-                          onClick={() => {
-                            selectCafe(cafe.id, {
-                              explicit: true,
-                              pan: true,
-                              nextSheetState: sheetState === "full" ? "half" : sheetState,
-                            });
-                          }}
-                        >
-                          <div className="diesel-result-row-main">
-                            <div className="diesel-result-row-copy">
-                              <strong>
-                                {cafe.name}
-                                {favoriteCafeIds.includes(cafe.id) ? <span className="diesel-saved-dot" aria-hidden="true" /> : null}
-                              </strong>
-                              <span>
-                                {[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null, ...cafeTags]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </span>
-                              {rowJournalMatch && rowJournalMatch.score >= 2.4 ? (
-                                <span className="diesel-result-row-journal-fit">
-                                  Journal fit · {rowJournalMatch.reason}
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="diesel-result-row-score">
-                              <strong>{cafeRating}</strong>
-                              <span>{cafe.reviewSummary.reviewCount} reviews</span>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  ) : null}
                 </>
               ) : null}
             </section>
