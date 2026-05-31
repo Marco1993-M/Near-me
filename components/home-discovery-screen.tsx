@@ -415,6 +415,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeJournalMemory = activeCafe
     ? getCafeJournalMemory(journalEntries, { cafeId: activeCafe.id, cafeName: activeCafe.name })
     : null;
+  const activeProfileMatch =
+    activeCafe && activeCoffeeProfile
+      ? getCafeProfileMatch(activeCafe, activeCoffeeProfile, coffeeProfileState)
+      : null;
   const activeJournalMatch = activeCafe ? journalMatchByCafeId.get(activeCafe.id) ?? null : null;
   const journalDiscoveryCue =
     journalEntries.length > 0
@@ -2269,6 +2273,20 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       <div className="diesel-selection-decision-badge">
                         <span className="diesel-selection-decision-kicker">Go if</span>
                         <strong>{activeDecisionGuide.trustTitle}</strong>
+                      </div>
+                    ) : null}
+                    {isCollapsedCard && (activeProfileMatch || activeJournalMatch) ? (
+                      <div className="diesel-selection-match-nudge">
+                        <span>
+                          {activeProfileMatch
+                            ? `${activeProfileMatch.percentage}% taste match`
+                            : activeJournalMatch?.label ?? "Journal fit"}
+                        </span>
+                        <strong>
+                          {activeProfileMatch
+                            ? activeProfileMatch.label
+                            : activeJournalMatch?.reason ?? "Near Me is learning from your journal"}
+                        </strong>
                       </div>
                     ) : null}
                     <p>
