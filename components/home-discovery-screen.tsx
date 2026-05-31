@@ -547,6 +547,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
+  const isCollapsedCard = sheetState === "collapsed";
+  const isHalfCard = sheetState === "half";
+  const isFullCard = sheetState === "full";
   const shouldShowIntro =
     isIntroVisible &&
     !isOverlayOpen &&
@@ -2263,10 +2266,33 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
 
                   <div className="diesel-selection-copy">
                     <strong>{activeCafe.name}</strong>
-                    <p>{activeDecisionGuide?.trustSummary ?? activeCafe.summary}</p>
+                    {activeDecisionGuide ? (
+                      <div className="diesel-selection-decision-badge">
+                        <span>Go if</span>
+                        <strong>{activeDecisionGuide.trustTitle}</strong>
+                      </div>
+                    ) : null}
+                    <p>
+                      {isCollapsedCard
+                        ? activeDecisionGuide?.trustSummary ?? activeCafe.summary
+                        : activeDecisionGuide?.bestForDetail ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary}
+                    </p>
                   </div>
 
-                  {activeCoffeeProfile || activeJournalMatch || activeDecisionGuide || activeTrustMentions.length > 0 || activeTrustQuote ? (
+                  {activeDecisionGuide && !isCollapsedCard ? (
+                    <div className="diesel-selection-quick-grid">
+                      <div className="diesel-selection-quick-card">
+                        <span>Best for</span>
+                        <strong>{activeDecisionGuide.bestFor}</strong>
+                      </div>
+                      <div className="diesel-selection-quick-card">
+                        <span>Order first</span>
+                        <strong>{activeDecisionGuide.order}</strong>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!isCollapsedCard && (activeCoffeeProfile || activeJournalMatch || activeDecisionGuide || activeTrustMentions.length > 0 || activeTrustQuote) ? (
                     <div className="diesel-selection-trust">
                       {activeCoffeeProfile ? <ProfileMatchPill cafe={activeCafe} variant="card" /> : null}
                       {activeJournalMatch ? (
@@ -2274,18 +2300,6 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           <span>Based on your journal</span>
                           <strong>{activeJournalMatch.reason}</strong>
                           <small>{activeJournalMatch.label}</small>
-                        </div>
-                      ) : null}
-                      {activeDecisionGuide ? (
-                        <div className="diesel-selection-trust-grid">
-                          <div className="diesel-selection-trust-block">
-                            <span>Best for</span>
-                            <strong>{activeDecisionGuide.bestFor}</strong>
-                          </div>
-                          <div className="diesel-selection-trust-block">
-                            <span>Order first</span>
-                            <strong>{activeDecisionGuide.order}</strong>
-                          </div>
                         </div>
                       ) : null}
                       {activeTrustMentions.length > 0 ? (
@@ -2317,7 +2331,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   ) : null}
 
-                  {activeJournalMemory ? (
+                  {isFullCard && activeJournalMemory ? (
                     <div className="diesel-selection-journal-memory">
                       <div className="diesel-selection-journal-memory-head">
                         <span>Logged before</span>
@@ -2345,9 +2359,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   ) : null}
 
-                  <div className="diesel-selection-footer">
-                    <span>{activeCafe.address}</span>
-                  </div>
+                  {isHalfCard || isFullCard ? (
+                    <div className="diesel-selection-footer">
+                      <span>{activeCafe.address}</span>
+                    </div>
+                  ) : null}
 
                   <div className="diesel-selection-actions">
                     <div className="diesel-selection-actions-main">
@@ -2440,6 +2456,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     </div>
                   </div>
 
+                  {(isHalfCard || isFullCard) ? (
                   <div className="diesel-sheet-results">
                     {rankedCafes.map((cafe) => {
                       const cafeRating =
@@ -2488,6 +2505,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       );
                     })}
                   </div>
+                  ) : null}
                 </>
               ) : null}
             </section>
