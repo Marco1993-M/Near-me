@@ -2150,6 +2150,27 @@ img {
   line-height: 1.42;
 }
 
+.diesel-selection-match-nudge {
+  display: grid;
+  gap: 0.08rem;
+  padding-left: 0.08rem;
+}
+
+.diesel-selection-match-nudge span {
+  color: #1f6a38;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diesel-selection-match-nudge strong {
+  color: rgba(20, 32, 24, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
 .diesel-empty-state-copy {
   gap: 0.4rem;
 }
