@@ -170,7 +170,7 @@ export default async function CafePage({ params }: CafePageProps) {
 
             <div className="diesel-selection-copy">
               <h1 className="cafe-detail-title">{cafe.name}</h1>
-              <p>{decisionGuide.trustSummary}</p>
+              <p>{decisionGuide.goIfSupport}</p>
             </div>
 
             <ProfileMatchPill cafe={cafe} variant="card" />
@@ -179,16 +179,16 @@ export default async function CafePage({ params }: CafePageProps) {
 
             <div className="cafe-detail-quick-grid">
               <article className="cafe-detail-quick-card">
-                <span>Why go</span>
-                <strong>{decisionGuide.trustTitle}</strong>
+                <span>Go here for</span>
+                <strong>{decisionGuide.goIfHeadline}</strong>
+              </article>
+              <article className="cafe-detail-quick-card">
+                <span>Confidence</span>
+                <strong>{decisionGuide.confidenceRead}</strong>
               </article>
               <article className="cafe-detail-quick-card">
                 <span>Order</span>
                 <strong>{decisionGuide.order}</strong>
-              </article>
-              <article className="cafe-detail-quick-card">
-                <span>Best for</span>
-                <strong>{decisionGuide.bestFor}</strong>
               </article>
             </div>
 
@@ -219,6 +219,7 @@ export default async function CafePage({ params }: CafePageProps) {
 
               <article className="cafe-detail-section">
                 <h2>Why Near Me would send you here</h2>
+                <p className="cafe-detail-section-note">{decisionGuide.trustTitle}</p>
                 <div className="cafe-detail-guide-list">
                   {decisionGuide.trustBullets.map((bullet) => (
                     <div className="cafe-detail-guide-row" key={bullet}>
