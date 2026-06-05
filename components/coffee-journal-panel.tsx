@@ -138,6 +138,33 @@ function getWheelColor(color: string, value: number) {
   return `color-mix(in srgb, ${color} ${100 - fade}%, rgba(255, 250, 242, 0.96))`;
 }
 
+function wrapCanvasText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (context.measureText(candidate).width <= maxWidth || !currentLine) {
+      currentLine = candidate;
+      continue;
+    }
+
+    lines.push(currentLine);
+    currentLine = word;
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 export function CoffeeJournalPanel({
   onClose,
   onLogCurrent,
@@ -187,16 +214,188 @@ export function CoffeeJournalPanel({
       .slice(0, 3);
   }, [insight.recentTasteWheel, insight.tasteWheel]);
 
+  function buildShareText(moment: (typeof insight.shareMoments)[number]) {
+    const leadingTaste = [insight.primaryTaste, insight.secondaryTaste ? `${insight.secondaryTaste} lean` : null]
+      .filter(Boolean)
+      .join(" · ");
+    const favoriteDrinkLine = favoriteDrinkFamily ? `Usually drawn to ${favoriteDrinkFamily}.` : null;
+    const tagsLine = leadingTags.length > 0 ? `Top notes: ${leadingTags.join(", ")}.` : null;
+
+    return [
+      moment.title,
+      moment.body,
+      leadingTaste ? `Taste read: ${leadingTaste}.` : null,
+      favoriteDrinkLine,
+      tagsLine,
+      "Built from my Near Me Coffee Journal.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  async function buildShareCard(moment: (typeof insight.shareMoments)[number]) {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1350;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return null;
+    }
+
+    context.fillStyle = "#fffdf8";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const glow = context.createRadialGradient(200, 180, 0, 200, 180, 520);
+    glow.addColorStop(0, "rgba(199, 245, 211, 0.28)");
+    glow.addColorStop(1, "rgba(255, 253, 248, 0)");
+    context.fillStyle = glow;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.fillStyle = "#142018";
+    context.font = "700 34px Georgia, serif";
+    context.fillText("Near Me", 92, 104);
+
+    context.fillStyle = "rgba(20, 32, 24, 0.58)";
+    context.font = "700 24px Arial, sans-serif";
+    context.fillText("Coffee Journal", 92, 148);
+
+    const cardX = 74;
+    const cardY = 196;
+    const cardWidth = canvas.width - cardX * 2;
+    const cardHeight = 964;
+    context.fillStyle = "rgba(255,255,252,0.9)";
+    context.strokeStyle = "rgba(20, 32, 24, 0.08)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.roundRect(cardX, cardY, cardWidth, cardHeight, 42);
+    context.fill();
+    context.stroke();
+
+    const centerX = canvas.width / 2;
+    const wheelY = 420;
+    const outerRadius = 180;
+    const innerRadius = 102;
+    const fullArc = Math.PI * 2;
+
+    let startAngle = -Math.PI / 2;
+    for (const segment of insight.tasteWheel) {
+      const segmentArc = fullArc / insight.tasteWheel.length;
+      context.beginPath();
+      context.moveTo(centerX, wheelY);
+      context.arc(centerX, wheelY, outerRadius, startAngle, startAngle + segmentArc);
+      context.closePath();
+      context.fillStyle = getWheelColor(segment.color, segment.value);
+      context.fill();
+      startAngle += segmentArc;
+    }
+
+    context.fillStyle = "#fffaf3";
+    context.beginPath();
+    context.arc(centerX, wheelY, innerRadius, 0, fullArc);
+    context.fill();
+
+    context.fillStyle = "rgba(20, 32, 24, 0.5)";
+    context.textAlign = "center";
+    context.font = "700 26px Arial, sans-serif";
+    context.fillText("YOUR TASTE", centerX, wheelY - 28);
+    context.fillStyle = "#142018";
+    context.font = "700 72px Georgia, serif";
+    context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 40);
+    context.fillStyle = "rgba(20, 32, 24, 0.58)";
+    context.font = "700 28px Georgia, serif";
+    context.fillText(insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening", centerX, wheelY + 88);
+
+    context.textAlign = "left";
+    context.fillStyle = "rgba(20, 32, 24, 0.5)";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText(moment.eyebrow.toUpperCase(), 110, 716);
+
+    context.fillStyle = "#142018";
+    context.font = "700 64px Georgia, serif";
+    const titleLines = wrapCanvasText(context, moment.title, 820);
+    titleLines.slice(0, 3).forEach((line, index) => {
+      context.fillText(line, 110, 794 + index * 74);
+    });
+
+    context.fillStyle = "rgba(20, 32, 24, 0.64)";
+    context.font = "500 30px Arial, sans-serif";
+    const bodyLines = wrapCanvasText(context, moment.body, 820);
+    bodyLines.slice(0, 3).forEach((line, index) => {
+      context.fillText(line, 110, 980 + index * 42);
+    });
+
+    const chipY = 1112;
+    const chipValues = [
+      insight.tasteMood,
+      favoriteDrinkFamily ? favoriteDrinkFamily.replace(/^\w/, (char) => char.toUpperCase()) : null,
+      leadingTags[0] ?? null,
+    ].filter(Boolean) as string[];
+
+    let chipX = 110;
+    context.font = "700 22px Arial, sans-serif";
+    for (const chip of chipValues.slice(0, 3)) {
+      const chipWidth = context.measureText(chip).width + 42;
+      context.fillStyle = "rgba(199, 245, 211, 0.3)";
+      context.beginPath();
+      context.roundRect(chipX, chipY, chipWidth, 46, 999);
+      context.fill();
+      context.fillStyle = "#214d2f";
+      context.fillText(chip, chipX + 21, chipY + 31);
+      chipX += chipWidth + 12;
+    }
+
+    context.fillStyle = "rgba(20, 32, 24, 0.42)";
+    context.font = "600 24px Arial, sans-serif";
+    context.fillText("near-me.cafe", 110, 1260);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
+    });
+
+    if (!blob) {
+      return null;
+    }
+
+    return new File([blob], `near-me-coffee-journal-${moment.id}.png`, {
+      type: "image/png",
+    });
+  }
+
   async function handleShareMoment(moment: (typeof insight.shareMoments)[number]) {
-    const shareText = `${moment.shareText} Near Me helps me track what I drink and learn my coffee taste over time.`;
+    const shareText = buildShareText(moment);
 
     try {
+      const shareCard = await buildShareCard(moment);
+
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share &&
+        shareCard &&
+        "canShare" in navigator &&
+        navigator.canShare({ files: [shareCard] })
+      ) {
+        await navigator.share({
+          title: "Near Me Coffee Journal",
+          text: shareText,
+          files: [shareCard],
+        });
+        setShareFeedback(`Shared card: ${moment.eyebrow}`);
+        window.setTimeout(() => setShareFeedback(null), 2200);
+        return;
+      }
+
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
           title: "Near Me Coffee Journal",
           text: shareText,
         });
         setShareFeedback(`Shared: ${moment.eyebrow}`);
+        window.setTimeout(() => setShareFeedback(null), 2200);
         return;
       }
 
@@ -438,7 +637,7 @@ export function CoffeeJournalPanel({
                     type="button"
                     onClick={() => void handleShareMoment(moment)}
                   >
-                    Share this
+                    Share card
                   </button>
                 </article>
               ))}
