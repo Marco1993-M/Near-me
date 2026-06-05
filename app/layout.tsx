@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
@@ -33,6 +34,7 @@ export default function RootLayout({
         </Script>
         <LegacyCacheReset />
         <AppShell>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );
