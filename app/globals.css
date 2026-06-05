@@ -436,6 +436,45 @@ img {
   color: var(--muted);
 }
 
+.route-item-rich {
+  align-items: flex-start;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.guide-card {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.guide-eyebrow {
+  color: rgba(20, 32, 24, 0.54);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 2.65rem;
+  padding: 0.72rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--foreground);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .saved-cafe-meta {
   margin-top: 0.5rem;
 }
@@ -4344,6 +4383,10 @@ img {
 @media (max-width: 960px) {
   .hero,
   .section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-grid {
     grid-template-columns: 1fr;
   }
 
