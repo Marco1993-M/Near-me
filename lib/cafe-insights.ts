@@ -3,6 +3,9 @@ import type { Cafe, CafeTrustSignals } from "@/types/cafe";
 export type CafeDecisionGuide = {
   trustTitle: string;
   trustSummary: string;
+  confidenceRead: string;
+  goIfHeadline: string;
+  goIfSupport: string;
   bestFor: string;
   order: string;
   bestForDetail: string;
@@ -172,9 +175,38 @@ export function getCafeDecisionGuide(
       ? "A few more thoughtful reviews would make this recommendation much sharper."
       : "This is exactly the kind of cafe where an early review can really help the next person.";
 
+  const confidenceRead = topRated
+    ? "High trust read"
+    : socialProof || specialtyForward
+      ? "Solid local signal"
+      : "Early but promising";
+
+  const goIfHeadline = quiet
+    ? "Quiet coffee time"
+    : milkForward
+      ? "Reliable cortados and flat whites"
+      : filterForward
+        ? "Brighter, more expressive cups"
+        : espressoForward
+          ? "An espresso-first read"
+          : "A straightforward specialty stop";
+
+  const goIfSupport = quiet
+    ? "Go if you want a calmer stop where the coffee can be the main event."
+    : milkForward
+      ? "Go if you usually judge a place by its short milk drinks and want an easy first order."
+      : filterForward
+        ? "Go if you enjoy cleaner, more curious specialty cups instead of the safest default."
+        : espressoForward
+          ? "Go if you like reading a cafe quickly through espresso and shorter drinks."
+          : "Go if you want a specialty-leaning stop without doing too much detective work first.";
+
   return {
     trustTitle,
     trustSummary,
+    confidenceRead,
+    goIfHeadline,
+    goIfSupport,
     bestFor,
     order,
     bestForDetail,

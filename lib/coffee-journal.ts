@@ -47,6 +47,13 @@ export type CoffeeJournalInsight = {
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
+  shareMoments: Array<{
+    id: "taste-read" | "taste-shift" | "standout-cup";
+    eyebrow: string;
+    title: string;
+    body: string;
+    shareText: string;
+  }>;
 };
 
 export type CafeJournalMemory = {
@@ -62,6 +69,7 @@ export type JournalCafeMatch = {
   score: number;
   label: string;
   reason: string;
+  support: string | null;
 };
 
 export const COFFEE_JOURNAL_STORAGE_KEY = "near-me-coffee-journal";
@@ -593,6 +601,53 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
       : null,
   ].filter((value): value is string => Boolean(value)).slice(0, 3);
 
+  const shareMoments: CoffeeJournalInsight["shareMoments"] = [
+    {
+      id: "taste-read",
+      eyebrow: "Taste read",
+      title:
+        primaryTaste && secondaryTaste
+          ? `${tasteMood} with a ${secondaryTaste.toLowerCase()} lean`
+          : primaryTaste
+            ? `${tasteMood}`
+            : "My coffee taste is still taking shape",
+      body:
+        favoriteDrinkFamily
+          ? `Near Me keeps seeing me come back to ${favoriteDrinkFamily}.`
+          : "Near Me is starting to learn the kind of coffee I naturally enjoy.",
+      shareText:
+        primaryTaste && secondaryTaste
+          ? `My Near Me coffee journal says I’m ${tasteMood.toLowerCase()} with a ${secondaryTaste.toLowerCase()} lean.`
+          : `My Near Me coffee journal is starting to map the kind of coffee I love.`,
+    },
+    {
+      id: "taste-shift",
+      eyebrow: "Taste evolution",
+      title: evolutionSummary,
+      body:
+        recentFavoriteDrinkFamily
+          ? `Lately I’ve been reaching for ${recentFavoriteDrinkFamily} more often.`
+          : "My recent cups are starting to shift the shape of my taste.",
+      shareText: `Near Me noticed a shift in my coffee taste: ${evolutionSummary.charAt(0).toLowerCase()}${evolutionSummary.slice(1)}`,
+    },
+    {
+      id: "standout-cup",
+      eyebrow: "Standout cup",
+      title: latestHighlight ? latestHighlight : topCafe ? topCafe : "Still logging my best cups",
+      body:
+        latestHighlight
+          ? `One of my recent standout coffee stops in Near Me.`
+          : topCafe
+            ? `This place keeps showing up most in my journal.`
+            : "A few more logs and Near Me will start surfacing my standout cups.",
+      shareText: latestHighlight
+        ? `One of my standout recent cups in Near Me was at ${latestHighlight}.`
+        : topCafe
+          ? `${topCafe} keeps showing up in my Near Me coffee journal.`
+          : `I’m building out my coffee journal in Near Me.`,
+    },
+  ];
+
   return {
     entryCount: entries.length,
     favoriteDrink,
@@ -614,6 +669,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     learningPrompt,
     glossaryTip,
     homeCue,
+    shareMoments,
   };
 }
 
@@ -680,11 +736,19 @@ export function getJournalCafeMatch(cafe: Cafe, entries: CoffeeJournalEntry[]): 
     (insight.primaryTaste
       ? `Leans ${insight.primaryTaste.toLowerCase()}, which suits your recent taste`
       : "Near Me is still learning your taste");
+  const support =
+    reasons[1] ??
+    (insight.recentFavoriteDrink && drinkFamilies.has(insight.recentFavoriteDrink)
+      ? `Also lines up with the ${getDrinkFamilyLabel(insight.recentFavoriteDrink, "sentence")} you have been reaching for lately`
+      : insight.secondaryTaste
+        ? `Also fits the ${insight.secondaryTaste.toLowerCase()} side of your journal`
+        : null);
 
   return {
     score: roundedScore,
     label,
     reason,
+    support,
   };
 }
 
