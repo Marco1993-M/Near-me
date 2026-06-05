@@ -303,6 +303,17 @@ export default async function CafePage({ params }: CafePageProps) {
                 </p>
                 <p className="cafe-detail-section-note">{decisionGuide.reviewHook}</p>
               </article>
+
+              <article className="cafe-detail-section">
+                <h2>Keep exploring</h2>
+                <p>
+                  If this feels like your kind of place, the taste-led Near Me guides can help you
+                  find more cafes by drink style, trust, and coffee mood.
+                </p>
+                <p className="cafe-detail-section-note">
+                  <Link href="/guides">Browse taste-led guides</Link>
+                </p>
+              </article>
             </div>
           </section>
         </div>

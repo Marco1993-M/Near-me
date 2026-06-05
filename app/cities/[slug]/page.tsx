@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCafeDecisionGuide } from "@/lib/cafe-insights";
-import { getCityHighlights, getCityStaticParams, getColdCafes } from "@/lib/cafes";
+import { getCityHighlights, getCityStaticParams, getColdCafes, getTasteGuideSummaries } from "@/lib/cafes";
 
 export const revalidate = 21600;
 
@@ -60,6 +60,7 @@ export default async function CityPage({ params }: CityPageProps) {
     matchingCafes.find((cafe) => cafe.tags.includes("Quiet")) ?? null,
     matchingCafes.find((cafe) => cafe.drinks.some((drink) => /cortado|flat white|espresso/i.test(drink))) ?? null,
   ].filter((cafe, index, cafes): cafe is NonNullable<typeof cafe> => Boolean(cafe) && cafes.findIndex((item) => item?.id === cafe?.id) === index);
+  const tasteGuides = getTasteGuideSummaries().slice(0, 3);
 
   return (
     <main className="section-stack">
@@ -90,8 +91,8 @@ export default async function CityPage({ params }: CityPageProps) {
                 <li className="route-item" key={cafe.id}>
                   <div>
                     <strong>{cafe.name}</strong>
-                    <span>{guide.trustSummary}</span>
-                    <span>{guide.bestFor}</span>
+                    <span>{guide.goIfHeadline}</span>
+                    <span>{guide.confidenceRead} · {guide.order}</span>
                   </div>
                   <Link href={`/cafes/${cafe.slug}`}>Open</Link>
                 </li>
@@ -100,6 +101,25 @@ export default async function CityPage({ params }: CityPageProps) {
           </ul>
         </section>
       ) : null}
+
+      <section className="panel section-card">
+        <h2>Taste-led guides</h2>
+        <p>
+          Not sure how to start in {cityName}? These Near Me guides sort cafes by drink style,
+          trust, and the kind of coffee experience you want.
+        </p>
+        <ul className="route-list">
+          {tasteGuides.map((guide) => (
+            <li className="route-item" key={guide.slug}>
+              <div>
+                <strong>{guide.title}</strong>
+                <span>{guide.description}</span>
+              </div>
+              <Link href={`/guides/${guide.slug}`}>Open</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="panel section-card">
         <h2>Specialty cafes in {cityName}</h2>
@@ -113,9 +133,9 @@ export default async function CityPage({ params }: CityPageProps) {
                   <li className="route-item" key={cafe.id}>
                     <div>
                       <strong>{cafe.name}</strong>
-                      <span>{guide.trustSummary}</span>
+                      <span>{guide.goIfHeadline}</span>
                       <span>
-                        {guide.order} · {guide.bestFor}
+                        {guide.confidenceRead} · {guide.order}
                       </span>
                     </div>
                     <Link href={`/cafes/${cafe.slug}`}>Open</Link>
