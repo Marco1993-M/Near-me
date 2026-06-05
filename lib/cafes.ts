@@ -62,6 +62,14 @@ type CanonicalReviewRow = {
   created_at: string;
 };
 
+export type TasteGuideSummary = {
+  slug: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  intro: string;
+};
+
 type ReviewTagRow = {
   review_id: string;
   tag: string;
@@ -76,6 +84,55 @@ const LAUNCH_EXCLUDED_NAME_PATTERNS = [
   /\bbootleggers?\b/i,
 ];
 const LAUNCH_EXCLUDED_CITY_NAMES = new Set(["Unknown City"]);
+const TASTE_GUIDE_DEFINITIONS: Array<
+  TasteGuideSummary & {
+    matches: (cafe: Cafe) => boolean;
+  }
+> = [
+  {
+    slug: "espresso-first-stops",
+    eyebrow: "Taste-led guide",
+    title: "Espresso-first stops",
+    description: "For cortado, short milk drink, and espresso people who want a fast honest read.",
+    intro:
+      "These are the places to start if you judge a cafe through cortados, flat whites, and the overall espresso signal first.",
+    matches: (cafe) =>
+      cafe.drinks.some((drink) => /cortado|espresso|macchiato|flat white/i.test(drink)) ||
+      cafe.tags.some((tag) => /bold|balanced|flat white/i.test(tag)),
+  },
+  {
+    slug: "bright-and-clean-cups",
+    eyebrow: "Taste-led guide",
+    title: "Bright and clean cups",
+    description: "For people chasing lighter, more expressive specialty coffee.",
+    intro:
+      "These are the cafes most likely to suit drinkers who want brighter filters, cleaner cups, and more expressive specialty notes.",
+    matches: (cafe) =>
+      cafe.drinks.some((drink) => /filter|pour over|pourover|batch/i.test(drink)) ||
+      cafe.tags.some((tag) => /bright|fruity|floral|clean/i.test(tag)),
+  },
+  {
+    slug: "quiet-work-and-linger",
+    eyebrow: "Taste-led guide",
+    title: "Quiet work and linger",
+    description: "For slower coffee breaks, laptop sessions, and calmer specialty stops.",
+    intro:
+      "These are the calmer specialty stops that feel better for working, lingering, or giving the coffee more attention.",
+    matches: (cafe) =>
+      cafe.tags.some((tag) => /quiet|laptop-friendly|traveler-friendly/i.test(tag)),
+  },
+  {
+    slug: "worth-the-detour",
+    eyebrow: "Trust-led guide",
+    title: "Worth the detour",
+    description: "Higher-trust picks that look strong enough to justify going out of your way.",
+    intro:
+      "These are the stronger bets when you want one careful coffee stop and do not want to gamble on a random listing.",
+    matches: (cafe) =>
+      (cafe.reviewSummary.reviewCount >= 3 && cafe.reviewSummary.averageRating >= 8.5) ||
+      (cafe.reviewSummary.reviewCount >= 6 && cafe.reviewSummary.averageRating >= 8),
+  },
+];
 
 function slugify(value: string) {
   return value
@@ -645,4 +702,37 @@ export const getCityStaticParams = cache(async () => {
   const bundle = await getColdCanonicalCafeBundle();
   const cities = bundle?.cityHighlights ?? [];
   return cities.map((city) => ({ slug: city.slug }));
+});
+
+export function getTasteGuideSummaries(): TasteGuideSummary[] {
+  return TASTE_GUIDE_DEFINITIONS.map(({ slug, eyebrow, title, description, intro }) => ({
+    slug,
+    eyebrow,
+    title,
+    description,
+    intro,
+  }));
+}
+
+export const getTasteGuideStaticParams = cache(async () => {
+  return TASTE_GUIDE_DEFINITIONS.map((guide) => ({ slug: guide.slug }));
+});
+
+export const getTasteGuideBySlug = cache(async (slug: string) => {
+  const guide = TASTE_GUIDE_DEFINITIONS.find((item) => item.slug === slug);
+  if (!guide) {
+    return null;
+  }
+
+  const cafes = await getColdCafes();
+  const matches = cafes.filter(guide.matches);
+
+  return {
+    ...guide,
+    cafes: matches.sort((left, right) => {
+      const leftScore = left.reviewSummary.averageRating * 4 + Math.min(left.reviewSummary.reviewCount, 16);
+      const rightScore = right.reviewSummary.averageRating * 4 + Math.min(right.reviewSummary.reviewCount, 16);
+      return rightScore - leftScore;
+    }),
+  };
 });
