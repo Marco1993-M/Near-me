@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import {
   getCoffeeJournalInsight,
@@ -150,6 +150,7 @@ export function CoffeeJournalPanel({
   );
 
   const insight = useMemo(() => getCoffeeJournalInsight(entries), [entries]);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const leadingTags = insight.topTags.slice(0, 3);
   const journalSections = useMemo(() => getJournalSections(entries), [entries]);
   const favoriteDrinkFamily = getDrinkFamilyLabel(insight.favoriteDrink);
@@ -185,6 +186,34 @@ export function CoffeeJournalPanel({
       .sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta) || right.recentValue - left.recentValue)
       .slice(0, 3);
   }, [insight.recentTasteWheel, insight.tasteWheel]);
+
+  async function handleShareMoment(moment: (typeof insight.shareMoments)[number]) {
+    const shareText = `${moment.shareText} Near Me helps me track what I drink and learn my coffee taste over time.`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "Near Me Coffee Journal",
+          text: shareText,
+        });
+        setShareFeedback(`Shared: ${moment.eyebrow}`);
+        return;
+      }
+
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setShareFeedback(`Copied: ${moment.eyebrow}`);
+        window.setTimeout(() => setShareFeedback(null), 2200);
+        return;
+      }
+
+      setShareFeedback("Sharing unavailable on this device");
+      window.setTimeout(() => setShareFeedback(null), 2200);
+    } catch {
+      setShareFeedback("Could not share right now");
+      window.setTimeout(() => setShareFeedback(null), 2200);
+    }
+  }
 
   return (
     <div className="map-journal-shell fade-slide-in">
@@ -391,6 +420,32 @@ export function CoffeeJournalPanel({
             <span>Near Me is learning</span>
             <strong>{insight.learningPrompt}</strong>
           </article>
+
+          <section className="coffee-journal-share" aria-label="Shareable journal moments">
+            <div className="coffee-journal-spectrum-head">
+              <span>Shareable moments</span>
+              <strong>Little snapshots of your coffee story</strong>
+            </div>
+
+            <div className="coffee-journal-share-grid">
+              {insight.shareMoments.map((moment) => (
+                <article className="coffee-journal-share-card" key={moment.id}>
+                  <span>{moment.eyebrow}</span>
+                  <strong>{moment.title}</strong>
+                  <p>{moment.body}</p>
+                  <button
+                    className="coffee-journal-share-button"
+                    type="button"
+                    onClick={() => void handleShareMoment(moment)}
+                  >
+                    Share this
+                  </button>
+                </article>
+              ))}
+            </div>
+
+            {shareFeedback ? <div className="coffee-journal-share-feedback">{shareFeedback}</div> : null}
+          </section>
         </div>
 
         <div className="map-top-picks-results coffee-journal-results">

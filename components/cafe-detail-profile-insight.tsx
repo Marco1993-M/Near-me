@@ -60,7 +60,11 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
               <span>Journal read</span>
               <strong>{journalMatch.label}</strong>
             </div>
-            <p>{journalMatch.reason}. Near Me is using your recent coffee memory to shape this recommendation.</p>
+            <p>
+              {journalMatch.reason}.
+              {journalMatch.support ? ` ${journalMatch.support}.` : ""}
+              {" "}Near Me is using your recent coffee memory to shape this recommendation.
+            </p>
           </>
         ) : null}
       </article>
@@ -87,7 +91,11 @@ export function CafeDetailProfileInsight({ cafe }: CafeDetailProfileInsightProps
             <span>Journal read</span>
             <strong>{journalMatch.label}</strong>
           </div>
-          <p>{journalMatch.reason}. This is based on the drink styles and taste notes you keep returning to.</p>
+          <p>
+            {journalMatch.reason}.
+            {journalMatch.support ? ` ${journalMatch.support}.` : ""}
+            {" "}This is based on the drink styles and taste notes you keep returning to.
+          </p>
         </div>
       ) : null}
       <div className="cafe-detail-profile-insight-meta">

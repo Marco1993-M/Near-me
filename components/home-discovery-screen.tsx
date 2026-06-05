@@ -9,6 +9,7 @@ import { CoffeeJournalPanel } from "@/components/coffee-journal-panel";
 import { DiscoveryMap } from "@/components/discovery-map";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
 import { NEAR_ME_CANDIDATE_RULE_LABEL } from "@/lib/candidate-trust";
+import { trackEvent } from "@/lib/analytics";
 import { addCoffeeJournalEntry } from "@/lib/coffee-journal";
 import {
   getCoffeeJournalInsight,
@@ -48,6 +49,18 @@ import {
 type HomeDiscoveryScreenProps = {
   cafes: Cafe[];
 };
+
+type DiscoverySource =
+  | "toolbar"
+  | "intro"
+  | "search"
+  | "top_picks"
+  | "map_marker"
+  | "auto_nearby"
+  | "deep_link"
+  | "empty_state"
+  | "fallback_card"
+  | "active_card";
 
 type ReviewTarget =
   | { type: "cafe"; cafe: Cafe }
@@ -321,6 +334,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const hasExplicitCafeSelectionRef = useRef(false);
   const hasRequestedInitialLocationRef = useRef(false);
   const previousRadiusKmRef = useRef(selectedRadiusKm);
+  const lastTrackedLocationStateRef = useRef<string | null>(null);
+  const profilerSourceRef = useRef<DiscoverySource>("toolbar");
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -709,6 +724,10 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         throw new Error(payload.error || "Could not submit shop.");
       }
 
+      trackEvent("add_shop_submitted", {
+        area: addShopArea.trim() || null,
+        has_location: Boolean(userLocation),
+      });
       setAddShopState("success");
       const trustLine = payload.trust
         ? payload.trust.supporterCount > 1 || payload.trust.reviewCount > 0
@@ -741,6 +760,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       explicit?: boolean;
       pan?: boolean;
       nextSheetState?: "collapsed" | "expanded";
+      source?: DiscoverySource;
     },
   ) {
     const explicit = options?.explicit ?? true;
@@ -752,6 +772,18 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     dismissIntro();
     setActiveFallbackId(null);
     setActiveCafeId(cafeId);
+
+    if (options?.source) {
+      const selectedCafe =
+        mappableCafes.find((cafe) => cafe.id === cafeId) ??
+        hydratedCafes.find((cafe) => cafe.id === cafeId) ??
+        null;
+      trackEvent("cafe_selected", {
+        source: options.source,
+        cafe_slug: selectedCafe?.slug ?? null,
+        city: selectedCafe?.city ?? null,
+      });
+    }
 
     if (options?.pan) {
       setPanToActiveCafeToken((current) => current + 1);
@@ -766,6 +798,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     placeId: string,
     options?: {
       pan?: boolean;
+      source?: DiscoverySource;
     },
   ) {
     hasExplicitCafeSelectionRef.current = false;
@@ -773,6 +806,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setActiveCafeId(null);
     setActiveFallbackId(placeId);
     setSheetState("collapsed");
+
+    if (options?.source) {
+      const selectedPlace = fallbackPlaces.find((place) => place.id === placeId) ?? null;
+      trackEvent("fallback_place_selected", {
+        source: options.source,
+        place_name: selectedPlace?.name ?? null,
+        city: selectedPlace?.city ?? null,
+      });
+    }
 
     if (options?.pan) {
       setPanToFallbackPlaceToken((current) => current + 1);
@@ -803,6 +845,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
+    trackEvent("cafe_selected", {
+      source: "deep_link",
+      cafe_slug: matchedCafe.slug,
+      city: matchedCafe.city,
+    });
   }, [hydratedCafes, mappableCafes, pathname]);
 
   useEffect(() => {
@@ -850,6 +897,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }
 
     setActiveCafeId((current) => (current === inRadiusCafe.id ? current : inRadiusCafe.id));
+    if (activeCafeId !== inRadiusCafe.id) {
+      trackEvent("cafe_selected", {
+        source: "auto_nearby",
+        cafe_slug: inRadiusCafe.slug,
+        city: inRadiusCafe.city,
+      });
+    }
   }, [
     activeCafeId,
     cafeDistances,
@@ -875,8 +929,38 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }
 
     hasRequestedInitialLocationRef.current = true;
-    setLocateRequestToken((current) => current + 1);
+    requestLocation("intro");
   }, [locationState, userLocation]);
+
+  useEffect(() => {
+    if (locationState === "idle" || locationState === "requesting") {
+      return;
+    }
+
+    if (lastTrackedLocationStateRef.current === locationState) {
+      return;
+    }
+
+    lastTrackedLocationStateRef.current = locationState;
+
+    if (locationState === "granted") {
+      trackEvent("location_granted", {
+        radius_km: selectedRadiusKm,
+      });
+      return;
+    }
+
+    if (locationState === "denied") {
+      trackEvent("location_denied", {
+        radius_km: selectedRadiusKm,
+      });
+      return;
+    }
+
+    trackEvent("location_unavailable", {
+      radius_km: selectedRadiusKm,
+    });
+  }, [locationState, selectedRadiusKm]);
 
   useEffect(() => {
     return () => {
@@ -894,8 +978,17 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     window.sessionStorage.setItem("near-me-home-intro-dismissed", "1");
   }
 
-  function openSearch() {
+  function requestLocation(source: DiscoverySource) {
+    trackEvent("location_requested", {
+      source,
+      radius_km: selectedRadiusKm,
+    });
+    setLocateRequestToken((current) => current + 1);
+  }
+
+  function openSearch(source: DiscoverySource = "toolbar") {
     dismissIntro();
+    trackEvent("search_opened", { source });
     setIsTopPicksOpen(false);
     setIsSearchOpen(true);
   }
@@ -905,15 +998,23 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setSearchQuery("");
   }
 
-  function openTopPicks() {
+  function openTopPicks(source: DiscoverySource = "toolbar") {
     dismissIntro();
+    trackEvent("top_picks_opened", {
+      source,
+      lens: topPickLens,
+    });
     setIsJournalOpen(false);
     setIsSearchOpen(false);
     setIsTopPicksOpen(true);
   }
 
-  function openJournal() {
+  function openJournal(source: DiscoverySource = "toolbar") {
     dismissIntro();
+    trackEvent("journal_opened", {
+      source,
+      entries: journalEntries.length,
+    });
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -925,17 +1026,22 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setIsJournalOpen(false);
   }
 
-  function openTastePanel() {
+  function openTastePanel(source: DiscoverySource = "toolbar") {
     dismissIntro();
     setIsJournalOpen(false);
     if (activeCoffeeProfile) {
       setIsSearchOpen(false);
       setIsTopPicksOpen(true);
       setTopPickLens("for-you");
+      trackEvent("top_picks_opened", {
+        source,
+        lens: "for-you",
+        via: "your_taste",
+      });
       return;
     }
 
-    openProfiler();
+    openProfiler(source);
   }
 
   function closeTopPicks() {
@@ -951,9 +1057,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setJournalState("idle");
   }
 
-  function openJournalEntryModal(target?: JournalTarget) {
+  function openJournalEntryModal(target?: JournalTarget, source: DiscoverySource = "active_card") {
     dismissIntro();
     setIsJournalOpen(false);
+    trackEvent("journal_entry_started", {
+      source,
+      target_type: target?.type ?? (activeCafe ? "cafe" : null),
+    });
     setJournalTarget(target ?? (activeCafe ? { type: "cafe", cafe: activeCafe } : null));
     resetJournalForm();
     setIsJournalEntryOpen(true);
@@ -994,6 +1104,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     });
 
     setJournalState("success");
+    trackEvent("journal_entry_saved", {
+      target_type: journalTarget.type,
+      drink: journalDrink,
+      rating: journalRating,
+      tags_count: selectedJournalTags.length,
+    });
     setJournalMessage("Logged privately to your coffee journal.");
     setReviewToast(`Journal saved: ${entry.cafeName}`);
 
@@ -1010,8 +1126,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }, 420);
   }
 
-  function openAddShopModal(prefill?: { name?: string; area?: string; note?: string }) {
+  function openAddShopModal(
+    prefill?: { name?: string; area?: string; note?: string },
+    source: DiscoverySource = "toolbar",
+  ) {
     dismissIntro();
+    trackEvent("add_shop_started", {
+      source,
+      has_prefill_name: Boolean(prefill?.name ?? searchQuery.trim()),
+    });
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -1034,8 +1157,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setProfilerSelections([]);
   }
 
-  function openProfiler() {
+  function openProfiler(source: DiscoverySource = "toolbar") {
     dismissIntro();
+    profilerSourceRef.current = source;
+    trackEvent("taste_setup_started", {
+      source,
+      mode: activeCoffeeProfile ? "retune" : "first_run",
+    });
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsJournalOpen(false);
@@ -1050,7 +1178,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   function cycleRadius() {
     const currentIndex = radiusOptionsKm.indexOf(selectedRadiusKm);
     const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % radiusOptionsKm.length;
-    setSelectedRadiusKm(radiusOptionsKm[nextIndex]);
+    const nextRadiusKm = radiusOptionsKm[nextIndex];
+    trackEvent("radius_changed", {
+      from_km: selectedRadiusKm,
+      to_km: nextRadiusKm,
+    });
+    setSelectedRadiusKm(nextRadiusKm);
   }
 
   function saveResolvedProfile(nextScores: ReturnType<typeof defaultProfilerScores>) {
@@ -1059,6 +1192,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       source: coffeeProfileState?.reviewCount ? "quiz+reviews" : "quiz",
     });
     setStoredCoffeeProfileState(nextProfileState);
+    trackEvent("taste_setup_completed", {
+      source: profilerSourceRef.current,
+      profile_slug: nextProfileState.profileSlug,
+      review_count: nextProfileState.reviewCount,
+    });
     setReviewToast(`Your taste is now leaning ${resolveCoffeeProfile(nextScores).name}`);
 
     if (reviewToastTimeoutRef.current) {
@@ -1135,11 +1273,15 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     setReviewMessage("");
   }
 
-  function openReviewModal(target?: ReviewTarget) {
+  function openReviewModal(target?: ReviewTarget, source: DiscoverySource = "active_card") {
     if (reviewSuccessTimeoutRef.current) {
       window.clearTimeout(reviewSuccessTimeoutRef.current);
       reviewSuccessTimeoutRef.current = null;
     }
+    trackEvent("review_started", {
+      source,
+      target_type: target?.type ?? (activeCafe ? "cafe" : null),
+    });
     setReviewTarget(target ?? (activeCafe ? { type: "cafe", cafe: activeCafe } : null));
     resetReviewForm();
     setIsReviewOpen(true);
@@ -1291,6 +1433,12 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     }
 
     setReviewState("success");
+    trackEvent("review_submitted", {
+      target_type: reviewTarget.type,
+      drink: reviewDrink,
+      rating: reviewRating,
+      tags_count: selectedReviewTags.length,
+    });
     setReviewMessage(
       reviewTarget.type === "cafe"
         ? nextProfileName
@@ -1328,11 +1476,13 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
       <DiscoveryMap
         cafes={mappableCafes}
         activeCafeId={activeCafe?.id ?? null}
-        onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true })}
+        onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true, source: "map_marker" })}
         panToActiveCafeToken={panToActiveCafeToken}
         fallbackPlaces={fallbackPlaces}
         activeFallbackPlaceId={activeFallbackPlace?.id ?? null}
-        onSelectFallbackPlace={(placeId) => selectFallbackPlace(placeId, { pan: true })}
+        onSelectFallbackPlace={(placeId) =>
+          selectFallbackPlace(placeId, { pan: true, source: "map_marker" })
+        }
         panToFallbackPlaceToken={panToFallbackPlaceToken}
         userLocation={userLocation}
         selectedRadiusKm={selectedRadiusKm}
@@ -1356,7 +1506,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               className="diesel-action-icon control-chip"
               aria-label={canRetryLocation ? "Retry location access" : "Center on my location"}
               type="button"
-              onClick={() => setLocateRequestToken((value) => value + 1)}
+              onClick={() => requestLocation("toolbar")}
               title={canRetryLocation ? "Retry location" : "Use my location"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1381,7 +1531,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               className={`diesel-action-icon control-chip${isTopPicksOpen && topPickLens !== "for-you" ? " active" : ""}`}
               type="button"
               aria-label="Open top picks"
-              onClick={openTopPicks}
+              onClick={() => openTopPicks("toolbar")}
               title="Top picks"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1392,7 +1542,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 className={`diesel-action-icon control-chip${isJournalOpen || isJournalEntryOpen ? " active" : ""}`}
                 type="button"
                 aria-label="Open your taste journal"
-                onClick={openJournal}
+                onClick={() => openJournal("toolbar")}
                 title="Your taste"
               >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1406,7 +1556,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 className={`diesel-action-icon control-chip${isProfilerOpen || (isTopPicksOpen && topPickLens === "for-you") ? " active" : ""}`}
                 type="button"
                 aria-label={activeCoffeeProfile ? "Open your taste" : "Start your taste setup"}
-                onClick={openTastePanel}
+                onClick={() => openTastePanel("toolbar")}
                 title={activeCoffeeProfile ? "Your taste" : "Taste setup"}
               >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1419,7 +1569,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               className={`diesel-action-icon control-chip${isSearchOpen ? " active" : ""}`}
               type="button"
               aria-label="Search coffee shops"
-              onClick={openSearch}
+              onClick={() => openSearch("toolbar")}
               title="Search"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -1462,7 +1612,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   type="button"
                   onClick={() => {
                     dismissIntro();
-                    setLocateRequestToken((value) => value + 1);
+                    requestLocation("intro");
                   }}
                   disabled={locationState === "requesting"}
                 >
@@ -1472,7 +1622,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       ? "Retry location"
                       : "Use my location"}
                 </button>
-                <button className="map-intro-secondary control-chip" type="button" onClick={openTastePanel}>
+                <button className="map-intro-secondary control-chip" type="button" onClick={() => openTastePanel("intro")}>
                   {activeCoffeeProfile ? "Open my taste" : "Start your taste"}
                 </button>
               </div>
@@ -1538,6 +1688,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             explicit: true,
                             pan: true,
                             nextSheetState: "collapsed",
+                            source: "search",
                           });
                           closeSearch();
                         }}
@@ -1573,7 +1724,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
               <button
                 className="map-search-add-shop"
                 type="button"
-                onClick={() => openAddShopModal({ name: searchQuery.trim() })}
+                onClick={() => openAddShopModal({ name: searchQuery.trim() }, "search")}
               >
                 Can&apos;t find it? Add a shop
               </button>
@@ -1590,7 +1741,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   <span>{topPickCopy.subtitle}</span>
                 </div>
                 <div className="map-top-picks-head-actions">
-                  <button className="map-top-picks-profile-button" type="button" onClick={openProfiler}>
+                  <button className="map-top-picks-profile-button" type="button" onClick={() => openProfiler("top_picks")}>
                     {activeCoffeeProfile ? "Retune taste" : "Taste setup"}
                   </button>
                   <button className="map-search-close" type="button" onClick={closeTopPicks} aria-label="Close top picks">
@@ -1599,7 +1750,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 </div>
               </div>
 
-              {activeCoffeeProfile ? <CoffeeProfileCard onRetake={openProfiler} /> : null}
+              {activeCoffeeProfile ? <CoffeeProfileCard onRetake={() => openProfiler("top_picks")} /> : null}
               {!activeCoffeeProfile && journalDiscoveryCue ? (
                 <div className="map-top-picks-journal-cue">
                   <span>Using your journal</span>
@@ -1643,7 +1794,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                   <div className="map-top-picks-empty">
                     <strong>Unlock taste-aware picks</strong>
                     <span>Answer 5 fast questions and Near Me will learn the kind of specialty coffee you actually enjoy.</span>
-                    <button className="map-top-picks-cta" type="button" onClick={openProfiler}>
+                    <button className="map-top-picks-cta" type="button" onClick={() => openProfiler("top_picks")}>
                       Start taste setup
                     </button>
                   </div>
@@ -1666,6 +1817,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           explicit: true,
                           pan: true,
                           nextSheetState: "collapsed",
+                          source: "top_picks",
                         });
                         closeTopPicks();
                       }}
@@ -1685,6 +1837,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         ) : journalMatch && (topPickLens === "for-you" || journalMatch.score >= 2.4) ? (
                           <span className="map-top-pick-match">
                             {topPickLens === "for-you" ? journalMatch.label : "Journal fit"} · {journalMatch.reason}
+                            {journalMatch.support ? ` · ${journalMatch.support}` : ""}
                           </span>
                         ) : null}
                       </div>
@@ -1708,7 +1861,11 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
         {isJournalOpen ? (
           <CoffeeJournalPanel
             onClose={closeJournal}
-            onLogCurrent={activeCafe ? () => openJournalEntryModal({ type: "cafe", cafe: activeCafe }) : undefined}
+            onLogCurrent={
+              activeCafe
+                ? () => openJournalEntryModal({ type: "cafe", cafe: activeCafe }, "active_card")
+                : undefined
+            }
             currentCafeName={activeCafe?.name ?? null}
           />
         ) : null}
@@ -1981,9 +2138,16 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                 className="diesel-sheet-handle"
                 type="button"
                 onClick={() =>
-                  setSheetState((current) =>
-                    current === "collapsed" ? "expanded" : "collapsed",
-                  )
+                  setSheetState((current) => {
+                    const nextState = current === "collapsed" ? "expanded" : "collapsed";
+                    if (nextState === "expanded") {
+                      trackEvent("card_expanded", {
+                        has_cafe: Boolean(activeCafe),
+                        has_fallback: Boolean(activeFallbackPlace),
+                      });
+                    }
+                    return nextState;
+                  })
                 }
                 aria-label={`Expand cafe sheet, currently ${sheetState}`}
               >
@@ -2057,18 +2221,24 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <span>{activeFallbackPlace.address}</span>
                       </div>
                       <div className="diesel-empty-state-actions">
-                        <a
-                          className="diesel-selection-primary control-primary"
-                          href={`https://www.google.com/maps/search/?api=1&query=${activeFallbackPlace.latitude},${activeFallbackPlace.longitude}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Directions
-                        </a>
+                      <a
+                        className="diesel-selection-primary control-primary"
+                        href={`https://www.google.com/maps/search/?api=1&query=${activeFallbackPlace.latitude},${activeFallbackPlace.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() =>
+                          trackEvent("directions_clicked", {
+                            source: "empty_state",
+                            place_name: activeFallbackPlace.name,
+                          })
+                        }
+                      >
+                        Directions
+                      </a>
                         <button
                           className="diesel-selection-secondary control-chip"
                           type="button"
-                          onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
+                          onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace }, "empty_state")}
                         >
                           {getFallbackTrustSummary(activeFallbackPlace).cta}
                         </button>
@@ -2080,7 +2250,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                               name: activeFallbackPlace.name,
                               area: activeFallbackPlace.address,
                               note: `Nearby fallback option from ${activeFallbackPlace.source}. Not yet verified by Near Me.`,
-                            })
+                            }, "empty_state")
                           }
                         >
                           Add this shop
@@ -2107,7 +2277,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                               key={place.id}
                               className={`diesel-empty-state-row${isActiveFallback ? " active" : ""}`}
                               type="button"
-                              onClick={() => selectFallbackPlace(place.id, { pan: true })}
+                              onClick={() => selectFallbackPlace(place.id, { pan: true, source: "empty_state" })}
                             >
                               <div className="diesel-empty-state-row-copy">
                                 <strong>{place.name}</strong>
@@ -2138,7 +2308,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       <button
                         className="diesel-selection-primary control-primary"
                         type="button"
-                        onClick={() => setSelectedRadiusKm(nextRadiusKm)}
+                        onClick={() => {
+                          trackEvent("radius_changed", {
+                            from_km: selectedRadiusKm,
+                            to_km: nextRadiusKm,
+                            source: "empty_state",
+                          });
+                          setSelectedRadiusKm(nextRadiusKm);
+                        }}
                       >
                         Expand to {nextRadiusKm} km
                       </button>
@@ -2146,14 +2323,14 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     <button
                       className="diesel-selection-secondary control-chip"
                       type="button"
-                      onClick={openSearch}
+                        onClick={() => openSearch("empty_state")}
                     >
                       Search this area
                     </button>
                     <button
                       className="diesel-selection-secondary control-chip"
                       type="button"
-                      onClick={() => openAddShopModal()}
+                      onClick={() => openAddShopModal(undefined, "empty_state")}
                     >
                       Add a shop
                     </button>
@@ -2224,13 +2401,19 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         href={`https://www.google.com/maps/search/?api=1&query=${activeFallbackPlace.latitude},${activeFallbackPlace.longitude}`}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={() =>
+                          trackEvent("directions_clicked", {
+                            source: "fallback_card",
+                            place_name: activeFallbackPlace.name,
+                          })
+                        }
                       >
                         Directions
                       </a>
                       <button
                         className="diesel-selection-secondary control-chip"
                         type="button"
-                        onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace })}
+                        onClick={() => openReviewModal({ type: "fallback", place: activeFallbackPlace }, "fallback_card")}
                       >
                         {getFallbackTrustSummary(activeFallbackPlace).cta}
                       </button>
@@ -2242,7 +2425,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                             name: activeFallbackPlace.name,
                             area: activeFallbackPlace.address,
                             note: `Nearby fallback option from ${activeFallbackPlace.source}. Not yet verified by Near Me.`,
-                          })
+                          }, "fallback_card")
                         }
                       >
                         Add this shop
@@ -2272,7 +2455,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     {activeDecisionGuide ? (
                       <div className="diesel-selection-decision-badge">
                         <span className="diesel-selection-decision-kicker">Go if</span>
-                        <strong>{activeDecisionGuide.trustTitle}</strong>
+                        <strong>{activeDecisionGuide.goIfHeadline}</strong>
                       </div>
                     ) : null}
                     {isCollapsedCard && (activeProfileMatch || activeJournalMatch) ? (
@@ -2291,8 +2474,8 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                     ) : null}
                     <p>
                       {isCollapsedCard
-                        ? activeDecisionGuide?.trustSummary ?? activeCafe.summary
-                        : activeDecisionGuide?.bestForDetail ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary}
+                        ? activeDecisionGuide?.goIfSupport ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary
+                        : activeDecisionGuide?.bestForDetail ?? activeDecisionGuide?.goIfSupport ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary}
                     </p>
                   </div>
 
@@ -2316,7 +2499,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <div className="diesel-selection-trust-head diesel-selection-trust-head-journal">
                           <span>Based on your journal</span>
                           <strong>{activeJournalMatch.reason}</strong>
-                          <small>{activeJournalMatch.label}</small>
+                          <small>{activeJournalMatch.support ?? activeJournalMatch.label}</small>
                         </div>
                       ) : null}
                       {activeTrustMentions.length > 0 ? (
@@ -2330,6 +2513,9 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                       ) : null}
                       {activeDecisionGuide?.trustBullets.length ? (
                         <div className="diesel-selection-trust-list">
+                          <span className="diesel-selection-trust-confidence">
+                            {activeDecisionGuide.confidenceRead}
+                          </span>
                           {activeDecisionGuide.trustBullets.slice(0, 2).map((bullet) => (
                             <span key={bullet}>{bullet}</span>
                           ))}
@@ -2390,11 +2576,26 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                           href={directionsHref}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() =>
+                            trackEvent("directions_clicked", {
+                              source: "active_card",
+                              cafe_slug: activeCafe.slug,
+                            })
+                          }
                         >
                           Directions
                         </a>
                       ) : null}
-                      <Link className="diesel-selection-secondary diesel-selection-secondary-main control-chip" href={`/cafes/${activeCafe.slug}`}>
+                      <Link
+                        className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                        href={`/cafes/${activeCafe.slug}`}
+                        onClick={() =>
+                          trackEvent("details_opened", {
+                            source: "active_card",
+                            cafe_slug: activeCafe.slug,
+                          })
+                        }
+                      >
                         Details
                       </Link>
                       <div className="diesel-selection-actions-icons">
@@ -2409,7 +2610,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <button
                           className="diesel-selection-icon-button"
                           type="button"
-                          onClick={() => openReviewModal({ type: "cafe", cafe: activeCafe })}
+                          onClick={() => openReviewModal({ type: "cafe", cafe: activeCafe }, "active_card")}
                           aria-label="Leave a review"
                         >
                           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -2420,7 +2621,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
                         <button
                           className="diesel-selection-icon-button"
                           type="button"
-                          onClick={() => openJournalEntryModal({ type: "cafe", cafe: activeCafe })}
+                          onClick={() => openJournalEntryModal({ type: "cafe", cafe: activeCafe }, "active_card")}
                           aria-label="Log this visit privately"
                         >
                           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
