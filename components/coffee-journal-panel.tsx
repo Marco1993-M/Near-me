@@ -273,37 +273,79 @@ export function CoffeeJournalPanel({
     context.fillStyle = "#fffdf8";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const glow = context.createRadialGradient(200, 180, 0, 200, 180, 520);
-    glow.addColorStop(0, "rgba(199, 245, 211, 0.28)");
-    glow.addColorStop(1, "rgba(255, 253, 248, 0)");
-    context.fillStyle = glow;
+    const wash = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    wash.addColorStop(0, "#f8fbf6");
+    wash.addColorStop(0.46, "#fffdf8");
+    wash.addColorStop(1, "#f7f2ea");
+    context.fillStyle = wash;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const mintGlow = context.createRadialGradient(180, 180, 0, 180, 180, 520);
+    mintGlow.addColorStop(0, "rgba(199, 245, 211, 0.34)");
+    mintGlow.addColorStop(1, "rgba(255, 253, 248, 0)");
+    context.fillStyle = mintGlow;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const oatGlow = context.createRadialGradient(940, 1140, 0, 940, 1140, 420);
+    oatGlow.addColorStop(0, "rgba(236, 214, 186, 0.26)");
+    oatGlow.addColorStop(1, "rgba(255, 253, 248, 0)");
+    context.fillStyle = oatGlow;
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.fillStyle = "#142018";
-    context.font = "700 34px Georgia, serif";
-    context.fillText("Near Me", 92, 104);
+    context.font = "700 52px Georgia, serif";
+    context.fillText("Near Me", 88, 106);
 
     context.fillStyle = "rgba(20, 32, 24, 0.58)";
     context.font = "700 24px Arial, sans-serif";
-    context.fillText("Coffee Journal", 92, 148);
+    context.fillText("Coffee Journal", 90, 152);
+
+    context.fillStyle = "rgba(20, 32, 24, 0.4)";
+    context.font = "600 20px Arial, sans-serif";
+    context.fillText("Private coffee memory", 90, 184);
 
     const cardX = 74;
-    const cardY = 196;
+    const cardY = 222;
     const cardWidth = canvas.width - cardX * 2;
-    const cardHeight = 964;
-    context.fillStyle = "rgba(255,255,252,0.9)";
-    context.strokeStyle = "rgba(20, 32, 24, 0.08)";
+    const cardHeight = 1016;
+    context.shadowColor = "rgba(33, 26, 16, 0.08)";
+    context.shadowBlur = 48;
+    context.shadowOffsetY = 22;
+    context.fillStyle = "rgba(255,255,252,0.92)";
+    context.strokeStyle = "rgba(20, 32, 24, 0.07)";
     context.lineWidth = 2;
     context.beginPath();
-    context.roundRect(cardX, cardY, cardWidth, cardHeight, 42);
+    context.roundRect(cardX, cardY, cardWidth, cardHeight, 46);
     context.fill();
     context.stroke();
+    context.shadowColor = "transparent";
+
+    const sheen = context.createLinearGradient(cardX, cardY, cardX, cardY + cardHeight);
+    sheen.addColorStop(0, "rgba(255,255,255,0.32)");
+    sheen.addColorStop(1, "rgba(255,255,255,0.04)");
+    context.fillStyle = sheen;
+    context.beginPath();
+    context.roundRect(cardX + 2, cardY + 2, cardWidth - 4, cardHeight - 4, 44);
+    context.fill();
+
+    context.fillStyle = "rgba(20, 32, 24, 0.08)";
+    context.beginPath();
+    context.roundRect(cardX + 42, cardY + 42, 182, 52, 999);
+    context.fill();
+    context.fillStyle = "#214d2f";
+    context.font = "700 21px Arial, sans-serif";
+    context.fillText("SHAREABLE MOMENT", cardX + 66, cardY + 75);
 
     const centerX = canvas.width / 2;
-    const wheelY = 420;
-    const outerRadius = 180;
-    const innerRadius = 102;
+    const wheelY = 468;
+    const outerRadius = 184;
+    const innerRadius = 106;
     const fullArc = Math.PI * 2;
+
+    context.fillStyle = "rgba(20, 32, 24, 0.04)";
+    context.beginPath();
+    context.arc(centerX, wheelY, outerRadius + 18, 0, fullArc);
+    context.fill();
 
     let startAngle = -Math.PI / 2;
     for (const segment of insight.tasteWheel) {
@@ -317,6 +359,12 @@ export function CoffeeJournalPanel({
       startAngle += segmentArc;
     }
 
+    context.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    context.lineWidth = 8;
+    context.beginPath();
+    context.arc(centerX, wheelY, outerRadius + 2, 0, fullArc);
+    context.stroke();
+
     context.fillStyle = "#fffaf3";
     context.beginPath();
     context.arc(centerX, wheelY, innerRadius, 0, fullArc);
@@ -324,11 +372,11 @@ export function CoffeeJournalPanel({
 
     context.fillStyle = "rgba(20, 32, 24, 0.5)";
     context.textAlign = "center";
-    context.font = "700 26px Arial, sans-serif";
+    context.font = "700 24px Arial, sans-serif";
     context.fillText("YOUR TASTE", centerX, wheelY - 28);
     context.fillStyle = "#142018";
     context.font = `700 ${getCanvasWheelTitleSize(insight.primaryTaste)}px Georgia, serif`;
-    context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 40);
+    context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 34);
     context.fillStyle = "rgba(20, 32, 24, 0.58)";
     context.font = `700 ${getCanvasWheelSubtitleSize(
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
@@ -336,29 +384,34 @@ export function CoffeeJournalPanel({
     context.fillText(
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
       centerX,
-      wheelY + 88,
+      wheelY + 78,
     );
+
+    context.fillStyle = "rgba(20, 32, 24, 0.06)";
+    context.beginPath();
+    context.roundRect(cardX + 42, 704, cardWidth - 84, 372, 32);
+    context.fill();
 
     context.textAlign = "left";
     context.fillStyle = "rgba(20, 32, 24, 0.5)";
     context.font = "700 22px Arial, sans-serif";
-    context.fillText(moment.eyebrow.toUpperCase(), 110, 716);
+    context.fillText(moment.eyebrow.toUpperCase(), 116, 748);
 
     context.fillStyle = "#142018";
-    context.font = "700 64px Georgia, serif";
-    const titleLines = wrapCanvasText(context, moment.title, 820);
+    context.font = "700 68px Georgia, serif";
+    const titleLines = wrapCanvasText(context, moment.title, 780);
     titleLines.slice(0, 3).forEach((line, index) => {
-      context.fillText(line, 110, 794 + index * 74);
+      context.fillText(line, 116, 828 + index * 76);
     });
 
     context.fillStyle = "rgba(20, 32, 24, 0.64)";
-    context.font = "500 30px Arial, sans-serif";
-    const bodyLines = wrapCanvasText(context, moment.body, 820);
+    context.font = "500 29px Arial, sans-serif";
+    const bodyLines = wrapCanvasText(context, moment.body, 760);
     bodyLines.slice(0, 3).forEach((line, index) => {
-      context.fillText(line, 110, 980 + index * 42);
+      context.fillText(line, 116, 1014 + index * 42);
     });
 
-    const chipY = 1112;
+    const chipY = 1128;
     const chipValues = [
       insight.tasteMood,
       favoriteDrinkFamily ? favoriteDrinkFamily.replace(/^\w/, (char) => char.toUpperCase()) : null,
@@ -368,23 +421,30 @@ export function CoffeeJournalPanel({
     let chipX = 110;
     context.font = "700 22px Arial, sans-serif";
     for (const chip of chipValues.slice(0, 3)) {
-      const chipWidth = context.measureText(chip).width + 42;
-      context.fillStyle = "rgba(199, 245, 211, 0.3)";
+      const chipWidth = context.measureText(chip).width + 44;
+      context.fillStyle = "rgba(199, 245, 211, 0.34)";
       context.beginPath();
-      context.roundRect(chipX, chipY, chipWidth, 46, 999);
+      context.roundRect(chipX, chipY, chipWidth, 48, 999);
       context.fill();
       context.fillStyle = "#214d2f";
-      context.fillText(chip, chipX + 21, chipY + 31);
+      context.fillText(chip, chipX + 22, chipY + 32);
       chipX += chipWidth + 12;
     }
 
-    context.fillStyle = "rgba(20, 32, 24, 0.42)";
-    context.font = "600 24px Arial, sans-serif";
-    context.fillText("near-me.cafe", 110, 1260);
+    context.strokeStyle = "rgba(20, 32, 24, 0.08)";
+    context.lineWidth = 2;
+    context.beginPath();
+    context.moveTo(cardX + 42, 1198);
+    context.lineTo(cardX + cardWidth - 42, 1198);
+    context.stroke();
+
+    context.fillStyle = "#142018";
+    context.font = "700 26px Georgia, serif";
+    context.fillText("near-me.cafe", 116, 1260);
     context.textAlign = "right";
-    context.fillStyle = "rgba(20, 32, 24, 0.54)";
+    context.fillStyle = "rgba(20, 32, 24, 0.56)";
     context.font = "600 22px Arial, sans-serif";
-    context.fillText("https://www.near-me.cafe", canvas.width - 110, 1260);
+    context.fillText("Find your taste. Discover better coffee.", canvas.width - 116, 1258);
     context.textAlign = "left";
 
     const blob = await new Promise<Blob | null>((resolve) => {
