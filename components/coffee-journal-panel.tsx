@@ -133,6 +133,28 @@ function getWheelSubtitleSize(label: string | null) {
   return "0.62rem";
 }
 
+function getCanvasWheelTitleSize(label: string | null) {
+  const length = label?.length ?? 0;
+  if (length >= 10) {
+    return 54;
+  }
+  if (length >= 8) {
+    return 60;
+  }
+  return 72;
+}
+
+function getCanvasWheelSubtitleSize(label: string | null) {
+  const length = label?.length ?? 0;
+  if (length >= 18) {
+    return 20;
+  }
+  if (length >= 14) {
+    return 22;
+  }
+  return 28;
+}
+
 function getWheelColor(color: string, value: number) {
   const fade = Math.round((1 - value) * 62);
   return `color-mix(in srgb, ${color} ${100 - fade}%, rgba(255, 250, 242, 0.96))`;
@@ -228,6 +250,7 @@ export function CoffeeJournalPanel({
       favoriteDrinkLine,
       tagsLine,
       "Built from my Near Me Coffee Journal.",
+      "Explore more at https://www.near-me.cafe",
     ]
       .filter(Boolean)
       .join("\n");
@@ -304,11 +327,17 @@ export function CoffeeJournalPanel({
     context.font = "700 26px Arial, sans-serif";
     context.fillText("YOUR TASTE", centerX, wheelY - 28);
     context.fillStyle = "#142018";
-    context.font = "700 72px Georgia, serif";
+    context.font = `700 ${getCanvasWheelTitleSize(insight.primaryTaste)}px Georgia, serif`;
     context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 40);
     context.fillStyle = "rgba(20, 32, 24, 0.58)";
-    context.font = "700 28px Georgia, serif";
-    context.fillText(insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening", centerX, wheelY + 88);
+    context.font = `700 ${getCanvasWheelSubtitleSize(
+      insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
+    )}px Georgia, serif`;
+    context.fillText(
+      insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
+      centerX,
+      wheelY + 88,
+    );
 
     context.textAlign = "left";
     context.fillStyle = "rgba(20, 32, 24, 0.5)";
@@ -352,6 +381,11 @@ export function CoffeeJournalPanel({
     context.fillStyle = "rgba(20, 32, 24, 0.42)";
     context.font = "600 24px Arial, sans-serif";
     context.fillText("near-me.cafe", 110, 1260);
+    context.textAlign = "right";
+    context.fillStyle = "rgba(20, 32, 24, 0.54)";
+    context.font = "600 22px Arial, sans-serif";
+    context.fillText("https://www.near-me.cafe", canvas.width - 110, 1260);
+    context.textAlign = "left";
 
     const blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob((nextBlob) => resolve(nextBlob), "image/png");
