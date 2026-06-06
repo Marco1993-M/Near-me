@@ -135,17 +135,29 @@ function getWheelSubtitleSize(label: string | null) {
 
 function getCanvasWheelTitleSize(label: string | null) {
   const length = label?.length ?? 0;
+  if (length >= 16) {
+    return 38;
+  }
+  if (length >= 13) {
+    return 44;
+  }
   if (length >= 10) {
-    return 54;
+    return 48;
   }
   if (length >= 8) {
-    return 60;
+    return 54;
   }
-  return 72;
+  return 64;
 }
 
 function getCanvasWheelSubtitleSize(label: string | null) {
   const length = label?.length ?? 0;
+  if (length >= 24) {
+    return 16;
+  }
+  if (length >= 20) {
+    return 18;
+  }
   if (length >= 18) {
     return 20;
   }
@@ -372,11 +384,11 @@ export function CoffeeJournalPanel({
 
     context.fillStyle = "rgba(20, 32, 24, 0.5)";
     context.textAlign = "center";
-    context.font = "700 24px Arial, sans-serif";
-    context.fillText("YOUR TASTE", centerX, wheelY - 28);
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText("YOUR TASTE", centerX, wheelY - 30);
     context.fillStyle = "#142018";
     context.font = `700 ${getCanvasWheelTitleSize(insight.primaryTaste)}px Georgia, serif`;
-    context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 34);
+    context.fillText(insight.primaryTaste ?? "Tasting", centerX, wheelY + 22);
     context.fillStyle = "rgba(20, 32, 24, 0.58)";
     context.font = `700 ${getCanvasWheelSubtitleSize(
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
@@ -384,31 +396,33 @@ export function CoffeeJournalPanel({
     context.fillText(
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
       centerX,
-      wheelY + 78,
+      wheelY + 68,
     );
 
     context.fillStyle = "rgba(20, 32, 24, 0.06)";
+    const editorialBlockX = cardX + 82;
+    const editorialBlockWidth = cardWidth - 164;
     context.beginPath();
-    context.roundRect(cardX + 42, 704, cardWidth - 84, 372, 32);
+    context.roundRect(editorialBlockX, 704, editorialBlockWidth, 372, 32);
     context.fill();
 
     context.textAlign = "left";
     context.fillStyle = "rgba(20, 32, 24, 0.5)";
     context.font = "700 22px Arial, sans-serif";
-    context.fillText(moment.eyebrow.toUpperCase(), 116, 748);
+    context.fillText(moment.eyebrow.toUpperCase(), editorialBlockX + 34, 748);
 
     context.fillStyle = "#142018";
-    context.font = "700 68px Georgia, serif";
-    const titleLines = wrapCanvasText(context, moment.title, 780);
+    context.font = "700 64px Georgia, serif";
+    const titleLines = wrapCanvasText(context, moment.title, editorialBlockWidth - 68);
     titleLines.slice(0, 3).forEach((line, index) => {
-      context.fillText(line, 116, 828 + index * 76);
+      context.fillText(line, editorialBlockX + 34, 826 + index * 74);
     });
 
     context.fillStyle = "rgba(20, 32, 24, 0.64)";
     context.font = "500 29px Arial, sans-serif";
-    const bodyLines = wrapCanvasText(context, moment.body, 760);
+    const bodyLines = wrapCanvasText(context, moment.body, editorialBlockWidth - 68);
     bodyLines.slice(0, 3).forEach((line, index) => {
-      context.fillText(line, 116, 1014 + index * 42);
+      context.fillText(line, editorialBlockX + 34, 1008 + index * 42);
     });
 
     const chipY = 1128;
