@@ -3,8 +3,17 @@ import { getFeaturedCafes } from "@/lib/cafes";
 
 export const revalidate = 3600;
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams: Promise<{
+    intent?: string;
+    open?: string;
+  }>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
   const featuredCafes = await getFeaturedCafes();
+  const { intent, open } = await searchParams;
+  const openTasteSetup = intent === "taste" || open === "taste";
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -26,7 +35,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <HomeDiscoveryScreen cafes={featuredCafes} />
+      <HomeDiscoveryScreen cafes={featuredCafes} openTasteSetup={openTasteSetup} />
     </main>
   );
 }
