@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@/types/cafe";
 import { CoffeeProfileCard } from "@/components/coffee-profile-card";
 import { CoffeeJournalPanel } from "@/components/coffee-journal-panel";
@@ -48,6 +48,7 @@ import {
 
 type HomeDiscoveryScreenProps = {
   cafes: Cafe[];
+  openTasteSetup?: boolean;
 };
 
 type DiscoverySource =
@@ -257,7 +258,8 @@ function buildOptimisticReviewState(
   };
 }
 
-export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
+export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDiscoveryScreenProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const [isIntroVisible, setIsIntroVisible] = useState(false);
   const [localReviewStateByCafeId, setLocalReviewStateByCafeId] = useState<
@@ -336,6 +338,7 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
   const previousRadiusKmRef = useRef(selectedRadiusKm);
   const lastTrackedLocationStateRef = useRef<string | null>(null);
   const profilerSourceRef = useRef<DiscoverySource>("toolbar");
+  const handledTasteIntentRef = useRef(false);
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -353,6 +356,16 @@ export function HomeDiscoveryScreen({ cafes }: HomeDiscoveryScreenProps) {
     getStoredCoffeeJournalServerSnapshot,
   );
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
+
+  useEffect(() => {
+    if (!openTasteSetup || handledTasteIntentRef.current) {
+      return;
+    }
+
+    handledTasteIntentRef.current = true;
+    openProfiler("deep_link");
+    router.replace(pathname, { scroll: false });
+  }, [openTasteSetup, pathname, router]);
 
   const cafeDistances = useMemo(() => {
     if (!userLocation) {

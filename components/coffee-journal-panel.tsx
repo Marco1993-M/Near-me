@@ -167,6 +167,8 @@ function getCanvasWheelSubtitleSize(label: string | null) {
   return 22;
 }
 
+const TASTE_SETUP_SHARE_URL = "https://www.near-me.cafe/?intent=taste";
+
 function getWheelColor(color: string, value: number) {
   const fade = Math.round((1 - value) * 62);
   return `color-mix(in srgb, ${color} ${100 - fade}%, rgba(255, 250, 242, 0.96))`;
@@ -256,13 +258,13 @@ export function CoffeeJournalPanel({
     const tagsLine = leadingTags.length > 0 ? `Top notes: ${leadingTags.join(", ")}.` : null;
 
     return [
-      moment.title,
+      moment.shareText,
       moment.body,
       leadingTaste ? `Taste read: ${leadingTaste}.` : null,
       favoriteDrinkLine,
       tagsLine,
       "Built from my Near Me Coffee Journal.",
-      "Explore more at https://www.near-me.cafe",
+      `Curious what your coffee taste looks like? Find yours at ${TASTE_SETUP_SHARE_URL}`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -459,7 +461,7 @@ export function CoffeeJournalPanel({
 
     context.fillStyle = "#142018";
     context.font = "700 26px Georgia, serif";
-    context.fillText("near-me.cafe", 116, 1260);
+    context.fillText("near-me.cafe/?intent=taste", 116, 1260);
     context.textAlign = "right";
     context.fillStyle = "rgba(20, 32, 24, 0.56)";
     context.font = "600 22px Arial, sans-serif";
