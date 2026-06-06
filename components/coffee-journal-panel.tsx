@@ -153,18 +153,18 @@ function getCanvasWheelTitleSize(label: string | null) {
 function getCanvasWheelSubtitleSize(label: string | null) {
   const length = label?.length ?? 0;
   if (length >= 24) {
-    return 16;
+    return 14;
   }
   if (length >= 20) {
-    return 18;
+    return 16;
   }
   if (length >= 18) {
-    return 20;
+    return 17;
   }
   if (length >= 14) {
-    return 22;
+    return 18;
   }
-  return 28;
+  return 22;
 }
 
 function getWheelColor(color: string, value: number) {
@@ -340,13 +340,15 @@ export function CoffeeJournalPanel({
     context.roundRect(cardX + 2, cardY + 2, cardWidth - 4, cardHeight - 4, 44);
     context.fill();
 
+    const shareableLabel = "SHAREABLE MOMENT";
+    context.font = "700 21px Arial, sans-serif";
+    const shareableLabelWidth = context.measureText(shareableLabel).width + 56;
     context.fillStyle = "rgba(20, 32, 24, 0.08)";
     context.beginPath();
-    context.roundRect(cardX + 42, cardY + 42, 182, 52, 999);
+    context.roundRect(cardX + 42, cardY + 42, shareableLabelWidth, 52, 999);
     context.fill();
     context.fillStyle = "#214d2f";
-    context.font = "700 21px Arial, sans-serif";
-    context.fillText("SHAREABLE MOMENT", cardX + 66, cardY + 75);
+    context.fillText(shareableLabel, cardX + 66, cardY + 75);
 
     const centerX = canvas.width / 2;
     const wheelY = 468;
@@ -393,11 +395,14 @@ export function CoffeeJournalPanel({
     context.font = `700 ${getCanvasWheelSubtitleSize(
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
     )}px Georgia, serif`;
-    context.fillText(
+    const subtitleLines = wrapCanvasText(
+      context,
       insight.secondaryTaste ? `${insight.secondaryTaste} lean` : "Still sharpening",
-      centerX,
-      wheelY + 68,
+      150,
     );
+    subtitleLines.slice(0, 2).forEach((line, index) => {
+      context.fillText(line, centerX, wheelY + 58 + index * 18);
+    });
 
     context.fillStyle = "rgba(20, 32, 24, 0.06)";
     const editorialBlockX = cardX + 82;
