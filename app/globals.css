@@ -732,6 +732,154 @@ img {
   pointer-events: auto;
 }
 
+.map-daily-cup-shell {
+  position: fixed;
+  top: calc(4.95rem + env(safe-area-inset-top));
+  left: 1rem;
+  right: 1rem;
+  z-index: 5001;
+  pointer-events: auto;
+}
+
+.map-daily-cup-card {
+  display: grid;
+  gap: 0.72rem;
+  width: min(100%, 32rem);
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(31, 106, 56, 0.12);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(199, 245, 211, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 247, 0.94) 100%);
+  box-shadow: var(--glass-highlight), 0 24px 48px rgba(20, 32, 24, 0.16);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+.map-daily-cup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.map-daily-cup-kicker {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.map-daily-cup-kicker span,
+.map-daily-cup-backups > span {
+  color: #1f6a38;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-daily-cup-kicker strong {
+  color: rgba(20, 32, 24, 0.68);
+  font-size: 0.82rem;
+}
+
+.map-daily-cup-open {
+  min-height: 2rem;
+  padding: 0 0.82rem;
+  border: 1px solid rgba(31, 106, 56, 0.14);
+  border-radius: 999px;
+  background: rgba(199, 245, 211, 0.32);
+  color: #1f6a38;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.map-daily-cup-copy {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.map-daily-cup-copy strong {
+  color: var(--near-me-ink);
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.map-daily-cup-copy p,
+.map-daily-cup-meta span,
+.map-daily-cup-backup span {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
+.map-daily-cup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+}
+
+.map-daily-cup-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.map-daily-cup-quick-card {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(255, 255, 252, 0.72);
+}
+
+.map-daily-cup-quick-card span {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.map-daily-cup-quick-card strong {
+  color: var(--near-me-ink);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.map-daily-cup-backups {
+  display: grid;
+  gap: 0.46rem;
+}
+
+.map-daily-cup-backup-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.map-daily-cup-backup {
+  display: grid;
+  gap: 0.12rem;
+  width: 100%;
+  padding: 0.76rem 0.82rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(255, 255, 252, 0.68);
+  color: var(--near-me-ink);
+  text-align: left;
+}
+
+.map-daily-cup-backup strong {
+  font-size: 0.84rem;
+}
+
 .map-intro-card {
   display: grid;
   gap: 0.8rem;
