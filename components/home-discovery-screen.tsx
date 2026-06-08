@@ -2943,7 +2943,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   <div className="diesel-selection-copy diesel-selection-copy-today">
                     <strong>{todayCupPrimary.cafe.name}</strong>
-                    <div className="diesel-selection-decision-badge">
+                    <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
                       <span className="diesel-selection-decision-kicker">Go today if</span>
                       <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
                     </div>
