@@ -74,9 +74,23 @@ type JournalTarget =
 
 type TodayCupFeedbackReason = "too-far" | "not-for-me" | "already-been" | "not-today";
 
+type TodayCupIntentKey =
+  | "default"
+  | "quiet"
+  | "best-cortado"
+  | "quick-stop"
+  | "worth-it"
+  | "bright-cup";
+
 type TodayCupFeedbackEntry = {
   reason: TodayCupFeedbackReason;
   skippedAt: string;
+};
+
+type TodayCupIntentConfig = {
+  label: string;
+  shortLabel: string;
+  cue: string;
 };
 
 const reviewDrinkOptions = [
@@ -132,6 +146,39 @@ const todayCupFeedbackCopy: Record<
   "not-for-me": { label: "Not for me", days: 14 },
   "already-been": { label: "Already been", days: 3 },
   "not-today": { label: "Not today", days: 1 },
+};
+
+const todayCupIntentCopy: Record<TodayCupIntentKey, TodayCupIntentConfig> = {
+  default: {
+    label: "Default",
+    shortLabel: "For now",
+    cue: "Your best all-round coffee call for this moment",
+  },
+  quiet: {
+    label: "Quiet",
+    shortLabel: "Quiet",
+    cue: "A calmer stop if you want to settle in instead of rush through",
+  },
+  "best-cortado": {
+    label: "Best cortado",
+    shortLabel: "Cortado",
+    cue: "A stronger espresso-first stop for your shorter milk drinks",
+  },
+  "quick-stop": {
+    label: "Quick stop",
+    shortLabel: "Quick",
+    cue: "A fast good-cup option when distance matters more than lingering",
+  },
+  "worth-it": {
+    label: "Worth it",
+    shortLabel: "Worth it",
+    cue: "A stronger trust-led pick if you are happy to stretch a little",
+  },
+  "bright-cup": {
+    label: "Bright cup",
+    shortLabel: "Bright",
+    cue: "A livelier pick if you want something cleaner, fruitier, or more expressive",
+  },
 };
 
 const journalTagHints: Record<(typeof journalTags)[number], string> = {
@@ -433,6 +480,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   >("idle");
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
+  const [todayCupIntent, setTodayCupIntent] = useState<TodayCupIntentKey>("default");
   const [todayCupFeedbackByCafeId, setTodayCupFeedbackByCafeId] = useState<Record<string, TodayCupFeedbackEntry>>({});
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
@@ -495,6 +543,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
   const currentHour = useMemo(() => new Date().getHours(), []);
   const todayCupMoment = useMemo(() => getTodayCupMoment(currentHour), [currentHour]);
+  const todayCupIntentConfig = todayCupIntentCopy[todayCupIntent];
 
   useEffect(() => {
     const nextFeedback = pruneTodayCupFeedback(readTodayCupFeedback());
@@ -797,14 +846,64 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           }
         }
 
+        let intentBoost = 0;
+        let distanceWeight = 0.2;
+        let ratingWeight = 0.86;
+        let journalWeight = 1.16;
+        let profileWeight = 0.9;
+
+        if (todayCupIntent === "quiet") {
+          if (cafeSignalsContain(cafe, ["quiet", "laptop-friendly", "traveler-friendly", "work-friendly"])) {
+            intentBoost += 1.65;
+          }
+          if (cafeSignalsContain(cafe, ["filter", "batch brew"])) {
+            intentBoost += 0.35;
+          }
+          distanceWeight = 0.16;
+        } else if (todayCupIntent === "best-cortado") {
+          if (cafeSignalsContain(cafe, ["cortado", "espresso", "macchiato"])) {
+            intentBoost += 1.85;
+          }
+          if (cafeSignalsContain(cafe, ["flat white", "milk drink"])) {
+            intentBoost += 0.55;
+          }
+          if (cafeSignalsContain(cafe, ["roaster", "specialty coffee"])) {
+            intentBoost += 0.25;
+          }
+          journalWeight = 1.28;
+          profileWeight = 1.04;
+        } else if (todayCupIntent === "quick-stop") {
+          intentBoost += Math.max(0, 1.8 - distance * 0.55);
+          distanceWeight = 0.48;
+          ratingWeight = 0.76;
+        } else if (todayCupIntent === "worth-it") {
+          if (cafeSignalsContain(cafe, ["roaster", "specialty coffee", "traveler-friendly"])) {
+            intentBoost += 0.5;
+          }
+          distanceWeight = 0.1;
+          ratingWeight = 1.05;
+          journalWeight = 1.22;
+          intentBoost += Math.min(reviewCount, 20) * 0.04;
+        } else if (todayCupIntent === "bright-cup") {
+          if (cafeSignalsContain(cafe, ["filter", "pour over", "fruity", "floral", "bright", "clean"])) {
+            intentBoost += 1.8;
+          }
+          if (cafeSignalsContain(cafe, ["seasonal", "signature"])) {
+            intentBoost += 0.3;
+          }
+          profileWeight = 1.04;
+          journalWeight = 1.24;
+        }
+
         const totalScore =
-          rating * 0.86 +
+          rating * ratingWeight +
           popularityBoost +
           radiusBonus +
-          profileScore * 0.9 +
-          journalScore * 1.16 +
+          profileScore * profileWeight +
+          journalScore * journalWeight +
           momentBoost -
-          distance * 0.2;
+          distance * distanceWeight +
+          intentBoost;
 
         return {
           cafe,
@@ -826,6 +925,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     coffeeProfileState,
     journalMatchByCafeId,
     selectedRadiusKm,
+    todayCupIntent,
     todayCupFeedbackByCafeId,
     todayCupMoment.key,
     userLocation,
@@ -1330,6 +1430,14 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     trackEvent("today_cup_skipped", {
       cafe_slug: todayCupPrimary.cafe.slug,
       reason,
+      moment: todayCupMoment.key,
+    });
+  }
+
+  function handleTodayCupIntentSelect(intent: TodayCupIntentKey) {
+    setTodayCupIntent(intent);
+    trackEvent("today_cup_intent_selected", {
+      intent,
       moment: todayCupMoment.key,
     });
   }
@@ -2953,13 +3061,34 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   <div className="diesel-selection-copy diesel-selection-copy-today">
                     <strong>{todayCupPrimary.cafe.name}</strong>
+                    <div className="diesel-today-intents" aria-label="Choose what you are in the mood for">
+                      {(
+                        Object.entries(todayCupIntentCopy) as Array<
+                          [TodayCupIntentKey, TodayCupIntentConfig]
+                        >
+                      ).map(([intentKey, intentConfig]) => (
+                        <button
+                          key={intentKey}
+                          type="button"
+                          className={`diesel-today-intent-chip${
+                            todayCupIntent === intentKey ? " is-active" : ""
+                          }`}
+                          onClick={() => handleTodayCupIntentSelect(intentKey)}
+                          aria-pressed={todayCupIntent === intentKey}
+                        >
+                          {intentConfig.label}
+                        </button>
+                      ))}
+                    </div>
                     <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
                       <span className="diesel-selection-decision-kicker">Go today if</span>
                       <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
                     </div>
                     {isCollapsedCard ? (
                       <div className="diesel-selection-match-nudge">
-                        <span className="diesel-selection-match-nudge-value">{todayCupMoment.label}</span>
+                        <span className="diesel-selection-match-nudge-value">
+                          {todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.shortLabel}
+                        </span>
                         <span className="diesel-selection-match-nudge-copy">
                           {todayCupPrimary.journalMatch?.reason ??
                             todayCupPrimary.profileMatch?.label ??
@@ -2969,7 +3098,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     ) : null}
                     <p>
                       {isCollapsedCard
-                        ? todayCupMoment.cue
+                        ? todayCupIntent === "default"
+                          ? todayCupMoment.cue
+                          : todayCupIntentConfig.cue
                         : todayCupPrimary.journalMatch?.support ??
                           todayCupPrimary.profileMatch?.reasons?.[0] ??
                           todayCupPrimary.decisionGuide.goIfSupport}
