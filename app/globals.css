@@ -2476,6 +2476,11 @@ img {
   letter-spacing: -0.01em;
 }
 
+.diesel-selection-decision-badge-today strong {
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
 .diesel-selection-quick-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
