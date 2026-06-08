@@ -72,6 +72,13 @@ type JournalTarget =
   | { type: "cafe"; cafe: Cafe }
   | { type: "fallback"; place: FallbackPlace };
 
+type TodayCupFeedbackReason = "too-far" | "not-for-me" | "already-been" | "not-today";
+
+type TodayCupFeedbackEntry = {
+  reason: TodayCupFeedbackReason;
+  skippedAt: string;
+};
+
 const reviewDrinkOptions = [
   {
     label: "Espresso",
@@ -115,6 +122,17 @@ const journalTags = [
   "Clean",
 ] as const;
 const radiusOptionsKm = [1, 3, 5, 10];
+const TODAY_CUP_FEEDBACK_STORAGE_KEY = "near-me-today-cup-feedback";
+
+const todayCupFeedbackCopy: Record<
+  TodayCupFeedbackReason,
+  { label: string; days: number }
+> = {
+  "too-far": { label: "Too far", days: 2 },
+  "not-for-me": { label: "Not for me", days: 14 },
+  "already-been": { label: "Already been", days: 3 },
+  "not-today": { label: "Not today", days: 1 },
+};
 
 const journalTagHints: Record<(typeof journalTags)[number], string> = {
   Bright: "Bright usually means lively acidity rather than bitterness.",
@@ -284,6 +302,74 @@ function cafeSignalsContain(cafe: Cafe, needles: string[]) {
   return needles.some((needle) => values.some((value) => value.includes(needle)));
 }
 
+function normalizeTodayCupFeedback(input: unknown) {
+  if (!input || typeof input !== "object") {
+    return {} as Record<string, TodayCupFeedbackEntry>;
+  }
+
+  return Object.fromEntries(
+    Object.entries(input)
+      .map(([cafeId, value]) => {
+        if (!value || typeof value !== "object") {
+          return null;
+        }
+
+        const candidate = value as Partial<TodayCupFeedbackEntry>;
+        if (
+          typeof candidate.reason !== "string" ||
+          !(candidate.reason in todayCupFeedbackCopy) ||
+          typeof candidate.skippedAt !== "string"
+        ) {
+          return null;
+        }
+
+        return [cafeId, { reason: candidate.reason as TodayCupFeedbackReason, skippedAt: candidate.skippedAt }] as const;
+      })
+      .filter((entry): entry is readonly [string, TodayCupFeedbackEntry] => Boolean(entry)),
+  );
+}
+
+function readTodayCupFeedback() {
+  if (typeof window === "undefined") {
+    return {} as Record<string, TodayCupFeedbackEntry>;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(TODAY_CUP_FEEDBACK_STORAGE_KEY);
+    if (!raw) {
+      return {} as Record<string, TodayCupFeedbackEntry>;
+    }
+
+    return normalizeTodayCupFeedback(JSON.parse(raw));
+  } catch {
+    return {} as Record<string, TodayCupFeedbackEntry>;
+  }
+}
+
+function pruneTodayCupFeedback(feedback: Record<string, TodayCupFeedbackEntry>) {
+  const now = Date.now();
+
+  return Object.fromEntries(
+    Object.entries(feedback).filter(([, entry]) => {
+      const maxAgeDays = todayCupFeedbackCopy[entry.reason]?.days ?? 1;
+      const skippedAt = new Date(entry.skippedAt).getTime();
+      if (!Number.isFinite(skippedAt)) {
+        return false;
+      }
+
+      return now - skippedAt < maxAgeDays * 24 * 60 * 60 * 1000;
+    }),
+  );
+}
+
+function writeTodayCupFeedback(feedback: Record<string, TodayCupFeedbackEntry>) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(TODAY_CUP_FEEDBACK_STORAGE_KEY, JSON.stringify(pruneTodayCupFeedback(feedback)));
+}
+
 function buildOptimisticReviewState(
   cafe: Cafe,
   input: { rating: number; note: string; selectedTags: string[] },
@@ -347,6 +433,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   >("idle");
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
+  const [todayCupReasonPickerOpen, setTodayCupReasonPickerOpen] = useState(false);
+  const [todayCupFeedbackByCafeId, setTodayCupFeedbackByCafeId] = useState<Record<string, TodayCupFeedbackEntry>>({});
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
@@ -408,6 +496,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
   const currentHour = useMemo(() => new Date().getHours(), []);
   const todayCupMoment = useMemo(() => getTodayCupMoment(currentHour), [currentHour]);
+
+  useEffect(() => {
+    const nextFeedback = pruneTodayCupFeedback(readTodayCupFeedback());
+    setTodayCupFeedbackByCafeId(nextFeedback);
+    writeTodayCupFeedback(nextFeedback);
+  }, []);
 
   useEffect(() => {
     if (!openTasteSetup || handledTasteIntentRef.current) {
@@ -718,8 +812,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
             activeCoffeeProfile ? getCafeProfileMatch(cafe, activeCoffeeProfile, coffeeProfileState) : null,
         };
       })
-      .sort((left, right) => right.totalScore - left.totalScore)
-      .slice(0, 3);
+      .filter((candidate) => !todayCupFeedbackByCafeId[candidate.cafe.id])
+      .sort((left, right) => right.totalScore - left.totalScore);
   }, [
     activeCoffeeProfile,
     cafeDistances,
@@ -727,12 +821,13 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     journalMatchByCafeId,
     mappableCafes,
     selectedRadiusKm,
+    todayCupFeedbackByCafeId,
     todayCupMoment.key,
     userLocation,
   ]);
 
   const todayCupPrimary = todayCupRanked[0] ?? null;
-  const todayCupBackups = todayCupRanked.slice(1);
+  const todayCupBackups = todayCupRanked.slice(1, 3);
   const shouldShowTodayCup =
     !shouldShowIntro &&
     !isOverlayOpen &&
@@ -921,6 +1016,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     if (explicit) {
       hasExplicitCafeSelectionRef.current = true;
       setIsCafeCardVisible(true);
+      resetTodayCupReasonPicker();
     } else {
       setIsCafeCardVisible(false);
     }
@@ -959,6 +1055,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   ) {
     hasExplicitCafeSelectionRef.current = false;
     setIsCafeCardVisible(false);
+    resetTodayCupReasonPicker();
     dismissIntro();
     setActiveCafeId(null);
     setActiveFallbackId(placeId);
@@ -1153,6 +1250,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function openSearch(source: DiscoverySource = "toolbar") {
     dismissIntro();
     trackEvent("search_opened", { source });
+    resetTodayCupReasonPicker();
     setIsTopPicksOpen(false);
     setIsSearchOpen(true);
   }
@@ -1168,6 +1266,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       source,
       lens: topPickLens,
     });
+    resetTodayCupReasonPicker();
     setIsJournalOpen(false);
     setIsSearchOpen(false);
     setIsTopPicksOpen(true);
@@ -1179,6 +1278,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       source,
       entries: journalEntries.length,
     });
+    resetTodayCupReasonPicker();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -1193,6 +1293,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function openTastePanel(source: DiscoverySource = "toolbar") {
     dismissIntro();
     setIsJournalOpen(false);
+    resetTodayCupReasonPicker();
     if (activeCoffeeProfile) {
       setIsSearchOpen(false);
       setIsTopPicksOpen(true);
@@ -1212,6 +1313,37 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     setIsTopPicksOpen(false);
   }
 
+  function openTodayCupReasonPicker() {
+    setTodayCupReasonPickerOpen(true);
+  }
+
+  function resetTodayCupReasonPicker() {
+    setTodayCupReasonPickerOpen(false);
+  }
+
+  function handleTodayCupFeedback(reason: TodayCupFeedbackReason) {
+    if (!todayCupPrimary) {
+      return;
+    }
+
+    const nextFeedback = pruneTodayCupFeedback({
+      ...todayCupFeedbackByCafeId,
+      [todayCupPrimary.cafe.id]: {
+        reason,
+        skippedAt: new Date().toISOString(),
+      },
+    });
+
+    setTodayCupFeedbackByCafeId(nextFeedback);
+    writeTodayCupFeedback(nextFeedback);
+    trackEvent("today_cup_skipped", {
+      cafe_slug: todayCupPrimary.cafe.slug,
+      reason,
+      moment: todayCupMoment.key,
+    });
+    setTodayCupReasonPickerOpen(false);
+  }
+
   function resetJournalForm() {
     setJournalRating(7);
     setJournalDrink(null);
@@ -1223,6 +1355,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
   function openJournalEntryModal(target?: JournalTarget, source: DiscoverySource = "active_card") {
     dismissIntro();
+    resetTodayCupReasonPicker();
     setIsJournalOpen(false);
     trackEvent("journal_entry_started", {
       source,
@@ -2925,8 +3058,35 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       >
                         More picks
                       </button>
+                      <button
+                        className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                        type="button"
+                        onClick={openTodayCupReasonPicker}
+                      >
+                        Show another
+                      </button>
                     </div>
                   </div>
+
+                  {todayCupReasonPickerOpen ? (
+                    <div className="diesel-today-feedback">
+                      <span>Help Near Me learn</span>
+                      <div className="diesel-today-feedback-list">
+                        {(Object.entries(todayCupFeedbackCopy) as Array<
+                          [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
+                        >).map(([reason, config]) => (
+                          <button
+                            key={reason}
+                            className="diesel-today-feedback-chip"
+                            type="button"
+                            onClick={() => handleTodayCupFeedback(reason)}
+                          >
+                            {config.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </section>
