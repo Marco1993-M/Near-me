@@ -801,8 +801,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
     const candidatePool =
       cafesWithinRadius.length > 0
-        ? cafesWithinRadius.slice(0, 12)
-        : cafesByDistance.slice(0, 12);
+        ? cafesWithinRadius.slice(0, 24)
+        : cafesByDistance.slice(0, 24);
 
     return candidatePool
       .map((cafe) => {
@@ -853,43 +853,79 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         let profileWeight = 0.9;
 
         if (todayCupIntent === "quiet") {
+          const quietFit = cafeSignalsContain(cafe, [
+            "quiet",
+            "laptop-friendly",
+            "traveler-friendly",
+            "work-friendly",
+          ]);
           if (cafeSignalsContain(cafe, ["quiet", "laptop-friendly", "traveler-friendly", "work-friendly"])) {
-            intentBoost += 1.65;
+            intentBoost += 2.4;
           }
           if (cafeSignalsContain(cafe, ["filter", "batch brew"])) {
             intentBoost += 0.35;
           }
+          if (!quietFit) {
+            intentBoost -= 1.2;
+          }
           distanceWeight = 0.16;
         } else if (todayCupIntent === "best-cortado") {
-          if (cafeSignalsContain(cafe, ["cortado", "espresso", "macchiato"])) {
-            intentBoost += 1.85;
+          const espressoFit = cafeSignalsContain(cafe, ["cortado", "espresso", "macchiato"]);
+          if (espressoFit) {
+            intentBoost += 2.7;
           }
           if (cafeSignalsContain(cafe, ["flat white", "milk drink"])) {
-            intentBoost += 0.55;
+            intentBoost += 0.75;
           }
           if (cafeSignalsContain(cafe, ["roaster", "specialty coffee"])) {
             intentBoost += 0.25;
           }
+          if (!espressoFit) {
+            intentBoost -= 1.5;
+          }
           journalWeight = 1.28;
           profileWeight = 1.04;
         } else if (todayCupIntent === "quick-stop") {
-          intentBoost += Math.max(0, 1.8 - distance * 0.55);
+          intentBoost += Math.max(0, 2.5 - distance * 0.9);
+          if (distance <= 1.2) {
+            intentBoost += 1.1;
+          } else if (distance > 2.5) {
+            intentBoost -= 1.2;
+          }
           distanceWeight = 0.48;
           ratingWeight = 0.76;
         } else if (todayCupIntent === "worth-it") {
+          const trustFit =
+            reviewCount >= 4 ||
+            rating >= 8.3 ||
+            cafeSignalsContain(cafe, ["roaster", "specialty coffee", "traveler-friendly"]);
           if (cafeSignalsContain(cafe, ["roaster", "specialty coffee", "traveler-friendly"])) {
             intentBoost += 0.5;
+          }
+          if (trustFit) {
+            intentBoost += 1.65;
           }
           distanceWeight = 0.1;
           ratingWeight = 1.05;
           journalWeight = 1.22;
           intentBoost += Math.min(reviewCount, 20) * 0.04;
         } else if (todayCupIntent === "bright-cup") {
-          if (cafeSignalsContain(cafe, ["filter", "pour over", "fruity", "floral", "bright", "clean"])) {
-            intentBoost += 1.8;
+          const brightFit = cafeSignalsContain(cafe, [
+            "filter",
+            "pour over",
+            "fruity",
+            "floral",
+            "bright",
+            "clean",
+          ]);
+          if (brightFit) {
+            intentBoost += 2.6;
           }
           if (cafeSignalsContain(cafe, ["seasonal", "signature"])) {
             intentBoost += 0.3;
+          }
+          if (!brightFit) {
+            intentBoost -= 1.4;
           }
           profileWeight = 1.04;
           journalWeight = 1.24;
