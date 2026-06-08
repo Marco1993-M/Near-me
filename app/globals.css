@@ -2569,6 +2569,48 @@ img {
   flex-shrink: 0;
 }
 
+.diesel-today-intents {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  margin-top: 0.15rem;
+  scrollbar-width: none;
+}
+
+.diesel-today-intents::-webkit-scrollbar {
+  display: none;
+}
+
+.diesel-today-intent-chip {
+  min-height: 1.95rem;
+  padding: 0 0.78rem;
+  border: 1px solid rgba(20, 32, 24, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 252, 0.74);
+  color: rgba(20, 32, 24, 0.62);
+  font-size: 0.73rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.diesel-today-intent-chip.is-active {
+  border-color: rgba(31, 106, 56, 0.18);
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.28), rgba(255, 255, 255, 0.08)),
+    rgba(238, 250, 242, 0.92);
+  color: #1f6a38;
+  box-shadow: 0 10px 24px rgba(31, 106, 56, 0.08);
+}
+
 .diesel-today-feedback {
   display: grid;
   gap: 0.45rem;
