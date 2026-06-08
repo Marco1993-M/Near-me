@@ -88,6 +88,8 @@ type JournalInput = {
   note: string;
   tags: string[];
   source: "manual" | "review";
+  reviewId?: string;
+  createdAt?: string;
 };
 
 const glossaryByTag: Record<string, string> = {
@@ -152,7 +154,38 @@ function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
     .filter((entry): entry is CoffeeJournalEntry => Boolean(entry))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 
-  return normalizedEntries;
+  const dedupedEntries: CoffeeJournalEntry[] = [];
+  const seenReviewIds = new Set<string>();
+  const seenReviewSignatures = new Set<string>();
+
+  for (const entry of normalizedEntries) {
+    if (entry.reviewId) {
+      if (seenReviewIds.has(entry.reviewId)) {
+        continue;
+      }
+
+      seenReviewIds.add(entry.reviewId);
+    }
+
+    if (entry.source === "review") {
+      const reviewSignature = [
+        entry.cafeId ?? entry.cafeName.toLowerCase(),
+        entry.drink.toLowerCase(),
+        entry.rating,
+        entry.note.trim().toLowerCase(),
+      ].join("::");
+
+      if (seenReviewSignatures.has(reviewSignature)) {
+        continue;
+      }
+
+      seenReviewSignatures.add(reviewSignature);
+    }
+
+    dedupedEntries.push(entry);
+  }
+
+  return dedupedEntries;
 }
 
 function readJournalRaw() {
@@ -254,7 +287,8 @@ export function addCoffeeJournalEntry(input: JournalInput) {
   const tags = Array.from(new Set(input.tags.map((tag) => tag.trim()).filter(Boolean))).slice(0, 5);
 
   const nextEntry: CoffeeJournalEntry = {
-    id: globalThis.crypto?.randomUUID?.() ?? `journal-${Date.now()}`,
+    id: input.reviewId ? `journal-review-${input.reviewId}` : globalThis.crypto?.randomUUID?.() ?? `journal-${Date.now()}`,
+    reviewId: input.reviewId,
     cafeId,
     cafeName,
     city,
@@ -262,7 +296,7 @@ export function addCoffeeJournalEntry(input: JournalInput) {
     rating: input.rating,
     note,
     tags,
-    createdAt: new Date().toISOString(),
+    createdAt: input.createdAt ?? new Date().toISOString(),
     source: input.source,
   };
 
@@ -607,9 +641,9 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
       eyebrow: "Taste read",
       title:
         primaryTaste && secondaryTaste
-          ? `${tasteMood} with a ${secondaryTaste.toLowerCase()} lean`
+          ? `I lean ${tasteMood.toLowerCase()} with a ${secondaryTaste.toLowerCase()} edge`
           : primaryTaste
-            ? `${tasteMood}`
+            ? `I lean ${tasteMood.toLowerCase()}`
             : "My coffee taste is still taking shape",
       body:
         favoriteDrinkFamily
@@ -623,17 +657,27 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     {
       id: "taste-shift",
       eyebrow: "Taste evolution",
-      title: evolutionSummary,
+      title:
+        recentPrimaryLabel && earlierPrimaryLabel && recentPrimaryLabel !== earlierPrimaryLabel
+          ? `My recent cups are leaning more ${recentPrimaryLabel.toLowerCase()} than before.`
+          : recentPrimaryLabel
+            ? `My recent cups are reinforcing a ${recentPrimaryLabel.toLowerCase()} lean.`
+            : "My taste is still sharpening with every new cup.",
       body:
         recentFavoriteDrinkFamily
           ? `Lately I’ve been reaching for ${recentFavoriteDrinkFamily} more often.`
           : "My recent cups are starting to shift the shape of my taste.",
-      shareText: `Near Me noticed a shift in my coffee taste: ${evolutionSummary.charAt(0).toLowerCase()}${evolutionSummary.slice(1)}`,
+      shareText:
+        recentPrimaryLabel && earlierPrimaryLabel && recentPrimaryLabel !== earlierPrimaryLabel
+          ? `My Near Me coffee journal is showing a shift toward ${recentPrimaryLabel.toLowerCase()} cups lately.`
+          : recentPrimaryLabel
+            ? `My Near Me coffee journal says my recent cups are reinforcing a ${recentPrimaryLabel.toLowerCase()} lean.`
+            : `My Near Me coffee journal is still sharpening with every new cup.`,
     },
     {
       id: "standout-cup",
       eyebrow: "Standout cup",
-      title: latestHighlight ? latestHighlight : topCafe ? topCafe : "Still logging my best cups",
+      title: latestHighlight ? `One of my standout cups: ${latestHighlight}` : topCafe ? `${topCafe} keeps standing out` : "I’m still logging my best cups",
       body:
         latestHighlight
           ? `One of my recent standout coffee stops in Near Me.`
