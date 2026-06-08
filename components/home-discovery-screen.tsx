@@ -1621,6 +1621,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
     setReviewState("submitting");
     setReviewMessage("");
+    let submittedReviewId: string | undefined;
 
     if (reviewTarget.type === "cafe") {
       const supabase = getSupabaseClient();
@@ -1652,6 +1653,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         setReviewMessage(error.message || "Could not submit review.");
         return;
       }
+
+      submittedReviewId = data?.id;
 
       if (data?.id && selectedReviewTags.length > 0) {
         await supabase.from(CANONICAL_TABLES.reviewTags).insert(
@@ -1695,6 +1698,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       note: reviewNote,
       tags: selectedReviewTags,
       source: "review",
+      reviewId: submittedReviewId,
     });
     if (reviewTarget.type === "cafe") {
       setLocalReviewStateByCafeId((current) => ({
