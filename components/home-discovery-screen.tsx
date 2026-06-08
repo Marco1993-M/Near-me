@@ -433,7 +433,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   >("idle");
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
-  const [todayCupReasonPickerOpen, setTodayCupReasonPickerOpen] = useState(false);
   const [todayCupFeedbackByCafeId, setTodayCupFeedbackByCafeId] = useState<Record<string, TodayCupFeedbackEntry>>({});
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
@@ -1016,7 +1015,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     if (explicit) {
       hasExplicitCafeSelectionRef.current = true;
       setIsCafeCardVisible(true);
-      resetTodayCupReasonPicker();
     } else {
       setIsCafeCardVisible(false);
     }
@@ -1055,7 +1053,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   ) {
     hasExplicitCafeSelectionRef.current = false;
     setIsCafeCardVisible(false);
-    resetTodayCupReasonPicker();
     dismissIntro();
     setActiveCafeId(null);
     setActiveFallbackId(placeId);
@@ -1250,7 +1247,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function openSearch(source: DiscoverySource = "toolbar") {
     dismissIntro();
     trackEvent("search_opened", { source });
-    resetTodayCupReasonPicker();
     setIsTopPicksOpen(false);
     setIsSearchOpen(true);
   }
@@ -1266,7 +1262,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       source,
       lens: topPickLens,
     });
-    resetTodayCupReasonPicker();
     setIsJournalOpen(false);
     setIsSearchOpen(false);
     setIsTopPicksOpen(true);
@@ -1278,7 +1273,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       source,
       entries: journalEntries.length,
     });
-    resetTodayCupReasonPicker();
     setIsSearchOpen(false);
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
@@ -1293,7 +1287,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function openTastePanel(source: DiscoverySource = "toolbar") {
     dismissIntro();
     setIsJournalOpen(false);
-    resetTodayCupReasonPicker();
     if (activeCoffeeProfile) {
       setIsSearchOpen(false);
       setIsTopPicksOpen(true);
@@ -1311,14 +1304,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
   function closeTopPicks() {
     setIsTopPicksOpen(false);
-  }
-
-  function openTodayCupReasonPicker() {
-    setTodayCupReasonPickerOpen(true);
-  }
-
-  function resetTodayCupReasonPicker() {
-    setTodayCupReasonPickerOpen(false);
   }
 
   function handleTodayCupFeedback(reason: TodayCupFeedbackReason) {
@@ -1341,7 +1326,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       reason,
       moment: todayCupMoment.key,
     });
-    setTodayCupReasonPickerOpen(false);
   }
 
   function resetJournalForm() {
@@ -1355,7 +1339,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
   function openJournalEntryModal(target?: JournalTarget, source: DiscoverySource = "active_card") {
     dismissIntro();
-    resetTodayCupReasonPicker();
     setIsJournalOpen(false);
     trackEvent("journal_entry_started", {
       source,
@@ -2983,6 +2966,24 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     </p>
                   </div>
 
+                  <div className="diesel-today-feedback diesel-today-feedback-inline">
+                    <span>Help Near Me learn</span>
+                    <div className="diesel-today-feedback-list">
+                      {(Object.entries(todayCupFeedbackCopy) as Array<
+                        [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
+                      >).map(([reason, config]) => (
+                        <button
+                          key={reason}
+                          className="diesel-today-feedback-chip"
+                          type="button"
+                          onClick={() => handleTodayCupFeedback(reason)}
+                        >
+                          {config.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {!isCollapsedCard ? (
                     <>
                       <div className="diesel-selection-quick-grid">
@@ -3058,35 +3059,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       >
                         More picks
                       </button>
-                      <button
-                        className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
-                        type="button"
-                        onClick={openTodayCupReasonPicker}
-                      >
-                        Show another
-                      </button>
                     </div>
                   </div>
-
-                  {todayCupReasonPickerOpen ? (
-                    <div className="diesel-today-feedback">
-                      <span>Help Near Me learn</span>
-                      <div className="diesel-today-feedback-list">
-                        {(Object.entries(todayCupFeedbackCopy) as Array<
-                          [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
-                        >).map(([reason, config]) => (
-                          <button
-                            key={reason}
-                            className="diesel-today-feedback-chip"
-                            type="button"
-                            onClick={() => handleTodayCupFeedback(reason)}
-                          >
-                            {config.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                 </>
               ) : null}
             </section>
