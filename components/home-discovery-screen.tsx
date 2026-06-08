@@ -341,11 +341,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedRadiusKm, setSelectedRadiusKm] = useState(1);
+  const [selectedRadiusKm, setSelectedRadiusKm] = useState(3);
   const [locationState, setLocationState] = useState<
     "idle" | "requesting" | "granted" | "denied" | "unavailable"
   >("idle");
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
+  const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
@@ -919,6 +920,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
     if (explicit) {
       hasExplicitCafeSelectionRef.current = true;
+      setIsCafeCardVisible(true);
+    } else {
+      setIsCafeCardVisible(false);
     }
 
     dismissIntro();
@@ -954,6 +958,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     },
   ) {
     hasExplicitCafeSelectionRef.current = false;
+    setIsCafeCardVisible(false);
     dismissIntro();
     setActiveCafeId(null);
     setActiveFallbackId(placeId);
@@ -992,6 +997,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     }
 
     hasExplicitCafeSelectionRef.current = true;
+    setIsCafeCardVisible(true);
     setActiveCafeId((current) => (current === matchedCafe.id ? current : matchedCafe.id));
     setSheetState("expanded");
     setIsSearchOpen(false);
@@ -1007,11 +1013,13 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   useEffect(() => {
     if (mappableCafes.length === 0) {
       setActiveCafeId(null);
+      setIsCafeCardVisible(false);
       return;
     }
 
     if (!userLocation && !hasExplicitCafeSelectionRef.current) {
       setActiveCafeId(null);
+      setIsCafeCardVisible(false);
       return;
     }
 
@@ -1046,10 +1054,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
     if (!nextSuggestedCafe) {
       setActiveCafeId(null);
+      setIsCafeCardVisible(false);
       return;
     }
 
     setActiveCafeId((current) => (current === nextSuggestedCafe.id ? current : nextSuggestedCafe.id));
+    setIsCafeCardVisible(false);
     if (activeCafeId !== nextSuggestedCafe.id) {
       trackEvent("cafe_selected", {
         source: todayCupPrimary ? "today_cup" : "auto_nearby",
@@ -2368,7 +2378,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           </div>
         ) : null}
 
-        {activeCafe || activeFallbackPlace || hasNoRadiusMatches ? (
+        {(activeFallbackPlace || hasNoRadiusMatches || (activeCafe && isCafeCardVisible)) ? (
           <>
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState === "expanded" ? "half" : "collapsed"}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
