@@ -750,7 +750,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       return [];
     }
 
-    return mappableCafes
+    const candidatePool =
+      cafesWithinRadius.length > 0
+        ? cafesWithinRadius.slice(0, 12)
+        : cafesByDistance.slice(0, 12);
+
+    return candidatePool
       .map((cafe) => {
         const distance = cafeDistances.get(cafe.id) ?? Number.POSITIVE_INFINITY;
         const reviewCount = cafe.reviewSummary.reviewCount;
@@ -815,10 +820,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       .sort((left, right) => right.totalScore - left.totalScore);
   }, [
     activeCoffeeProfile,
+    cafesByDistance,
     cafeDistances,
+    cafesWithinRadius,
     coffeeProfileState,
     journalMatchByCafeId,
-    mappableCafes,
     selectedRadiusKm,
     todayCupFeedbackByCafeId,
     todayCupMoment.key,
