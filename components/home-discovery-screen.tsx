@@ -1805,92 +1805,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           </div>
         ) : null}
 
-        {shouldShowTodayCup && todayCupPrimary ? (
-          <div className="map-daily-cup-shell fade-slide-in">
-            <section className="map-daily-cup-card" aria-label="Today's Cup">
-              <div className="map-daily-cup-head">
-                <div className="map-daily-cup-kicker">
-                  <span>Today&apos;s cup</span>
-                  <strong>{todayCupMoment.label}</strong>
-                </div>
-                <button
-                  className="map-daily-cup-open"
-                  type="button"
-                  onClick={() =>
-                    selectCafe(todayCupPrimary.cafe.id, {
-                      explicit: true,
-                      pan: true,
-                      nextSheetState: "expanded",
-                      source: "today_cup",
-                    })
-                  }
-                >
-                  Open pick
-                </button>
-              </div>
-
-              <div className="map-daily-cup-copy">
-                <strong>{todayCupPrimary.cafe.name}</strong>
-                <p>
-                  {todayCupPrimary.journalMatch?.reason ??
-                    todayCupPrimary.profileMatch?.label ??
-                    todayCupPrimary.decisionGuide.goIfSupport}
-                </p>
-              </div>
-
-              <div className="map-daily-cup-meta">
-                <span>{todayCupMoment.cue}</span>
-                <span>
-                  {[todayCupPrimary.cafe.city, formatDistance(todayCupPrimary.distance), todayCupPrimary.decisionGuide.confidenceRead]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              </div>
-
-              <div className="map-daily-cup-quick-grid">
-                <div className="map-daily-cup-quick-card">
-                  <span>Order first</span>
-                  <strong>{todayCupPrimary.decisionGuide.order}</strong>
-                </div>
-                <div className="map-daily-cup-quick-card">
-                  <span>Why today</span>
-                  <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
-                </div>
-              </div>
-
-              {todayCupBackups.length > 0 ? (
-                <div className="map-daily-cup-backups">
-                  <span>Backups</span>
-                  <div className="map-daily-cup-backup-list">
-                    {todayCupBackups.map((backup) => (
-                      <button
-                        key={backup.cafe.id}
-                        className="map-daily-cup-backup"
-                        type="button"
-                        onClick={() =>
-                          selectCafe(backup.cafe.id, {
-                            explicit: true,
-                            pan: true,
-                            nextSheetState: "collapsed",
-                            source: "today_cup",
-                          })
-                        }
-                      >
-                        <strong>{backup.cafe.name}</strong>
-                        <span>
-                          {[formatDistance(backup.distance), backup.decisionGuide.order]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </section>
-          </div>
-        ) : null}
-
         {isSearchOpen ? (
           <div className="map-search-shell fade-slide-in">
             <section className="map-search-panel" role="dialog" aria-modal="false" aria-label="Search cafes">
@@ -2378,7 +2292,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           </div>
         ) : null}
 
-        {(activeFallbackPlace || hasNoRadiusMatches || (activeCafe && isCafeCardVisible)) ? (
+        {(activeFallbackPlace || hasNoRadiusMatches || (activeCafe && isCafeCardVisible) || shouldShowTodayCup) ? (
           <>
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState === "expanded" ? "half" : "collapsed"}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
@@ -2683,20 +2597,35 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     </div>
                   </div>
                 </>
-              ) : activeCafe ? (
+              ) : activeCafe && isCafeCardVisible ? (
                 <>
                   <div className="diesel-selection-head">
                     <div className="diesel-selection-meta">
                       <span>{activeCafe.city}</span>
                       <span>{activeDistance ? formatDistance(activeDistance) : activeCafe.countryCode}</span>
                     </div>
-                    <div className="diesel-selection-score">
-                      <strong>{activeRating ?? "New"}</strong>
-                      <span>
-                        {activeCafe.reviewSummary.reviewCount > 0
-                          ? `${activeCafe.reviewSummary.reviewCount} reviews`
-                          : "No reviews yet"}
-                      </span>
+                    <div className="diesel-selection-head-actions">
+                      <div className="diesel-selection-score">
+                        <strong>{activeRating ?? "New"}</strong>
+                        <span>
+                          {activeCafe.reviewSummary.reviewCount > 0
+                            ? `${activeCafe.reviewSummary.reviewCount} reviews`
+                            : "No reviews yet"}
+                        </span>
+                      </div>
+                      {todayCupPrimary ? (
+                        <button
+                          className="diesel-selection-context-chip"
+                          type="button"
+                          onClick={() => {
+                            hasExplicitCafeSelectionRef.current = false;
+                            setIsCafeCardVisible(false);
+                            setSheetState("collapsed");
+                          }}
+                        >
+                          Today&apos;s cup
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
@@ -2882,7 +2811,122 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       </div>
                     </div>
                   </div>
+                </>
+              ) : todayCupPrimary ? (
+                <>
+                  <div className="diesel-selection-head diesel-selection-head-today">
+                    <div className="diesel-selection-meta">
+                      <span>Today&apos;s cup</span>
+                      <span>{todayCupMoment.shortLabel}</span>
+                    </div>
+                    <div className="diesel-selection-score diesel-selection-score-today">
+                      <strong>{formatDistance(todayCupPrimary.distance)}</strong>
+                      <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                    </div>
+                  </div>
 
+                  <div className="diesel-selection-copy diesel-selection-copy-today">
+                    <strong>{todayCupPrimary.cafe.name}</strong>
+                    <div className="diesel-selection-decision-badge">
+                      <span className="diesel-selection-decision-kicker">Go today if</span>
+                      <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
+                    </div>
+                    {isCollapsedCard ? (
+                      <div className="diesel-selection-match-nudge">
+                        <span className="diesel-selection-match-nudge-value">{todayCupMoment.label}</span>
+                        <span className="diesel-selection-match-nudge-copy">
+                          {todayCupPrimary.journalMatch?.reason ??
+                            todayCupPrimary.profileMatch?.label ??
+                            todayCupPrimary.decisionGuide.goIfSupport}
+                        </span>
+                      </div>
+                    ) : null}
+                    <p>
+                      {isCollapsedCard
+                        ? todayCupMoment.cue
+                        : todayCupPrimary.journalMatch?.support ??
+                          todayCupPrimary.profileMatch?.reasons?.[0] ??
+                          todayCupPrimary.decisionGuide.goIfSupport}
+                    </p>
+                  </div>
+
+                  {!isCollapsedCard ? (
+                    <>
+                      <div className="diesel-selection-quick-grid">
+                        <div className="diesel-selection-quick-card">
+                          <span>Order first</span>
+                          <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                        </div>
+                        <div className="diesel-selection-quick-card">
+                          <span>Best for</span>
+                          <strong>{todayCupPrimary.decisionGuide.bestFor}</strong>
+                        </div>
+                      </div>
+
+                      {todayCupBackups.length > 0 ? (
+                        <div className="diesel-today-backups">
+                          <span>Backups</span>
+                          <div className="diesel-today-backup-list">
+                            {todayCupBackups.map((backup) => (
+                              <button
+                                key={backup.cafe.id}
+                                className="diesel-today-backup-row"
+                                type="button"
+                                onClick={() =>
+                                  selectCafe(backup.cafe.id, {
+                                    explicit: true,
+                                    pan: true,
+                                    nextSheetState: "collapsed",
+                                    source: "today_cup",
+                                  })
+                                }
+                              >
+                                <div className="diesel-today-backup-copy">
+                                  <strong>{backup.cafe.name}</strong>
+                                  <span>
+                                    {[backup.cafe.city, formatDistance(backup.distance), backup.decisionGuide.order]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </span>
+                                </div>
+                                <span className="diesel-today-backup-score">
+                                  {backup.profileMatch
+                                    ? `${backup.profileMatch.percentage}%`
+                                    : backup.journalMatch?.label ?? "Backup"}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  <div className="diesel-selection-actions">
+                    <div className="diesel-selection-actions-main">
+                      <button
+                        className="diesel-selection-primary diesel-selection-primary-main control-primary"
+                        type="button"
+                        onClick={() =>
+                          selectCafe(todayCupPrimary.cafe.id, {
+                            explicit: true,
+                            pan: true,
+                            nextSheetState: "expanded",
+                            source: "today_cup",
+                          })
+                        }
+                      >
+                        Open pick
+                      </button>
+                      <button
+                        className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                        type="button"
+                        onClick={() => openTopPicks("today_cup")}
+                      >
+                        More picks
+                      </button>
+                    </div>
+                  </div>
                 </>
               ) : null}
             </section>
