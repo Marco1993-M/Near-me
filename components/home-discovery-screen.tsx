@@ -56,6 +56,7 @@ type DiscoverySource =
   | "intro"
   | "search"
   | "top_picks"
+  | "today_cup"
   | "map_marker"
   | "auto_nearby"
   | "deep_link"
@@ -235,6 +236,54 @@ function getFallbackTrustSummary(place: FallbackPlace) {
   };
 }
 
+type TodayCupMoment = {
+  key: "morning" | "midday" | "afternoon" | "evening";
+  label: string;
+  shortLabel: string;
+  cue: string;
+};
+
+function getTodayCupMoment(hour: number): TodayCupMoment {
+  if (hour < 11) {
+    return {
+      key: "morning",
+      label: "Morning cup",
+      shortLabel: "Morning",
+      cue: "Best nearby call for your first proper cup",
+    };
+  }
+
+  if (hour < 15) {
+    return {
+      key: "midday",
+      label: "Midday reset",
+      shortLabel: "Midday",
+      cue: "A strong coffee stop for the middle of the day",
+    };
+  }
+
+  if (hour < 18) {
+    return {
+      key: "afternoon",
+      label: "Afternoon pick",
+      shortLabel: "Afternoon",
+      cue: "A thoughtful later-day stop if you want something better than routine",
+    };
+  }
+
+  return {
+    key: "evening",
+    label: "Later cup",
+    shortLabel: "Later",
+    cue: "A calmer coffee stop if you still want one good cup today",
+  };
+}
+
+function cafeSignalsContain(cafe: Cafe, needles: string[]) {
+  const values = [...cafe.tags, ...cafe.drinks, ...cafe.roasters].map((value) => value.toLowerCase());
+  return needles.some((needle) => values.some((value) => value.includes(needle)));
+}
+
 function buildOptimisticReviewState(
   cafe: Cafe,
   input: { rating: number; note: string; selectedTags: string[] },
@@ -356,6 +405,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     getStoredCoffeeJournalServerSnapshot,
   );
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
+  const currentHour = useMemo(() => new Date().getHours(), []);
+  const todayCupMoment = useMemo(() => getTodayCupMoment(currentHour), [currentHour]);
 
   useEffect(() => {
     if (!openTasteSetup || handledTasteIntentRef.current) {
@@ -599,6 +650,94 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     selectedJournalTags.length > 0
       ? journalTagHints[selectedJournalTags[selectedJournalTags.length - 1] as keyof typeof journalTagHints]
       : "Add one or two simple descriptors and Near Me will slowly sharpen your coffee vocabulary.";
+
+  const todayCupRanked = useMemo(() => {
+    if (!userLocation) {
+      return [];
+    }
+
+    return mappableCafes
+      .map((cafe) => {
+        const distance = cafeDistances.get(cafe.id) ?? Number.POSITIVE_INFINITY;
+        const reviewCount = cafe.reviewSummary.reviewCount;
+        const rating = reviewCount > 0 ? cafe.reviewSummary.averageRating : 6.7;
+        const popularityBoost = Math.min(reviewCount, 18) * 0.06;
+        const radiusBonus = distance <= selectedRadiusKm ? 1.2 : -Math.min(distance - selectedRadiusKm, 8) * 0.18;
+        const profileScore = activeCoffeeProfile ? getCafeProfileMatchScore(cafe, activeCoffeeProfile, coffeeProfileState) : 0;
+        const journalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
+        const journalScore = journalMatch?.score ?? 0;
+
+        let momentBoost = 0;
+        if (todayCupMoment.key === "morning") {
+          if (cafeSignalsContain(cafe, ["cortado", "flat white", "cappuccino", "latte", "espresso"])) {
+            momentBoost += 1.2;
+          }
+          if (cafeSignalsContain(cafe, ["specialty coffee", "roaster"])) {
+            momentBoost += 0.35;
+          }
+        } else if (todayCupMoment.key === "midday") {
+          if (cafeSignalsContain(cafe, ["quiet", "laptop-friendly", "traveler-friendly"])) {
+            momentBoost += 1.1;
+          }
+          if (cafeSignalsContain(cafe, ["flat white", "cappuccino", "filter"])) {
+            momentBoost += 0.45;
+          }
+        } else if (todayCupMoment.key === "afternoon") {
+          if (cafeSignalsContain(cafe, ["filter", "pour over", "fruity", "floral"])) {
+            momentBoost += 1.15;
+          }
+          if (cafeSignalsContain(cafe, ["seasonal", "signature"])) {
+            momentBoost += 0.45;
+          }
+        } else {
+          if (cafeSignalsContain(cafe, ["quiet", "traveler-friendly"])) {
+            momentBoost += 0.8;
+          }
+          if (cafeSignalsContain(cafe, ["chocolatey", "smooth", "flat white", "latte"])) {
+            momentBoost += 0.5;
+          }
+        }
+
+        const totalScore =
+          rating * 0.86 +
+          popularityBoost +
+          radiusBonus +
+          profileScore * 0.9 +
+          journalScore * 1.16 +
+          momentBoost -
+          distance * 0.2;
+
+        return {
+          cafe,
+          distance,
+          totalScore,
+          decisionGuide: getCafeDecisionGuide(cafe),
+          journalMatch,
+          profileMatch:
+            activeCoffeeProfile ? getCafeProfileMatch(cafe, activeCoffeeProfile, coffeeProfileState) : null,
+        };
+      })
+      .sort((left, right) => right.totalScore - left.totalScore)
+      .slice(0, 3);
+  }, [
+    activeCoffeeProfile,
+    cafeDistances,
+    coffeeProfileState,
+    journalMatchByCafeId,
+    mappableCafes,
+    selectedRadiusKm,
+    todayCupMoment.key,
+    userLocation,
+  ]);
+
+  const todayCupPrimary = todayCupRanked[0] ?? null;
+  const todayCupBackups = todayCupRanked.slice(1);
+  const shouldShowTodayCup =
+    !shouldShowIntro &&
+    !isOverlayOpen &&
+    !hasNoRadiusMatches &&
+    !activeFallbackPlace &&
+    Boolean(todayCupPrimary);
   useEffect(() => {
     if (!userLocation) {
       setFallbackPlaces([]);
@@ -899,22 +1038,23 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
             return typeof distance === "number" && distance <= selectedRadiusKm;
           }) ?? null
         : null;
+    const nextSuggestedCafe = todayCupPrimary?.cafe ?? inRadiusCafe;
 
     if (!userLocation) {
       return;
     }
 
-    if (!inRadiusCafe) {
+    if (!nextSuggestedCafe) {
       setActiveCafeId(null);
       return;
     }
 
-    setActiveCafeId((current) => (current === inRadiusCafe.id ? current : inRadiusCafe.id));
-    if (activeCafeId !== inRadiusCafe.id) {
+    setActiveCafeId((current) => (current === nextSuggestedCafe.id ? current : nextSuggestedCafe.id));
+    if (activeCafeId !== nextSuggestedCafe.id) {
       trackEvent("cafe_selected", {
-        source: "auto_nearby",
-        cafe_slug: inRadiusCafe.slug,
-        city: inRadiusCafe.city,
+        source: todayCupPrimary ? "today_cup" : "auto_nearby",
+        cafe_slug: nextSuggestedCafe.slug,
+        city: nextSuggestedCafe.city,
       });
     }
   }, [
@@ -923,6 +1063,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     cafesByDistance,
     mappableCafes,
     selectedRadiusKm,
+    todayCupPrimary,
     userLocation,
   ]);
 
@@ -1650,6 +1791,92 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     : "5 quick questions to unlock taste-aware picks"}
                 </span>
               </div>
+            </section>
+          </div>
+        ) : null}
+
+        {shouldShowTodayCup && todayCupPrimary ? (
+          <div className="map-daily-cup-shell fade-slide-in">
+            <section className="map-daily-cup-card" aria-label="Today's Cup">
+              <div className="map-daily-cup-head">
+                <div className="map-daily-cup-kicker">
+                  <span>Today&apos;s cup</span>
+                  <strong>{todayCupMoment.label}</strong>
+                </div>
+                <button
+                  className="map-daily-cup-open"
+                  type="button"
+                  onClick={() =>
+                    selectCafe(todayCupPrimary.cafe.id, {
+                      explicit: true,
+                      pan: true,
+                      nextSheetState: "expanded",
+                      source: "today_cup",
+                    })
+                  }
+                >
+                  Open pick
+                </button>
+              </div>
+
+              <div className="map-daily-cup-copy">
+                <strong>{todayCupPrimary.cafe.name}</strong>
+                <p>
+                  {todayCupPrimary.journalMatch?.reason ??
+                    todayCupPrimary.profileMatch?.label ??
+                    todayCupPrimary.decisionGuide.goIfSupport}
+                </p>
+              </div>
+
+              <div className="map-daily-cup-meta">
+                <span>{todayCupMoment.cue}</span>
+                <span>
+                  {[todayCupPrimary.cafe.city, formatDistance(todayCupPrimary.distance), todayCupPrimary.decisionGuide.confidenceRead]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </div>
+
+              <div className="map-daily-cup-quick-grid">
+                <div className="map-daily-cup-quick-card">
+                  <span>Order first</span>
+                  <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                </div>
+                <div className="map-daily-cup-quick-card">
+                  <span>Why today</span>
+                  <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
+                </div>
+              </div>
+
+              {todayCupBackups.length > 0 ? (
+                <div className="map-daily-cup-backups">
+                  <span>Backups</span>
+                  <div className="map-daily-cup-backup-list">
+                    {todayCupBackups.map((backup) => (
+                      <button
+                        key={backup.cafe.id}
+                        className="map-daily-cup-backup"
+                        type="button"
+                        onClick={() =>
+                          selectCafe(backup.cafe.id, {
+                            explicit: true,
+                            pan: true,
+                            nextSheetState: "collapsed",
+                            source: "today_cup",
+                          })
+                        }
+                      >
+                        <strong>{backup.cafe.name}</strong>
+                        <span>
+                          {[formatDistance(backup.distance), backup.decisionGuide.order]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
           </div>
         ) : null}
