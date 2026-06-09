@@ -98,6 +98,8 @@ type TodayCupIntentConfig = {
   label: string;
   shortLabel: string;
   cue: string;
+  tone: string;
+  accentClass: string;
 };
 
 const reviewDrinkOptions = [
@@ -161,31 +163,43 @@ const todayCupIntentCopy: Record<TodayCupIntentKey, TodayCupIntentConfig> = {
     label: "Default",
     shortLabel: "For now",
     cue: "Your best all-round coffee call for this moment",
+    tone: "Balanced daily pick",
+    accentClass: "is-default",
   },
   quiet: {
     label: "Quiet",
     shortLabel: "Quiet",
     cue: "A calmer stop if you want to settle in instead of rush through",
+    tone: "Calmer atmosphere",
+    accentClass: "is-quiet",
   },
   "best-cortado": {
     label: "Best cortado",
     shortLabel: "Cortado",
     cue: "A stronger espresso-first stop for your shorter milk drinks",
+    tone: "Short milk drink focus",
+    accentClass: "is-cortado",
   },
   "quick-stop": {
     label: "Quick stop",
     shortLabel: "Quick",
     cue: "A fast good-cup option when distance matters more than lingering",
+    tone: "Fast and close",
+    accentClass: "is-quick",
   },
   "worth-it": {
     label: "Worth it",
     shortLabel: "Worth it",
     cue: "A stronger trust-led pick if you are happy to stretch a little",
+    tone: "Quality over convenience",
+    accentClass: "is-worth-it",
   },
   "bright-cup": {
     label: "Bright cup",
     shortLabel: "Bright",
     cue: "A livelier pick if you want something cleaner, fruitier, or more expressive",
+    tone: "Lively and expressive",
+    accentClass: "is-bright",
   },
 };
 
@@ -249,6 +263,10 @@ function formatDistance(distanceKm: number) {
   }
 
   return `${Math.round(distanceKm)} km`;
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function getJournalDrinkFamilyLabel(drink: string | null) {
@@ -1092,6 +1110,39 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     !hasNoRadiusMatches &&
     !activeFallbackPlace &&
     Boolean(todayCupPrimary);
+  const todayCupVisualSignals = todayCupPrimary
+    ? [
+        {
+          label: "Trust",
+          value: clampNumber(
+            ((todayCupPrimary.cafe.reviewSummary.averageRating - 6.2) / 3) * 0.65 +
+              Math.min(todayCupPrimary.cafe.reviewSummary.reviewCount, 12) / 12 * 0.35,
+            0.18,
+            1,
+          ),
+          detail: todayCupPrimary.decisionGuide.confidenceRead,
+        },
+        {
+          label: "Taste",
+          value: clampNumber(
+            todayCupPrimary.profileMatch
+              ? todayCupPrimary.profileMatch.percentage / 100
+              : (todayCupPrimary.journalMatch?.score ?? 0) / 4.4,
+            0.16,
+            1,
+          ),
+          detail:
+            todayCupPrimary.journalMatch?.label ??
+            todayCupPrimary.profileMatch?.label ??
+            "Taste fit",
+        },
+        {
+          label: "Distance",
+          value: clampNumber(1 - todayCupPrimary.distance / Math.max(selectedRadiusKm + 0.6, 2), 0.18, 1),
+          detail: formatDistance(todayCupPrimary.distance),
+        },
+      ]
+    : [];
   useEffect(() => {
     if (!userLocation) {
       setFallbackPlaces([]);
@@ -3041,7 +3092,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     <strong>{activeCafe.name}</strong>
                     {activeDecisionGuide ? (
                       <div className="diesel-selection-decision-badge">
-                        <span className="diesel-selection-decision-kicker">Go if</span>
+                        <span className="diesel-selection-decision-kicker">Best for</span>
                         <strong>{activeDecisionGuide.goIfHeadline}</strong>
                       </div>
                     ) : null}
@@ -3235,6 +3286,15 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   <div className="diesel-selection-copy diesel-selection-copy-today">
                     <strong>{todayCupPrimary.cafe.name}</strong>
+                    {!isCollapsedCard ? (
+                      <div className={`diesel-today-mood-band ${todayCupIntentConfig.accentClass}`}>
+                        <div className="diesel-today-mood-orb" aria-hidden="true" />
+                        <div className="diesel-today-mood-copy">
+                          <span>{todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.label}</span>
+                          <strong>{todayCupIntentConfig.tone}</strong>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="diesel-today-intents" aria-label="Choose what you are in the mood for">
                       {(
                         Object.entries(todayCupIntentCopy) as Array<
@@ -3255,34 +3315,65 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       ))}
                     </div>
                     <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
-                      <span className="diesel-selection-decision-kicker">Go today if</span>
+                      <span className="diesel-selection-decision-kicker">Today&apos;s strength</span>
                       <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
                     </div>
                     {isCollapsedCard ? (
-                      <div className="diesel-selection-match-nudge">
-                        <span className="diesel-selection-match-nudge-value">
-                          {todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.shortLabel}
-                        </span>
-                        <span className="diesel-selection-match-nudge-copy">
-                          {todayCupPrimary.journalMatch?.reason ??
-                            todayCupPrimary.profileMatch?.label ??
-                            todayCupPrimary.decisionGuide.goIfSupport}
-                        </span>
-                      </div>
-                    ) : null}
-                    <p>
-                      {isCollapsedCard
-                        ? todayCupIntent === "default"
-                          ? todayCupMoment.cue
-                          : todayCupIntentConfig.cue
-                        : todayCupPrimary.journalMatch?.support ??
+                      <>
+                        <div className="diesel-today-signal-strip" aria-label="Today&apos;s cup signals">
+                          {todayCupVisualSignals.map((signal) => (
+                            <div key={signal.label} className="diesel-today-signal-card">
+                              <div className="diesel-today-signal-head">
+                                <span>{signal.label}</span>
+                                <strong>{signal.detail}</strong>
+                              </div>
+                              <div className="diesel-today-signal-meter" aria-hidden="true">
+                                <span style={{ width: `${Math.round(signal.value * 100)}%` }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="diesel-today-glance-grid">
+                          <div className="diesel-today-glance-card">
+                            <span>Order first</span>
+                            <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                          </div>
+                          <div className="diesel-today-glance-card">
+                            <span>{todayCupIntent === "default" ? todayCupMoment.shortLabel : "Mood"}</span>
+                            <strong>
+                              {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
+                            </strong>
+                            <small>
+                              {todayCupPrimary.journalMatch?.reason ??
+                                todayCupPrimary.profileMatch?.label ??
+                                todayCupPrimary.decisionGuide.bestFor}
+                            </small>
+                          </div>
+                        </div>
+                        <div className="diesel-today-support-line">
+                          <span className="diesel-today-support-dot" aria-hidden="true" />
+                          <span>
+                            {todayCupPrimary.routineNote ??
+                              todayCupPrimary.journalMatch?.support ??
+                              todayCupIntentConfig.cue}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <p>
+                        {todayCupPrimary.journalMatch?.support ??
                           todayCupPrimary.profileMatch?.reasons?.[0] ??
                           todayCupPrimary.decisionGuide.goIfSupport}
-                    </p>
+                      </p>
+                    )}
                   </div>
 
-                  <div className="diesel-today-feedback diesel-today-feedback-inline">
-                    <span>Help Near Me learn</span>
+                  <div
+                    className={`diesel-today-feedback diesel-today-feedback-inline${
+                      isCollapsedCard ? " diesel-today-feedback-compact" : ""
+                    }`}
+                  >
+                    <span>{isCollapsedCard ? "Teach Near Me" : "Help Near Me learn"}</span>
                     <div className="diesel-today-feedback-list">
                       {(Object.entries(todayCupFeedbackCopy) as Array<
                         [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
