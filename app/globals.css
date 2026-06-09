@@ -2655,6 +2655,10 @@ img {
   white-space: nowrap;
 }
 
+.diesel-today-context {
+  margin-top: 0.05rem;
+}
+
 .diesel-empty-state-actions {
   display: flex;
   flex-wrap: wrap;
