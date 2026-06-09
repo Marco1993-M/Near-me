@@ -87,6 +87,13 @@ type TodayCupFeedbackEntry = {
   skippedAt: string;
 };
 
+type TodayCupHistoryEntry = {
+  cafeId: string;
+  chosenAt: string;
+  intent: TodayCupIntentKey;
+  moment: TodayCupMoment["key"];
+};
+
 type TodayCupIntentConfig = {
   label: string;
   shortLabel: string;
@@ -137,6 +144,7 @@ const journalTags = [
 ] as const;
 const radiusOptionsKm = [1, 3, 5, 10];
 const TODAY_CUP_FEEDBACK_STORAGE_KEY = "near-me-today-cup-feedback";
+const TODAY_CUP_HISTORY_STORAGE_KEY = "near-me-today-cup-history";
 
 const todayCupFeedbackCopy: Record<
   TodayCupFeedbackReason,
@@ -417,6 +425,82 @@ function writeTodayCupFeedback(feedback: Record<string, TodayCupFeedbackEntry>) 
   window.localStorage.setItem(TODAY_CUP_FEEDBACK_STORAGE_KEY, JSON.stringify(pruneTodayCupFeedback(feedback)));
 }
 
+function normalizeTodayCupHistory(input: unknown) {
+  if (!Array.isArray(input)) {
+    return [] as TodayCupHistoryEntry[];
+  }
+
+  return input
+    .map((value): TodayCupHistoryEntry | null => {
+      if (!value || typeof value !== "object") {
+        return null;
+      }
+
+      const candidate = value as Partial<TodayCupHistoryEntry>;
+      if (
+        typeof candidate.cafeId !== "string" ||
+        typeof candidate.chosenAt !== "string" ||
+        typeof candidate.intent !== "string" ||
+        typeof candidate.moment !== "string"
+      ) {
+        return null;
+      }
+
+      if (!(candidate.intent in todayCupIntentCopy)) {
+        return null;
+      }
+
+      if (!["morning", "midday", "afternoon", "evening"].includes(candidate.moment)) {
+        return null;
+      }
+
+      return {
+        cafeId: candidate.cafeId,
+        chosenAt: candidate.chosenAt,
+        intent: candidate.intent as TodayCupIntentKey,
+        moment: candidate.moment as TodayCupMoment["key"],
+      };
+    })
+    .filter((entry): entry is TodayCupHistoryEntry => Boolean(entry))
+    .sort((left, right) => right.chosenAt.localeCompare(left.chosenAt));
+}
+
+function pruneTodayCupHistory(history: TodayCupHistoryEntry[]) {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  return history.filter((entry) => {
+    const chosenAt = new Date(entry.chosenAt).getTime();
+    return Number.isFinite(chosenAt) && chosenAt >= cutoff;
+  });
+}
+
+function readTodayCupHistory() {
+  if (typeof window === "undefined") {
+    return [] as TodayCupHistoryEntry[];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(TODAY_CUP_HISTORY_STORAGE_KEY);
+    if (!raw) {
+      return [] as TodayCupHistoryEntry[];
+    }
+
+    return pruneTodayCupHistory(normalizeTodayCupHistory(JSON.parse(raw)));
+  } catch {
+    return [] as TodayCupHistoryEntry[];
+  }
+}
+
+function writeTodayCupHistory(history: TodayCupHistoryEntry[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    TODAY_CUP_HISTORY_STORAGE_KEY,
+    JSON.stringify(pruneTodayCupHistory(history).slice(0, 24)),
+  );
+}
+
 function buildOptimisticReviewState(
   cafe: Cafe,
   input: { rating: number; note: string; selectedTags: string[] },
@@ -482,6 +566,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
   const [todayCupIntent, setTodayCupIntent] = useState<TodayCupIntentKey>("default");
   const [todayCupFeedbackByCafeId, setTodayCupFeedbackByCafeId] = useState<Record<string, TodayCupFeedbackEntry>>({});
+  const [todayCupHistory, setTodayCupHistory] = useState<TodayCupHistoryEntry[]>([]);
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
   const [topPickLens, setTopPickLens] = useState<"nearby" | "worth-it" | "work" | "for-you">("nearby");
   const [isProfilerOpen, setIsProfilerOpen] = useState(false);
@@ -549,6 +634,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     const nextFeedback = pruneTodayCupFeedback(readTodayCupFeedback());
     setTodayCupFeedbackByCafeId(nextFeedback);
     writeTodayCupFeedback(nextFeedback);
+  }, []);
+
+  useEffect(() => {
+    const nextHistory = readTodayCupHistory();
+    setTodayCupHistory(nextHistory);
+    writeTodayCupHistory(nextHistory);
   }, []);
 
   useEffect(() => {
@@ -814,6 +905,25 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         const profileScore = activeCoffeeProfile ? getCafeProfileMatchScore(cafe, activeCoffeeProfile, coffeeProfileState) : 0;
         const journalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
         const journalScore = journalMatch?.score ?? 0;
+        const journalMemory = getCafeJournalMemory(journalEntries, { cafeId: cafe.id, cafeName: cafe.name });
+        const journalVisitCount = journalMemory?.visitCount ?? 0;
+        const historyForCafe = todayCupHistory.filter((entry) => entry.cafeId === cafe.id);
+        const sameIntentHits = historyForCafe.filter((entry) => entry.intent === todayCupIntent).length;
+        const sameMomentHits = historyForCafe.filter((entry) => entry.moment === todayCupMoment.key).length;
+        const routineBoost = Math.min(
+          sameIntentHits * 0.85 +
+            sameMomentHits * 0.45 +
+            Math.max(0, journalVisitCount - 1) * 0.18,
+          2.6,
+        );
+        const routineNote =
+          sameIntentHits > 0
+            ? `You have chosen this spot for a similar ${todayCupIntentConfig.shortLabel.toLowerCase()} run before.`
+            : sameMomentHits > 0
+              ? `This already fits a ${todayCupMoment.shortLabel.toLowerCase()} pattern in your routine.`
+              : journalVisitCount > 1
+                ? `${cafe.name} already shows up in your journal, so Near Me knows it is part of your orbit.`
+                : null;
 
         let momentBoost = 0;
         if (todayCupMoment.key === "morning") {
@@ -939,12 +1049,15 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           journalScore * journalWeight +
           momentBoost -
           distance * distanceWeight +
-          intentBoost;
+          intentBoost +
+          routineBoost;
 
         return {
           cafe,
           distance,
           totalScore,
+          routineBoost,
+          routineNote,
           decisionGuide: getCafeDecisionGuide(cafe),
           journalMatch,
           profileMatch:
@@ -960,10 +1073,14 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     cafesWithinRadius,
     coffeeProfileState,
     journalMatchByCafeId,
+    journalEntries,
     selectedRadiusKm,
+    todayCupHistory,
     todayCupIntent,
+    todayCupIntentConfig.shortLabel,
     todayCupFeedbackByCafeId,
     todayCupMoment.key,
+    todayCupMoment.shortLabel,
     userLocation,
   ]);
 
@@ -1475,6 +1592,27 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     trackEvent("today_cup_intent_selected", {
       intent,
       moment: todayCupMoment.key,
+    });
+  }
+
+  function rememberTodayCupChoice(cafeId: string, source: "primary" | "backup") {
+    const nextHistory = pruneTodayCupHistory([
+      {
+        cafeId,
+        chosenAt: new Date().toISOString(),
+        intent: todayCupIntent,
+        moment: todayCupMoment.key,
+      },
+      ...todayCupHistory,
+    ]).slice(0, 24);
+
+    setTodayCupHistory(nextHistory);
+    writeTodayCupHistory(nextHistory);
+    trackEvent("today_cup_opened", {
+      cafe_id: cafeId,
+      intent: todayCupIntent,
+      moment: todayCupMoment.key,
+      source,
     });
   }
 
@@ -3163,6 +3301,18 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   {!isCollapsedCard ? (
                     <>
+                      <div className="diesel-selection-trust diesel-today-context">
+                        <span>Why this now</span>
+                        <strong>
+                          {todayCupPrimary.routineBoost > 0.8 ? "Routine-aware pick" : "Best fit for this moment"}
+                        </strong>
+                        <p>
+                          {todayCupPrimary.routineNote ??
+                            todayCupPrimary.journalMatch?.support ??
+                            todayCupIntentConfig.cue}
+                        </p>
+                      </div>
+
                       <div className="diesel-selection-quick-grid">
                         <div className="diesel-selection-quick-card">
                           <span>Order first</span>
@@ -3183,14 +3333,15 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                                 key={backup.cafe.id}
                                 className="diesel-today-backup-row"
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
+                                  rememberTodayCupChoice(backup.cafe.id, "backup");
                                   selectCafe(backup.cafe.id, {
                                     explicit: true,
                                     pan: true,
                                     nextSheetState: "collapsed",
                                     source: "today_cup",
-                                  })
-                                }
+                                  });
+                                }}
                               >
                                 <div className="diesel-today-backup-copy">
                                   <strong>{backup.cafe.name}</strong>
@@ -3218,14 +3369,15 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       <button
                         className="diesel-selection-primary diesel-selection-primary-main control-primary"
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          rememberTodayCupChoice(todayCupPrimary.cafe.id, "primary");
                           selectCafe(todayCupPrimary.cafe.id, {
                             explicit: true,
                             pan: true,
                             nextSheetState: "expanded",
                             source: "today_cup",
-                          })
-                        }
+                          });
+                        }}
                       >
                         Open pick
                       </button>
