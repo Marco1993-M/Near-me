@@ -2479,6 +2479,10 @@ img {
 .diesel-selection-decision-badge-today strong {
   font-size: 0.74rem;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .diesel-selection-quick-grid {
@@ -2578,6 +2582,91 @@ img {
   scrollbar-width: none;
 }
 
+.diesel-today-mood-band {
+  display: flex;
+  align-items: center;
+  gap: 0.72rem;
+  padding: 0.72rem 0.82rem;
+  border-radius: 18px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-default {
+  background:
+    radial-gradient(circle at top left, rgba(199, 245, 211, 0.26), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-quiet {
+  background:
+    radial-gradient(circle at top left, rgba(182, 219, 202, 0.28), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-cortado {
+  background:
+    radial-gradient(circle at top left, rgba(201, 185, 150, 0.3), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-quick {
+  background:
+    radial-gradient(circle at top left, rgba(250, 222, 164, 0.32), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-worth-it {
+  background:
+    radial-gradient(circle at top left, rgba(174, 205, 165, 0.3), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-band.is-bright {
+  background:
+    radial-gradient(circle at top left, rgba(255, 221, 132, 0.34), transparent 52%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-mood-orb {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(199, 245, 211, 0.42));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 12px 24px rgba(31, 106, 56, 0.1);
+}
+
+.diesel-today-mood-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.diesel-today-mood-copy span {
+  color: rgba(20, 32, 24, 0.44);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diesel-today-mood-copy strong {
+  color: var(--near-me-ink);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
 .diesel-today-intents::-webkit-scrollbar {
   display: none;
 }
@@ -2611,6 +2700,116 @@ img {
   box-shadow: 0 10px 24px rgba(31, 106, 56, 0.08);
 }
 
+.diesel-today-signal-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.04rem;
+}
+
+.diesel-today-signal-card {
+  display: grid;
+  gap: 0.34rem;
+  padding: 0.66rem 0.72rem;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.5);
+}
+
+.diesel-today-signal-head {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.diesel-today-signal-head span {
+  color: rgba(20, 32, 24, 0.44);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diesel-today-signal-head strong {
+  color: var(--near-me-ink);
+  font-size: 0.77rem;
+  line-height: 1.2;
+}
+
+.diesel-today-signal-meter {
+  position: relative;
+  height: 0.34rem;
+  border-radius: 999px;
+  background: rgba(20, 32, 24, 0.08);
+  overflow: hidden;
+}
+
+.diesel-today-signal-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(131, 188, 144, 0.52), #1f6a38);
+}
+
+.diesel-today-glance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.05rem;
+}
+
+.diesel-today-glance-card {
+  display: grid;
+  gap: 0.14rem;
+  padding: 0.72rem 0.78rem;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.54);
+}
+
+.diesel-today-glance-card span {
+  color: rgba(20, 32, 24, 0.46);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diesel-today-glance-card strong {
+  color: var(--near-me-ink);
+  font-size: 0.88rem;
+  line-height: 1.18;
+}
+
+.diesel-today-glance-card small {
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.73rem;
+  line-height: 1.3;
+}
+
+.diesel-today-support-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+  margin-top: 0.08rem;
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.diesel-today-support-dot {
+  width: 0.46rem;
+  height: 0.46rem;
+  margin-top: 0.28rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #c7f5d3, #8fc79a);
+  box-shadow: 0 0 0 3px rgba(199, 245, 211, 0.14);
+}
+
 .diesel-today-feedback {
   display: grid;
   gap: 0.45rem;
@@ -2627,6 +2826,15 @@ img {
   background:
     linear-gradient(180deg, rgba(199, 245, 211, 0.18), rgba(255, 255, 255, 0.08)),
     rgba(255, 255, 252, 0.56);
+}
+
+.diesel-today-feedback-compact {
+  gap: 0.38rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .diesel-today-feedback > span {
@@ -2653,6 +2861,30 @@ img {
   font-size: 0.76rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.diesel-today-feedback-compact .diesel-today-feedback-list {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.08rem;
+  scrollbar-width: none;
+}
+
+.diesel-today-feedback-compact .diesel-today-feedback-list::-webkit-scrollbar {
+  display: none;
+}
+
+.diesel-today-feedback-compact .diesel-today-feedback-chip {
+  min-height: 1.86rem;
+  padding: 0 0.68rem;
+  font-size: 0.73rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 520px) {
+  .diesel-today-signal-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 .diesel-today-context {
