@@ -8,10 +8,12 @@ type DiscoveryMapProps = {
   activeCafeId: string | null;
   onSelectCafe: (cafeId: string) => void;
   panToActiveCafeToken?: number;
+  searchFocusedCafeId?: string | null;
   fallbackPlaces?: FallbackPlace[];
   activeFallbackPlaceId?: string | null;
   onSelectFallbackPlace?: (placeId: string) => void;
   panToFallbackPlaceToken?: number;
+  searchFocusedFallbackPlaceId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
   selectedRadiusKm?: number;
   locateRequestToken?: number;
@@ -278,10 +280,12 @@ export function DiscoveryMap({
   activeCafeId,
   onSelectCafe,
   panToActiveCafeToken = 0,
+  searchFocusedCafeId = null,
   fallbackPlaces = [],
   activeFallbackPlaceId = null,
   onSelectFallbackPlace,
   panToFallbackPlaceToken = 0,
+  searchFocusedFallbackPlaceId = null,
   userLocation = null,
   selectedRadiusKm = 3,
   locateRequestToken = 0,
@@ -752,8 +756,13 @@ export function DiscoveryMap({
       return;
     }
 
-    panToWithOffset(map, L, [activeCafe.latitude, activeCafe.longitude], 96);
-  }, [activeCafeId, isMapReady, panToActiveCafeToken]);
+    const isSearchFocus = activeCafe.id === searchFocusedCafeId;
+    const nextZoom = isSearchFocus ? Math.max(map.getZoom(), 16) : map.getZoom();
+    if (isSearchFocus && map.getZoom() < nextZoom) {
+      map.setZoom(nextZoom, { animate: true });
+    }
+    panToWithOffset(map, L, [activeCafe.latitude, activeCafe.longitude], isSearchFocus ? 164 : 96);
+  }, [activeCafeId, isMapReady, panToActiveCafeToken, searchFocusedCafeId]);
 
   useEffect(() => {
     if (!panToFallbackPlaceToken) {
@@ -771,8 +780,18 @@ export function DiscoveryMap({
       return;
     }
 
-    panToWithOffset(map, L, [activeFallbackPlace.latitude, activeFallbackPlace.longitude], 96);
-  }, [activeFallbackPlaceId, isMapReady, panToFallbackPlaceToken]);
+    const isSearchFocus = activeFallbackPlace.id === searchFocusedFallbackPlaceId;
+    const nextZoom = isSearchFocus ? Math.max(map.getZoom(), 16) : map.getZoom();
+    if (isSearchFocus && map.getZoom() < nextZoom) {
+      map.setZoom(nextZoom, { animate: true });
+    }
+    panToWithOffset(
+      map,
+      L,
+      [activeFallbackPlace.latitude, activeFallbackPlace.longitude],
+      isSearchFocus ? 164 : 96,
+    );
+  }, [activeFallbackPlaceId, isMapReady, panToFallbackPlaceToken, searchFocusedFallbackPlaceId]);
 
   return <div ref={mapElementRef} className="map-canvas" />;
 }
