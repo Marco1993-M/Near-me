@@ -2271,6 +2271,13 @@ img {
   white-space: nowrap;
 }
 
+.diesel-selection-dismiss {
+  min-height: 1.9rem;
+  padding-inline: 0.72rem;
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.72rem;
+}
+
 .diesel-selection-head-today {
   align-items: flex-start;
 }
