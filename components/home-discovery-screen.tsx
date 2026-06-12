@@ -160,18 +160,18 @@ const TEST_SPONSORED_PLACEMENTS: SponsoredPlacement[] = [
   {
     slug: "sorcery-coffee-roasters-diep-in-die-berg",
     radiusKm: 40,
-    label: "Sponsored nearby",
-    headline: "A stronger espresso stop worth surfacing nearby",
-    body: "Test flow: Near Me controls the design, the cafe supplies the message, and the suggestion only appears when it is locally relevant.",
-    cta: "Open feature",
+    label: "For coffee shops",
+    headline: "Promote your cafe on Near Me",
+    body: "Show up nearby with a tasteful featured card. Apply to feature your shop.",
+    cta: "Feature your cafe",
   },
   {
     slug: "plato-garsfontein",
     radiusKm: 40,
-    label: "Sponsored nearby",
-    headline: "An easy flat white stop close to your route",
-    body: "Test flow: this lets us judge whether a paid local feature can feel useful instead of intrusive.",
-    cta: "Open feature",
+    label: "For coffee shops",
+    headline: "Promote your cafe on Near Me",
+    body: "Show up nearby with a tasteful featured card. Apply to feature your shop.",
+    cta: "Feature your cafe",
   },
 ];
 
@@ -1350,10 +1350,10 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       placement: {
         slug: `featured-test-${todayCupPrimary.cafe.slug}`,
         radiusKm: selectedRadiusKm,
-        label: "Featured nearby",
-        headline: "A premium local feature in the same card rail",
-        body: "Test flow: this slot can hold future cafe promotions without interrupting the map or replacing Today’s Cup.",
-        cta: "Open feature",
+        label: "For coffee shops",
+        headline: "Promote your cafe on Near Me",
+        body: "Show up nearby with a tasteful featured card. Apply to feature your shop.",
+        cta: "Feature your cafe",
       },
       cafe: todayCupPrimary.cafe,
       distanceKm: todayCupPrimary.distance,
@@ -3628,7 +3628,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 <>
                   <div className="diesel-selection-head diesel-selection-head-today">
                     <div className="diesel-selection-meta">
-                      <span>{bottomRailCard === "featured" ? "Featured nearby" : "Today's cup"}</span>
+                      <span>{bottomRailCard === "featured" ? "For coffee shops" : "Today's cup"}</span>
                       <span>
                         {bottomRailCard === "featured" && sponsoredPlacement
                           ? sponsoredPlacement.placement.label
@@ -3640,7 +3640,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                         <>
                           <div className="diesel-selection-score diesel-selection-score-today">
                             <strong>{formatDistance(sponsoredPlacement.distanceKm)}</strong>
-                            <span>Paid local feature test</span>
+                            <span>Cafe partner preview</span>
                           </div>
                           <button
                             className="map-search-close diesel-selection-dismiss"
@@ -3672,14 +3672,28 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   {shouldShowSponsoredPlacement ? (
                     <div className="diesel-bottom-rail-pager" aria-label="Bottom card views">
-                      <div className="diesel-bottom-rail-dots" aria-hidden="true">
-                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`} />
-                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`} />
+                      <div className="diesel-bottom-rail-dots" role="tablist" aria-label="Bottom card views">
+                        <button
+                          className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={bottomRailCard === "today"}
+                          aria-label="Show Today's Cup"
+                          onClick={() => setBottomRailCard("today")}
+                        />
+                        <button
+                          className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={bottomRailCard === "featured"}
+                          aria-label="Show featured nearby"
+                          onClick={() => setBottomRailCard("featured")}
+                        />
                       </div>
                       <small>
                         {bottomRailCard === "featured"
-                          ? "Swipe right to return to Today's Cup"
-                          : "Swipe left for Featured nearby"}
+                          ? "Swipe or tap to return to Today's Cup"
+                          : "Swipe or tap for the coffee shop feature"}
                       </small>
                     </div>
                   ) : null}
@@ -3692,7 +3706,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       <div className="diesel-selection-copy diesel-selection-copy-today diesel-selection-copy-featured">
                         <strong>{sponsoredPlacement.cafe.name}</strong>
                         <div className="diesel-selection-decision-badge diesel-selection-decision-badge-featured">
-                          <span className="diesel-selection-decision-kicker">Featured nearby</span>
+                          <span className="diesel-selection-decision-kicker">For coffee shops</span>
                           <strong>{sponsoredPlacement.placement.headline}</strong>
                         </div>
                         <p>{sponsoredPlacement.placement.body}</p>
@@ -3705,8 +3719,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                         </div>
                         <div className="diesel-today-glance-card">
                           <span>Format</span>
-                          <strong>Paid local feature</strong>
-                          <small>Design controlled by Near Me</small>
+                          <strong>Featured placement</strong>
+                          <small>Designed by Near Me</small>
                         </div>
                       </div>
 
@@ -3716,16 +3730,18 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                             className="diesel-selection-primary diesel-selection-primary-main control-primary"
                             type="button"
                             onClick={() => {
-                              trackEvent("sponsored_card_opened", {
+                              trackEvent("featured_cafe_interest_opened", {
                                 cafe_slug: sponsoredPlacement.cafe.slug,
                                 source: "bottom_rail",
                               });
-                              selectCafe(sponsoredPlacement.cafe.id, {
-                                explicit: true,
-                                pan: true,
-                                nextSheetState: "expanded",
-                                source: "active_card",
-                              });
+                              openAddShopModal({
+                                name: sponsoredPlacement.cafe.name,
+                                area: sponsoredPlacement.cafe.address || "",
+                                note: "I want to feature my cafe on Near Me with a local sponsored card.",
+                              }, "today_cup");
+                              setAddShopMessage(
+                                `Tell us a little about how ${sponsoredPlacement.cafe.name} should be featured.`
+                              );
                             }}
                           >
                             {sponsoredPlacement.placement.cta}
