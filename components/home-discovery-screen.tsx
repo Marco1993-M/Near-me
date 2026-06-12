@@ -269,6 +269,24 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function mergeFallbackPlaces(
+  existingPlaces: FallbackPlace[],
+  nextNearbyPlaces: FallbackPlace[],
+) {
+  const pinnedSearchPlaces = existingPlaces.filter((place) => place.source === "osm-nominatim");
+  const merged = [...pinnedSearchPlaces, ...nextNearbyPlaces];
+  const seen = new Set<string>();
+
+  return merged.filter((place) => {
+    if (seen.has(place.id)) {
+      return false;
+    }
+
+    seen.add(place.id);
+    return true;
+  });
+}
+
 function getJournalDrinkFamilyLabel(drink: string | null) {
   if (!drink) {
     return null;
@@ -1222,9 +1240,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         }
 
         const places = payload.places ?? [];
-        setFallbackPlaces(places);
+        let mergedPlaces = places;
+        setFallbackPlaces((current) => {
+          mergedPlaces = mergeFallbackPlaces(current, places);
+          return mergedPlaces;
+        });
         setActiveFallbackId((current) =>
-          current && places.some((place) => place.id === current) ? current : null,
+          current &&
+          mergedPlaces.some((place) => place.id === current)
+            ? current
+            : null,
         );
         setFallbackState("ready");
       })
