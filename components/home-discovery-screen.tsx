@@ -1037,50 +1037,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
-  const sponsoredPlacement = useMemo(() => {
-    if (!userLocation || activeCafe || activeFallbackPlace || isOverlayOpen) {
-      return null;
-    }
-
-    const matches = TEST_SPONSORED_PLACEMENTS.map((placement) => {
-      const cafe = hydratedCafes.find((candidate) => candidate.slug === placement.slug);
-
-      if (!cafe || typeof cafe.latitude !== "number" || typeof cafe.longitude !== "number") {
-        return null;
-      }
-
-      const distanceKm = getDistanceInKm(userLocation, {
-        latitude: cafe.latitude,
-        longitude: cafe.longitude,
-      });
-
-      if (distanceKm > placement.radiusKm) {
-        return null;
-      }
-
-      return { placement, cafe, distanceKm };
-    })
-      .filter(
-        (
-          value,
-        ): value is {
-          placement: SponsoredPlacement;
-          cafe: Cafe;
-          distanceKm: number;
-        } => Boolean(value),
-      )
-      .sort((left, right) => left.distanceKm - right.distanceKm);
-
-    return matches[0] ?? null;
-  }, [activeCafe, activeFallbackPlace, hydratedCafes, isOverlayOpen, userLocation]);
-  const shouldShowSponsoredPlacement =
-    Boolean(sponsoredPlacement) &&
-    sponsoredPlacement?.placement.slug !== dismissedSponsoredSlug;
-  useEffect(() => {
-    if (!shouldShowSponsoredPlacement && bottomRailCard === "featured") {
-      setBottomRailCard("today");
-    }
-  }, [bottomRailCard, shouldShowSponsoredPlacement]);
   const handleBottomRailTouchStart = (event: TouchEvent<HTMLElement>) => {
     const touch = event.touches[0];
     if (!touch) {
@@ -1348,6 +1304,77 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     !hasNoRadiusMatches &&
     !activeFallbackPlace &&
     Boolean(todayCupPrimary);
+  const sponsoredPlacement = useMemo(() => {
+    if (!userLocation || activeCafe || activeFallbackPlace || isOverlayOpen) {
+      return null;
+    }
+
+    const matches = TEST_SPONSORED_PLACEMENTS.map((placement) => {
+      const cafe = hydratedCafes.find((candidate) => candidate.slug === placement.slug);
+
+      if (!cafe || typeof cafe.latitude !== "number" || typeof cafe.longitude !== "number") {
+        return null;
+      }
+
+      const distanceKm = getDistanceInKm(userLocation, {
+        latitude: cafe.latitude,
+        longitude: cafe.longitude,
+      });
+
+      if (distanceKm > placement.radiusKm) {
+        return null;
+      }
+
+      return { placement, cafe, distanceKm };
+    })
+      .filter(
+        (
+          value,
+        ): value is {
+          placement: SponsoredPlacement;
+          cafe: Cafe;
+          distanceKm: number;
+        } => Boolean(value),
+      )
+      .sort((left, right) => left.distanceKm - right.distanceKm);
+
+    if (matches[0]) {
+      return matches[0];
+    }
+
+    if (!todayCupPrimary) {
+      return null;
+    }
+
+    return {
+      placement: {
+        slug: `featured-test-${todayCupPrimary.cafe.slug}`,
+        radiusKm: selectedRadiusKm,
+        label: "Featured nearby",
+        headline: "A premium local feature in the same card rail",
+        body: "Test flow: this slot can hold future cafe promotions without interrupting the map or replacing Today’s Cup.",
+        cta: "Open feature",
+      },
+      cafe: todayCupPrimary.cafe,
+      distanceKm: todayCupPrimary.distance,
+    };
+  }, [
+    activeCafe,
+    activeFallbackPlace,
+    hydratedCafes,
+    isOverlayOpen,
+    selectedRadiusKm,
+    todayCupPrimary,
+    userLocation,
+  ]);
+  const shouldShowSponsoredPlacement =
+    Boolean(sponsoredPlacement) &&
+    sponsoredPlacement?.placement.slug !== dismissedSponsoredSlug;
+  useEffect(() => {
+    if (!shouldShowSponsoredPlacement && bottomRailCard === "featured") {
+      setBottomRailCard("today");
+    }
+  }, [bottomRailCard, shouldShowSponsoredPlacement]);
   const enableBottomRailSwipe = shouldShowSponsoredPlacement && shouldShowTodayCup;
   const todayCupVisualSignals = todayCupPrimary
     ? [
