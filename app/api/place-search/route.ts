@@ -21,6 +21,11 @@ type NominatimPlace = {
   };
 };
 
+const QUERY_ALIASES: Record<string, string[]> = {
+  bootleggers: ["bootlegger", "bootleggers coffee company"],
+  bootlegger: ["bootleggers", "bootleggers coffee company"],
+};
+
 function getDistanceInKm(
   from: { latitude: number; longitude: number },
   to: { latitude: number; longitude: number },
@@ -88,6 +93,35 @@ function normalizePlace(
   };
 }
 
+function buildSearchQueries(query: string) {
+  const normalized = query.trim().toLowerCase();
+  const base = [query.trim(), `${query.trim()} coffee`];
+  const aliases = Object.entries(QUERY_ALIASES)
+    .filter(([key]) => normalized.includes(key))
+    .flatMap(([, values]) => values);
+
+  return [...new Set([...base, ...aliases])].filter(Boolean);
+}
+
+function getNameMatchScore(place: FallbackPlace, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedName = place.name.trim().toLowerCase();
+
+  if (normalizedName === normalizedQuery) {
+    return 3;
+  }
+
+  if (normalizedName.startsWith(normalizedQuery)) {
+    return 2.2;
+  }
+
+  if (normalizedName.includes(normalizedQuery)) {
+    return 1.5;
+  }
+
+  return 0.6;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
@@ -102,43 +136,49 @@ export async function GET(request: Request) {
     return NextResponse.json({ places: [] });
   }
 
-  const nominatimParams = new URLSearchParams({
-    q: `${query} coffee`,
-    format: "jsonv2",
-    addressdetails: "1",
-    extratags: "1",
-    limit: userLocation ? "8" : "6",
-  });
-
-  if (userLocation) {
-    const halfWidth = 0.18;
-    const halfHeight = 0.12;
-    nominatimParams.set(
-      "viewbox",
-      [
-        (userLocation.longitude - halfWidth).toFixed(4),
-        (userLocation.latitude + halfHeight).toFixed(4),
-        (userLocation.longitude + halfWidth).toFixed(4),
-        (userLocation.latitude - halfHeight).toFixed(4),
-      ].join(","),
-    );
-    nominatimParams.set("bounded", "1");
-  }
-
   try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${nominatimParams.toString()}`, {
-      headers: {
-        "Accept-Language": "en",
-        "User-Agent": `${siteConfig.name} place search (${siteConfig.suggestCafeEmail})`,
-      },
-      cache: "no-store",
-    });
+    const queries = buildSearchQueries(query);
+    const payloads = await Promise.all(
+      queries.map(async (searchTerm) => {
+        const nominatimParams = new URLSearchParams({
+          q: searchTerm,
+          format: "jsonv2",
+          addressdetails: "1",
+          extratags: "1",
+          limit: userLocation ? "10" : "6",
+        });
 
-    if (!response.ok) {
-      return NextResponse.json({ places: [] });
-    }
+        if (userLocation) {
+          const halfWidth = 0.45;
+          const halfHeight = 0.3;
+          nominatimParams.set(
+            "viewbox",
+            [
+              (userLocation.longitude - halfWidth).toFixed(4),
+              (userLocation.latitude + halfHeight).toFixed(4),
+              (userLocation.longitude + halfWidth).toFixed(4),
+              (userLocation.latitude - halfHeight).toFixed(4),
+            ].join(","),
+          );
+        }
 
-    const payload = (await response.json()) as NominatimPlace[];
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?${nominatimParams.toString()}`, {
+          headers: {
+            "Accept-Language": "en",
+            "User-Agent": `${siteConfig.name} place search (${siteConfig.suggestCafeEmail})`,
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return [] as NominatimPlace[];
+        }
+
+        return (await response.json()) as NominatimPlace[];
+      }),
+    );
+
+    const payload = payloads.flat();
     const seen = new Set<string>();
     const places = payload
       .map((place) => normalizePlace(place, userLocation))
@@ -151,7 +191,11 @@ export async function GET(request: Request) {
         seen.add(key);
         return true;
       })
-      .sort((left, right) => left.distanceKm - right.distanceKm)
+      .sort((left, right) => {
+        const leftScore = getNameMatchScore(left, query) - left.distanceKm * 0.08;
+        const rightScore = getNameMatchScore(right, query) - right.distanceKm * 0.08;
+        return rightScore - leftScore;
+      })
       .slice(0, 6);
 
     return NextResponse.json({ places });
