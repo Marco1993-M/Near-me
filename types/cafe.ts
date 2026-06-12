@@ -57,7 +57,7 @@ export type MapCafe = Pick<
 
 export type FallbackPlace = {
   id: string;
-  source: "osm-overpass";
+  source: "osm-overpass" | "osm-nominatim";
   name: string;
   address: string;
   city: string;
