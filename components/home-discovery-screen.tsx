@@ -72,6 +72,8 @@ type JournalTarget =
   | { type: "cafe"; cafe: Cafe }
   | { type: "fallback"; place: FallbackPlace };
 
+type AddShopMode = "suggest" | "feature";
+
 type TodayCupFeedbackReason = "too-far" | "not-for-me" | "already-been" | "not-today";
 
 type TodayCupIntentKey =
@@ -690,6 +692,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [isJournalEntryOpen, setIsJournalEntryOpen] = useState(false);
   const [isAddShopOpen, setIsAddShopOpen] = useState(false);
+  const [addShopMode, setAddShopMode] = useState<AddShopMode>("suggest");
   const [profilerQuestionIndex, setProfilerQuestionIndex] = useState(0);
   const [profilerScores, setProfilerScores] = useState(defaultProfilerScores);
   const [profilerSelections, setProfilerSelections] = useState<number[]>([]);
@@ -720,6 +723,26 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [addShopNote, setAddShopNote] = useState("");
   const [addShopState, setAddShopState] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [addShopMessage, setAddShopMessage] = useState("");
+  const addShopCafeSuggestions = useMemo(
+    () =>
+      [...hydratedCafes]
+        .filter((cafe) => cafe.name.trim().length > 0)
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((cafe) => ({
+          name: cafe.name,
+          address: cafe.address || "",
+        }))
+        .filter((suggestion, index, array) => {
+          return (
+            index ===
+            array.findIndex(
+              (candidate) =>
+                candidate.name.toLowerCase() === suggestion.name.toLowerCase(),
+            )
+          );
+        }),
+    [hydratedCafes],
+  );
   const reviewSuccessTimeoutRef = useRef<number | null>(null);
   const reviewToastTimeoutRef = useRef<number | null>(null);
   const hasExplicitCafeSelectionRef = useRef(false);
@@ -2016,6 +2039,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function openAddShopModal(
     prefill?: { name?: string; area?: string; note?: string },
     source: DiscoverySource = "toolbar",
+    mode: AddShopMode = "suggest",
   ) {
     dismissIntro();
     trackEvent("add_shop_started", {
@@ -2026,6 +2050,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     setIsTopPicksOpen(false);
     setIsProfilerOpen(false);
     setIsJournalOpen(false);
+    setAddShopMode(mode);
     setAddShopName(prefill?.name ?? searchQuery.trim());
     setAddShopArea(prefill?.area ?? "");
     setAddShopNote(prefill?.note ?? "");
@@ -2036,6 +2061,17 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
   function closeAddShopModal() {
     setIsAddShopOpen(false);
+  }
+
+  function handleAddShopNameChange(nextValue: string) {
+    setAddShopName(nextValue);
+    const matchedCafe = addShopCafeSuggestions.find(
+      (candidate) => candidate.name.toLowerCase() === nextValue.trim().toLowerCase(),
+    );
+
+    if (matchedCafe?.address) {
+      setAddShopArea(matchedCafe.address);
+    }
   }
 
   function resetProfiler() {
@@ -2489,12 +2525,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     {
                       name: sponsoredPlacement.cafe.name,
                       area: sponsoredPlacement.cafe.address || "",
-                      note: "I want to feature my cafe on Near Me with a local sponsored card.",
                     },
                     "toolbar",
+                    "feature",
                   );
                   setAddShopMessage(
-                    `Tell us a little about how ${sponsoredPlacement.cafe.name} should be featured.`,
+                    "Tell us a little about this cafe and how you’d like it to appear on Near Me.",
                   );
                 }}
               >
@@ -2907,8 +2943,14 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
               </div>
 
               <div className="profiler-question-block">
-                <strong>Tell us about the cafe you found</strong>
-                <span>Send it straight to Near Me for review and we will add it to the queue.</span>
+                <strong>
+                  {addShopMode === "feature" ? "Tell us about this cafe" : "Tell us about the cafe you found"}
+                </strong>
+                <span>
+                  {addShopMode === "feature"
+                    ? "Share the basics and any context you want the Near Me team to know."
+                    : "Send it straight to Near Me for review and we will add it to the queue."}
+                </span>
               </div>
 
               <label className="review-modal-section">
@@ -2916,10 +2958,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 <input
                   className="add-shop-input"
                   type="text"
+                  list="near-me-cafe-name-suggestions"
                   value={addShopName}
-                  onChange={(event) => setAddShopName(event.target.value)}
+                  onChange={(event) => handleAddShopNameChange(event.target.value)}
                   placeholder="Coffee shop name"
                 />
+                <datalist id="near-me-cafe-name-suggestions">
+                  {addShopCafeSuggestions.map((suggestion) => (
+                    <option key={suggestion.name} value={suggestion.name} />
+                  ))}
+                </datalist>
               </label>
 
               <label className="review-modal-section">
@@ -2934,12 +2982,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
               </label>
 
               <label className="review-modal-section">
-                <strong>Why it belongs on Near Me</strong>
+                <strong>{addShopMode === "feature" ? "Anything we should know?" : "Why it belongs on Near Me"}</strong>
                 <textarea
                   className="review-note-input"
                   value={addShopNote}
                   onChange={(event) => setAddShopNote(event.target.value)}
-                  placeholder="Specialty coffee, great espresso, local favorite, beautiful space..."
+                  placeholder={
+                    addShopMode === "feature"
+                      ? "Specialty coffee, signature drinks, what makes this place stand out..."
+                      : "Specialty coffee, great espresso, local favorite, beautiful space..."
+                  }
                   rows={4}
                 />
               </label>
@@ -2958,7 +3010,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                   onClick={handleAddShopSubmit}
                   disabled={addShopState === "submitting"}
                 >
-                  {addShopState === "submitting" ? "Submitting..." : "Submit to Near Me"}
+                  {addShopState === "submitting"
+                    ? "Submitting..."
+                    : addShopMode === "feature"
+                      ? "Send to Near Me"
+                      : "Submit to Near Me"}
                 </button>
               </div>
             </section>
