@@ -80,13 +80,6 @@ export const CANONICAL_CAFES_COLD_CACHE_TAG = "canonical-cafes-cold";
 export const CAFE_TRUST_SIGNALS_CACHE_TAG = "cafe-trust-signals";
 
 const SUPABASE_IN_CHUNK_SIZE = 120;
-const LAUNCH_EXCLUDED_NAME_PATTERNS = [
-  /\bstarbucks\b/i,
-  /\bvida e caff[eè]\b/i,
-  /\bmugg\s*&\s*bean\b/i,
-  /\bwoolworths\b/i,
-];
-const LAUNCH_EXCLUDED_CITY_NAMES = new Set(["Unknown City"]);
 const TASTE_GUIDE_DEFINITIONS: Array<
   TasteGuideSummary & {
     matches: (cafe: Cafe) => boolean;
@@ -162,14 +155,6 @@ function buildSummary(city: string, tags: string[], reviewCount: number) {
       : "ready for first-hand discovery";
 
   return `A ${lead} cafe in ${city}, ${proof}.`;
-}
-
-function isLaunchEligibleCafe(input: { name: string; city: string }) {
-  if (LAUNCH_EXCLUDED_CITY_NAMES.has(input.city)) {
-    return false;
-  }
-
-  return !LAUNCH_EXCLUDED_NAME_PATTERNS.some((pattern) => pattern.test(input.name));
 }
 
 function normalizeDrinks(rows: CafeReviewDrinkRow[]) {
@@ -521,8 +506,7 @@ async function fetchCanonicalCafeBundleUncached(): Promise<CanonicalCafeBundle |
         trustPreview,
       } satisfies Cafe;
     })
-    .filter((cafe): cafe is Cafe => Boolean(cafe))
-    .filter((cafe) => isLaunchEligibleCafe({ name: cafe.name, city: cafe.city }));
+    .filter((cafe): cafe is Cafe => Boolean(cafe));
 
   const byCity = new Map<string, Cafe[]>();
   for (const cafe of cafes) {
