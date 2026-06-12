@@ -1,7 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  CAFE_TRUST_SIGNALS_CACHE_TAG,
+  CANONICAL_CAFES_COLD_CACHE_TAG,
+  CANONICAL_CAFES_HOT_CACHE_TAG,
+} from "@/lib/cafes";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { isValidAdminToken } from "@/lib/admin";
 import { getSupabaseServerClient } from "@/lib/supabase";
@@ -288,6 +293,9 @@ export async function approveCandidate(formData: FormData) {
   revalidatePath("/guides");
   revalidatePath(`/cafes/${cafeSlug}`);
   revalidatePath(`/cities/${citySlug}`);
+  revalidateTag(CANONICAL_CAFES_HOT_CACHE_TAG, "max");
+  revalidateTag(CANONICAL_CAFES_COLD_CACHE_TAG, "max");
+  revalidateTag(CAFE_TRUST_SIGNALS_CACHE_TAG, "max");
 
   redirectBack(token, "approved");
 }
