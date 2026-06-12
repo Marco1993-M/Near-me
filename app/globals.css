@@ -613,57 +613,47 @@ img {
   min-width: 0;
 }
 
-.diesel-bottom-rail-shell {
-  position: relative;
-  margin-top: 0.15rem;
-}
-
-.diesel-bottom-rail-shell.has-peek {
-  overflow: hidden;
-}
-
-.diesel-bottom-rail-shell.has-peek.is-today {
-  padding-right: 1.2rem;
-}
-
-.diesel-bottom-rail-shell.has-peek.is-featured {
-  padding-left: 1.2rem;
-}
-
-.diesel-bottom-rail-peek {
-  position: absolute;
-  top: 0.55rem;
-  bottom: 0.55rem;
-  width: 4.4rem;
+.diesel-featured-link-shell {
+  position: fixed;
+  top: calc(max(1rem, env(safe-area-inset-top)) + 3.55rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4999;
+  width: min(calc(100% - 2rem), 36rem);
   display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.diesel-featured-link-line {
+  margin: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  padding: 0.7rem 0.45rem;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top left, rgba(199, 245, 211, 0.18), transparent 52%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 100%),
-    rgba(255, 255, 252, 0.44);
+  gap: 0.3rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
   border: 1px solid rgba(20, 32, 24, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 12px 24px rgba(20, 32, 24, 0.08);
-  pointer-events: none;
-  z-index: 0;
+  background: rgba(255, 255, 252, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  color: rgba(20, 32, 24, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: center;
 }
 
-.diesel-bottom-rail-peek.is-right {
-  right: 0;
-}
-
-.diesel-bottom-rail-peek.is-left {
-  left: 0;
-}
-
-.diesel-bottom-rail-stage.is-swipeable {
-  touch-action: pan-y;
-  position: relative;
-  z-index: 1;
+.diesel-featured-link-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1f6a38;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  cursor: pointer;
 }
 
 .diesel-selection-copy-featured {
