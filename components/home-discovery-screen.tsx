@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace, MapCafe } from "@/types/cafe";
@@ -670,7 +670,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
   const [searchFocusedCafeId, setSearchFocusedCafeId] = useState<string | null>(null);
   const [searchFocusedFallbackId, setSearchFocusedFallbackId] = useState<string | null>(null);
-  const [bottomRailCard, setBottomRailCard] = useState<"today" | "featured">("today");
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
@@ -729,8 +728,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const lastTrackedLocationStateRef = useRef<string | null>(null);
   const profilerSourceRef = useRef<DiscoverySource>("toolbar");
   const handledTasteIntentRef = useRef(false);
-  const bottomRailTouchStartXRef = useRef<number | null>(null);
-  const bottomRailTouchStartYRef = useRef<number | null>(null);
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -1036,44 +1033,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
-  const handleBottomRailTouchStart = (event: TouchEvent<HTMLElement>) => {
-    const touch = event.touches[0];
-    if (!touch) {
-      return;
-    }
-
-    bottomRailTouchStartXRef.current = touch.clientX;
-    bottomRailTouchStartYRef.current = touch.clientY;
-  };
-  const handleBottomRailTouchEnd = (event: TouchEvent<HTMLElement>) => {
-    const startX = bottomRailTouchStartXRef.current;
-    const startY = bottomRailTouchStartYRef.current;
-    bottomRailTouchStartXRef.current = null;
-    bottomRailTouchStartYRef.current = null;
-
-    if (startX == null || startY == null || !enableBottomRailSwipe) {
-      return;
-    }
-
-    const touch = event.changedTouches[0];
-    if (!touch) {
-      return;
-    }
-
-    const deltaX = touch.clientX - startX;
-    const deltaY = touch.clientY - startY;
-
-    if (Math.abs(deltaX) < 28 || Math.abs(deltaX) < Math.abs(deltaY) * 1.15) {
-      return;
-    }
-
-    if (deltaX < 0) {
-      setBottomRailCard("featured");
-      return;
-    }
-
-    setBottomRailCard("today");
-  };
   const isCollapsedCard = sheetState === "collapsed";
   const isExpandedCard = sheetState === "expanded";
   const shouldShowIntro =
@@ -1367,13 +1326,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     todayCupPrimary,
     userLocation,
   ]);
-  const shouldShowSponsoredPlacement = Boolean(sponsoredPlacement);
-  useEffect(() => {
-    if (!shouldShowSponsoredPlacement && bottomRailCard === "featured") {
-      setBottomRailCard("today");
-    }
-  }, [bottomRailCard, shouldShowSponsoredPlacement]);
-  const enableBottomRailSwipe = shouldShowSponsoredPlacement && shouldShowTodayCup;
+  const shouldShowFeaturedCafePrompt =
+    Boolean(sponsoredPlacement) && !shouldShowIntro && !isOverlayOpen;
   const todayCupVisualSignals = todayCupPrimary
     ? [
         {
@@ -2519,6 +2473,37 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           </div>
         </div>
 
+        {shouldShowFeaturedCafePrompt && sponsoredPlacement ? (
+          <div className="diesel-featured-link-shell fade-slide-in">
+            <p className="diesel-featured-link-line">
+              <span>Own a coffee shop?</span>
+              <button
+                type="button"
+                className="diesel-featured-link-button"
+                onClick={() => {
+                  trackEvent("featured_cafe_interest_opened", {
+                    cafe_slug: sponsoredPlacement.cafe.slug,
+                    source: "top_link",
+                  });
+                  openAddShopModal(
+                    {
+                      name: sponsoredPlacement.cafe.name,
+                      area: sponsoredPlacement.cafe.address || "",
+                      note: "I want to feature my cafe on Near Me with a local sponsored card.",
+                    },
+                    "toolbar",
+                  );
+                  setAddShopMessage(
+                    `Tell us a little about how ${sponsoredPlacement.cafe.name} should be featured.`,
+                  );
+                }}
+              >
+                Feature your cafe on Near Me
+              </button>
+            </p>
+          </div>
+        ) : null}
+
         {shouldShowIntro ? (
           <div className="map-intro-shell fade-slide-in">
             <section className="map-intro-card" aria-label="Near Me introduction">
@@ -3109,8 +3094,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
               <button
                 className="diesel-sheet-handle"
                 type="button"
-                onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
-                onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
                 onClick={() =>
                   setSheetState((current) => {
                     const nextState = current === "collapsed" ? "expanded" : "collapsed";
@@ -3624,122 +3607,27 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 </>
               ) : todayCupPrimary ? (
                 <>
-                  <div
-                    className="diesel-selection-head diesel-selection-head-today"
-                    onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
-                    onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
-                  >
+                  <div className="diesel-selection-head diesel-selection-head-today">
                     <div className="diesel-selection-meta">
-                      <span>{bottomRailCard === "featured" ? "For coffee shops" : "Today's cup"}</span>
-                      <span>
-                        {bottomRailCard === "featured" && sponsoredPlacement
-                          ? sponsoredPlacement.placement.label
-                          : todayCupMoment.shortLabel}
-                      </span>
+                      <span>Today's cup</span>
+                      <span>{todayCupMoment.shortLabel}</span>
                     </div>
                     <div className="diesel-selection-head-actions">
-                      {bottomRailCard === "featured" && sponsoredPlacement ? (
-                        <>
-                          <div className="diesel-selection-score diesel-selection-score-today">
-                            <strong>{formatDistance(sponsoredPlacement.distanceKm)}</strong>
-                            <span>Cafe partner preview</span>
-                          </div>
-                          <button
-                            className="map-search-close diesel-selection-dismiss"
-                            type="button"
-                            onClick={() => setBottomRailCard("today")}
-                            aria-label="Dismiss featured nearby card"
-                          >
-                            Back
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <div className="diesel-selection-score diesel-selection-score-today">
-                            <strong>{formatDistance(todayCupPrimary.distance)}</strong>
-                            <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
-                          </div>
-                          <button
-                            className="map-search-close diesel-selection-dismiss"
-                            type="button"
-                            onClick={dismissTodayCup}
-                            aria-label="Dismiss Today's Cup"
-                          >
-                            Dismiss
-                          </button>
-                        </>
-                      )}
+                      <div className="diesel-selection-score diesel-selection-score-today">
+                        <strong>{formatDistance(todayCupPrimary.distance)}</strong>
+                        <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                      </div>
+                      <button
+                        className="map-search-close diesel-selection-dismiss"
+                        type="button"
+                        onClick={dismissTodayCup}
+                        aria-label="Dismiss Today's Cup"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                   </div>
-
-                  <div
-                    className={`diesel-bottom-rail-shell${shouldShowSponsoredPlacement ? " has-peek" : ""}${
-                      bottomRailCard === "featured" ? " is-featured" : " is-today"
-                    }`}
-                  >
-                    {shouldShowSponsoredPlacement ? (
-                      <div
-                        className={`diesel-bottom-rail-peek${
-                          bottomRailCard === "featured" ? " is-left" : " is-right"
-                        }`}
-                        aria-hidden="true"
-                      />
-                    ) : null}
-
-                    <div
-                      className={`diesel-bottom-rail-stage${shouldShowSponsoredPlacement ? " is-swipeable" : ""}`}
-                    >
-                  {bottomRailCard === "featured" && sponsoredPlacement ? (
-                    <>
-                      <div className="diesel-selection-copy diesel-selection-copy-today diesel-selection-copy-featured">
-                        <strong>{sponsoredPlacement.cafe.name}</strong>
-                        <div className="diesel-selection-decision-badge diesel-selection-decision-badge-featured">
-                          <span className="diesel-selection-decision-kicker">For coffee shops</span>
-                          <strong>{sponsoredPlacement.placement.headline}</strong>
-                        </div>
-                        <p>{sponsoredPlacement.placement.body}</p>
-                      </div>
-
-                      <div className="diesel-today-glance-grid diesel-featured-glance-grid">
-                        <div className="diesel-today-glance-card">
-                          <span>Distance</span>
-                          <strong>{formatDistance(sponsoredPlacement.distanceKm)}</strong>
-                        </div>
-                        <div className="diesel-today-glance-card">
-                          <span>Format</span>
-                          <strong>Featured placement</strong>
-                          <small>Designed by Near Me</small>
-                        </div>
-                      </div>
-
-                      <div className="diesel-selection-actions">
-                        <div className="diesel-selection-actions-main">
-                          <button
-                            className="diesel-selection-primary diesel-selection-primary-main control-primary"
-                            type="button"
-                            onClick={() => {
-                              trackEvent("featured_cafe_interest_opened", {
-                                cafe_slug: sponsoredPlacement.cafe.slug,
-                                source: "bottom_rail",
-                              });
-                              openAddShopModal({
-                                name: sponsoredPlacement.cafe.name,
-                                area: sponsoredPlacement.cafe.address || "",
-                                note: "I want to feature my cafe on Near Me with a local sponsored card.",
-                              }, "today_cup");
-                              setAddShopMessage(
-                                `Tell us a little about how ${sponsoredPlacement.cafe.name} should be featured.`
-                              );
-                            }}
-                          >
-                            {sponsoredPlacement.placement.cta}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="diesel-selection-copy diesel-selection-copy-today">
+                  <div className="diesel-selection-copy diesel-selection-copy-today">
                         <strong>{todayCupPrimary.cafe.name}</strong>
                         {!isCollapsedCard ? (
                           <div className={`diesel-today-mood-band ${todayCupIntentConfig.accentClass}`}>
@@ -3936,10 +3824,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                           </button>
                         </div>
                       </div>
-                    </>
-                  )}
-                    </div>
-                  </div>
                 </>
               ) : null}
             </section>
