@@ -41,6 +41,14 @@ type SourcePlacePayload = {
   approved_via?: string;
 };
 
+type CanonicalCafeMatchRow = {
+  id: string;
+  slug: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+};
+
 function normalizeCandidateReviews(payload: SourcePlacePayload | null | undefined) {
   const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
   const fallbackLatest = payload?.latest_review ? [payload.latest_review] : [];
@@ -80,6 +88,104 @@ function normalizeReviewTags(tags: string[] | undefined) {
         .filter(Boolean),
     ),
   ).slice(0, 5);
+}
+
+function getDistanceInKm(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number },
+) {
+  const earthRadiusKm = 6371;
+  const dLat = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const dLng = ((to.longitude - from.longitude) * Math.PI) / 180;
+  const fromLat = (from.latitude * Math.PI) / 180;
+  const toLat = (to.latitude * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLng / 2) * Math.sin(dLng / 2) * Math.cos(fromLat) * Math.cos(toLat);
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeNameForMatching(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\b(coffee|company|cafe|corner)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getMeaningfulNameTokens(value: string) {
+  return normalizeNameForMatching(value)
+    .split(" ")
+    .filter((token) => token.length >= 4);
+}
+
+function namesLikelyMatch(left: string, right: string) {
+  const normalizedLeft = normalizeNameForMatching(left);
+  const normalizedRight = normalizeNameForMatching(right);
+
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+
+  if (normalizedLeft === normalizedRight) {
+    return true;
+  }
+
+  if (normalizedLeft.includes(normalizedRight) || normalizedRight.includes(normalizedLeft)) {
+    return true;
+  }
+
+  const rightTokens = new Set(getMeaningfulNameTokens(right));
+  const sharedTokens = getMeaningfulNameTokens(left).filter((token) => rightTokens.has(token));
+  return sharedTokens.length > 0;
+}
+
+async function findLikelyExistingCafe(
+  supabase: NonNullable<ReturnType<typeof getSupabaseServerClient>>,
+  input: {
+    name: string;
+    countryCode: string;
+    latitude: number | null;
+    longitude: number | null;
+  },
+) {
+  if (input.latitude == null || input.longitude == null) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from(CANONICAL_TABLES.cafes)
+    .select("id, slug, name, latitude, longitude")
+    .eq("status", "active")
+    .eq("country_code", input.countryCode)
+    .limit(500);
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  const candidates = (data as CanonicalCafeMatchRow[])
+    .filter(
+      (cafe) =>
+        cafe.latitude != null &&
+        cafe.longitude != null &&
+        namesLikelyMatch(cafe.name, input.name),
+    )
+    .map((cafe) => ({
+      ...cafe,
+      distanceKm: getDistanceInKm(
+        { latitude: input.latitude!, longitude: input.longitude! },
+        { latitude: cafe.latitude!, longitude: cafe.longitude! },
+      ),
+    }))
+    .filter((cafe) => cafe.distanceKm <= 0.4)
+    .sort((left, right) => left.distanceKm - right.distanceKm);
+
+  return candidates[0] ?? null;
 }
 
 async function resolveUniqueCafeSlug(
@@ -182,39 +288,57 @@ export async function approveCandidate(formData: FormData) {
       ? sourcePlace.longitude
       : null;
 
-  const { data: cityRow, error: cityError } = await adminSupabase
-    .from(CANONICAL_TABLES.cities)
-    .upsert(
-      [{ slug: citySlug, name: cityName, country_code: countryCode }],
-      { onConflict: "slug" },
-    )
-    .select("id")
-    .single();
+  const existingCafeMatch = await findLikelyExistingCafe(adminSupabase, {
+    name,
+    countryCode,
+    latitude,
+    longitude,
+  });
 
-  if (cityError || !cityRow?.id) {
-    redirectBack(token, "city-error");
+  let cafeId: string | null = existingCafeMatch?.id ?? null;
+  let cafeSlug = existingCafeMatch?.slug ?? "";
+
+  if (!cafeId) {
+    const { data: cityRow, error: cityError } = await adminSupabase
+      .from(CANONICAL_TABLES.cities)
+      .upsert(
+        [{ slug: citySlug, name: cityName, country_code: countryCode }],
+        { onConflict: "slug" },
+      )
+      .select("id")
+      .single();
+
+    if (cityError || !cityRow?.id) {
+      redirectBack(token, "city-error");
+    }
+
+    cafeSlug = await resolveUniqueCafeSlug(adminSupabase, name, citySlug);
+    const { data: cafeRow, error: cafeError } = await adminSupabase
+      .from(CANONICAL_TABLES.cafes)
+      .insert([
+        {
+          slug: cafeSlug,
+          name,
+          city_id: cityRow.id,
+          country_code: countryCode,
+          address_line1: address,
+          latitude,
+          longitude,
+          summary: note || null,
+          status: "active",
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (cafeError || !cafeRow?.id) {
+      redirectBack(token, "approve-error");
+    }
+
+    cafeId = cafeRow.id;
   }
 
-  const cafeSlug = await resolveUniqueCafeSlug(adminSupabase, name, citySlug);
-  const { data: cafeRow, error: cafeError } = await adminSupabase
-    .from(CANONICAL_TABLES.cafes)
-    .insert([
-      {
-        slug: cafeSlug,
-        name,
-        city_id: cityRow.id,
-        country_code: countryCode,
-        address_line1: address,
-        latitude,
-        longitude,
-        summary: note || null,
-        status: "active",
-      },
-    ])
-    .select("id")
-    .single();
-
-  if (cafeError || !cafeRow?.id) {
+  if (!cafeId || !cafeSlug) {
     redirectBack(token, "approve-error");
   }
 
@@ -229,7 +353,7 @@ export async function approveCandidate(formData: FormData) {
       .from(CANONICAL_TABLES.reviews)
       .insert([
         {
-          cafe_id: cafeRow.id,
+          cafe_id: cafeId,
           rating: Number(review.rating),
           note: review.note.trim(),
           drink: review.drink?.trim() || null,
@@ -279,7 +403,7 @@ export async function approveCandidate(formData: FormData) {
   const { error: updateError } = await adminSupabase
     .from(CANONICAL_TABLES.sourcePlaces)
     .update({
-      canonical_cafe_id: cafeRow.id,
+      canonical_cafe_id: cafeId,
       match_status: "matched",
       payload: nextPayload,
     })
