@@ -1096,7 +1096,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     bottomRailTouchStartXRef.current = null;
     bottomRailTouchStartYRef.current = null;
 
-    if (startX == null || startY == null || !shouldShowSponsoredPlacement) {
+    if (startX == null || startY == null || !enableBottomRailSwipe) {
       return;
     }
 
@@ -1108,7 +1108,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     const deltaX = touch.clientX - startX;
     const deltaY = touch.clientY - startY;
 
-    if (Math.abs(deltaX) < 42 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+    if (Math.abs(deltaX) < 28 || Math.abs(deltaX) < Math.abs(deltaY) * 1.15) {
       return;
     }
 
@@ -1348,6 +1348,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     !hasNoRadiusMatches &&
     !activeFallbackPlace &&
     Boolean(todayCupPrimary);
+  const enableBottomRailSwipe = shouldShowSponsoredPlacement && shouldShowTodayCup;
   const todayCupVisualSignals = todayCupPrimary
     ? [
         {
@@ -3079,6 +3080,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState === "expanded" ? "half" : "collapsed"}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
               aria-live="polite"
+              onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
+              onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
             >
               <button
                 className="diesel-sheet-handle"
@@ -3656,8 +3659,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   <div
                     className={`diesel-bottom-rail-stage${shouldShowSponsoredPlacement ? " is-swipeable" : ""}`}
-                    onTouchStart={handleBottomRailTouchStart}
-                    onTouchEnd={handleBottomRailTouchEnd}
                   >
                   {bottomRailCard === "featured" && sponsoredPlacement ? (
                     <>
