@@ -601,6 +601,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
   const [todayCupIntent, setTodayCupIntent] = useState<TodayCupIntentKey>("default");
+  const [isTodayCupDismissed, setIsTodayCupDismissed] = useState(false);
   const [todayCupFeedbackByCafeId, setTodayCupFeedbackByCafeId] = useState<Record<string, TodayCupFeedbackEntry>>({});
   const [todayCupHistory, setTodayCupHistory] = useState<TodayCupHistoryEntry[]>([]);
   const [isTopPicksOpen, setIsTopPicksOpen] = useState(false);
@@ -1175,6 +1176,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const todayCupPrimary = todayCupRanked[0] ?? null;
   const todayCupBackups = todayCupRanked.slice(1, 3);
   const shouldShowTodayCup =
+    !isTodayCupDismissed &&
     !shouldShowIntro &&
     !isOverlayOpen &&
     !hasNoRadiusMatches &&
@@ -1520,6 +1522,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       hasExplicitCafeSelectionRef.current = false;
     }
 
+    if (isTodayCupDismissed && !hasExplicitCafeSelectionRef.current) {
+      setActiveCafeId(null);
+      setIsCafeCardVisible(false);
+      return;
+    }
+
     const inRadiusCafe =
       userLocation
         ? cafesByDistance.find((cafe) => {
@@ -1554,6 +1562,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     cafesByDistance,
     mappableCafes,
     selectedRadiusKm,
+    isTodayCupDismissed,
     todayCupPrimary,
     userLocation,
   ]);
@@ -1728,9 +1737,22 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   }
 
   function handleTodayCupIntentSelect(intent: TodayCupIntentKey) {
+    setIsTodayCupDismissed(false);
     setTodayCupIntent(intent);
     trackEvent("today_cup_intent_selected", {
       intent,
+      moment: todayCupMoment.key,
+    });
+  }
+
+  function dismissTodayCup() {
+    setIsTodayCupDismissed(true);
+    if (!hasExplicitCafeSelectionRef.current) {
+      setActiveCafeId(null);
+      setIsCafeCardVisible(false);
+    }
+    trackEvent("today_cup_dismissed", {
+      intent: todayCupIntent,
       moment: todayCupMoment.key,
     });
   }
@@ -3400,9 +3422,19 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       <span>Today&apos;s cup</span>
                       <span>{todayCupMoment.shortLabel}</span>
                     </div>
-                    <div className="diesel-selection-score diesel-selection-score-today">
-                      <strong>{formatDistance(todayCupPrimary.distance)}</strong>
-                      <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                    <div className="diesel-selection-head-actions">
+                      <div className="diesel-selection-score diesel-selection-score-today">
+                        <strong>{formatDistance(todayCupPrimary.distance)}</strong>
+                        <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                      </div>
+                      <button
+                        className="map-search-close diesel-selection-dismiss"
+                        type="button"
+                        onClick={dismissTodayCup}
+                        aria-label="Dismiss Today's Cup"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                   </div>
 
