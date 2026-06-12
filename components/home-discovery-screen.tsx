@@ -670,7 +670,6 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
   const [searchFocusedCafeId, setSearchFocusedCafeId] = useState<string | null>(null);
   const [searchFocusedFallbackId, setSearchFocusedFallbackId] = useState<string | null>(null);
-  const [dismissedSponsoredSlug, setDismissedSponsoredSlug] = useState<string | null>(null);
   const [bottomRailCard, setBottomRailCard] = useState<"today" | "featured">("today");
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
@@ -1305,7 +1304,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     !activeFallbackPlace &&
     Boolean(todayCupPrimary);
   const sponsoredPlacement = useMemo(() => {
-    if (!userLocation || activeCafe || activeFallbackPlace || isOverlayOpen) {
+    if (!userLocation || activeFallbackPlace || isOverlayOpen || (activeCafe && isCafeCardVisible)) {
       return null;
     }
 
@@ -1362,14 +1361,13 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     activeCafe,
     activeFallbackPlace,
     hydratedCafes,
+    isCafeCardVisible,
     isOverlayOpen,
     selectedRadiusKm,
     todayCupPrimary,
     userLocation,
   ]);
-  const shouldShowSponsoredPlacement =
-    Boolean(sponsoredPlacement) &&
-    sponsoredPlacement?.placement.slug !== dismissedSponsoredSlug;
+  const shouldShowSponsoredPlacement = Boolean(sponsoredPlacement);
   useEffect(() => {
     if (!shouldShowSponsoredPlacement && bottomRailCard === "featured") {
       setBottomRailCard("today");
@@ -3645,10 +3643,10 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                           <button
                             className="map-search-close diesel-selection-dismiss"
                             type="button"
-                            onClick={() => setDismissedSponsoredSlug(sponsoredPlacement.placement.slug)}
+                            onClick={() => setBottomRailCard("today")}
                             aria-label="Dismiss featured nearby card"
                           >
-                            Dismiss
+                            Back
                           </button>
                         </>
                       ) : (
@@ -3672,28 +3670,14 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
                   {shouldShowSponsoredPlacement ? (
                     <div className="diesel-bottom-rail-pager" aria-label="Bottom card views">
-                      <div className="diesel-bottom-rail-dots" role="tablist" aria-label="Bottom card views">
-                        <button
-                          className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`}
-                          type="button"
-                          role="tab"
-                          aria-selected={bottomRailCard === "today"}
-                          aria-label="Show Today's Cup"
-                          onClick={() => setBottomRailCard("today")}
-                        />
-                        <button
-                          className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`}
-                          type="button"
-                          role="tab"
-                          aria-selected={bottomRailCard === "featured"}
-                          aria-label="Show featured nearby"
-                          onClick={() => setBottomRailCard("featured")}
-                        />
+                      <div className="diesel-bottom-rail-dots" aria-hidden="true">
+                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`} />
+                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`} />
                       </div>
                       <small>
                         {bottomRailCard === "featured"
-                          ? "Swipe or tap to return to Today's Cup"
-                          : "Swipe or tap for the coffee shop feature"}
+                          ? "Swipe right to return to Today's Cup"
+                          : "Swipe left to view the coffee shop feature"}
                       </small>
                     </div>
                   ) : null}
