@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type TouchEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace, MapCafe } from "@/types/cafe";
@@ -730,6 +730,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const lastTrackedLocationStateRef = useRef<string | null>(null);
   const profilerSourceRef = useRef<DiscoverySource>("toolbar");
   const handledTasteIntentRef = useRef(false);
+  const bottomRailTouchStartXRef = useRef<number | null>(null);
+  const bottomRailTouchStartYRef = useRef<number | null>(null);
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -1079,6 +1081,44 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       setBottomRailCard("today");
     }
   }, [bottomRailCard, shouldShowSponsoredPlacement]);
+  const handleBottomRailTouchStart = (event: TouchEvent<HTMLElement>) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    bottomRailTouchStartXRef.current = touch.clientX;
+    bottomRailTouchStartYRef.current = touch.clientY;
+  };
+  const handleBottomRailTouchEnd = (event: TouchEvent<HTMLElement>) => {
+    const startX = bottomRailTouchStartXRef.current;
+    const startY = bottomRailTouchStartYRef.current;
+    bottomRailTouchStartXRef.current = null;
+    bottomRailTouchStartYRef.current = null;
+
+    if (startX == null || startY == null || !shouldShowSponsoredPlacement) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      return;
+    }
+
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    if (Math.abs(deltaX) < 42 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      setBottomRailCard("featured");
+      return;
+    }
+
+    setBottomRailCard("today");
+  };
   const isCollapsedCard = sheetState === "collapsed";
   const isExpandedCard = sheetState === "expanded";
   const shouldShowIntro =
@@ -3600,27 +3640,25 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     </div>
                   </div>
 
-                  {shouldShowSponsoredPlacement && sponsoredPlacement ? (
-                    <div className="diesel-bottom-rail-switch" aria-label="Bottom card views">
-                      <button
-                        type="button"
-                        className={`diesel-bottom-rail-chip${bottomRailCard === "today" ? " is-active" : ""}`}
-                        onClick={() => setBottomRailCard("today")}
-                        aria-pressed={bottomRailCard === "today"}
-                      >
-                        Today's Cup
-                      </button>
-                      <button
-                        type="button"
-                        className={`diesel-bottom-rail-chip${bottomRailCard === "featured" ? " is-active" : ""}`}
-                        onClick={() => setBottomRailCard("featured")}
-                        aria-pressed={bottomRailCard === "featured"}
-                      >
-                        Featured nearby
-                      </button>
+                  {shouldShowSponsoredPlacement ? (
+                    <div className="diesel-bottom-rail-pager" aria-label="Bottom card views">
+                      <div className="diesel-bottom-rail-dots" aria-hidden="true">
+                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`} />
+                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`} />
+                      </div>
+                      <small>
+                        {bottomRailCard === "featured"
+                          ? "Swipe right to return to Today's Cup"
+                          : "Swipe left for Featured nearby"}
+                      </small>
                     </div>
                   ) : null}
 
+                  <div
+                    className={`diesel-bottom-rail-stage${shouldShowSponsoredPlacement ? " is-swipeable" : ""}`}
+                    onTouchStart={handleBottomRailTouchStart}
+                    onTouchEnd={handleBottomRailTouchEnd}
+                  >
                   {bottomRailCard === "featured" && sponsoredPlacement ? (
                     <>
                       <div className="diesel-selection-copy diesel-selection-copy-today diesel-selection-copy-featured">
@@ -3868,6 +3906,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       </div>
                     </>
                   )}
+                  </div>
                 </>
               ) : null}
             </section>
