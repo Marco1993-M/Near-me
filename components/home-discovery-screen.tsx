@@ -596,6 +596,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [profilerSelections, setProfilerSelections] = useState<number[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchPlaceResults, setSearchPlaceResults] = useState<FallbackPlace[]>([]);
+  const [searchPlaceState, setSearchPlaceState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewDrink, setReviewDrink] = useState<string | null>(null);
@@ -784,6 +786,56 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       ),
     );
   }, [normalizedSearchQuery, rankedCafes]);
+  const searchRows = useMemo(
+    () => [
+      ...searchResults.map((cafe) => ({ type: "cafe" as const, cafe })),
+      ...searchPlaceResults.map((place) => ({ type: "place" as const, place })),
+    ],
+    [searchPlaceResults, searchResults],
+  );
+  useEffect(() => {
+    if (!isSearchOpen) {
+      return;
+    }
+
+    if (normalizedSearchQuery.length < 2) {
+      setSearchPlaceResults([]);
+      setSearchPlaceState("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+    const searchParams = new URLSearchParams({ q: normalizedSearchQuery });
+    if (userLocation) {
+      searchParams.set("lat", String(userLocation.latitude));
+      searchParams.set("lng", String(userLocation.longitude));
+    }
+
+    setSearchPlaceState("loading");
+
+    void fetch(`/api/place-search?${searchParams.toString()}`, {
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((payload: { places?: FallbackPlace[] }) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setSearchPlaceResults(payload.places ?? []);
+        setSearchPlaceState("ready");
+      })
+      .catch(() => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setSearchPlaceResults([]);
+        setSearchPlaceState("error");
+      });
+
+    return () => controller.abort();
+  }, [isSearchOpen, normalizedSearchQuery, userLocation]);
   const topPickGroups = useMemo(() => {
     const nearby = rankedCafes.slice(0, 6);
     const worthIt = [...mappableCafes]
@@ -1564,6 +1616,18 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   function closeSearch() {
     setIsSearchOpen(false);
     setSearchQuery("");
+    setSearchPlaceResults([]);
+    setSearchPlaceState("idle");
+  }
+
+  function selectSearchPlace(place: FallbackPlace) {
+    setFallbackPlaces((current) => {
+      const next = current.some((entry) => entry.id === place.id) ? current : [place, ...current];
+      return next.sort((left, right) => left.distanceKm - right.distanceKm);
+    });
+    setFallbackState("ready");
+    selectFallbackPlace(place.id, { pan: true, source: "search" });
+    closeSearch();
   }
 
   function openTopPicks(source: DiscoverySource = "toolbar") {
@@ -2294,44 +2358,73 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
               </div>
 
               <div className="map-search-results">
-                {searchResults.length > 0 ? (
-                  searchResults.slice(0, 8).map((cafe) => {
-                    const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
-                    const cafeRating =
-                      cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
-                    const searchJournalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
+                {searchRows.length > 0 ? (
+                  searchRows.slice(0, 10).map((row) => {
+                    if (row.type === "cafe") {
+                      const cafe = row.cafe;
+                      const cafeDistance = userLocation ? cafeDistances.get(cafe.id) ?? null : null;
+                      const cafeRating =
+                        cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating.toFixed(1) : "New";
+                      const searchJournalMatch = journalMatchByCafeId.get(cafe.id) ?? null;
 
+                      return (
+                        <button
+                          key={cafe.id}
+                          className="map-search-result-row"
+                          type="button"
+                          onClick={() => {
+                            selectCafe(cafe.id, {
+                              explicit: true,
+                              pan: true,
+                              nextSheetState: "collapsed",
+                              source: "search",
+                            });
+                            closeSearch();
+                          }}
+                        >
+                          <div className="map-search-result-copy">
+                            <strong>{cafe.name}</strong>
+                            <span>
+                              {[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null, cafe.tags[0] ?? null]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                            {searchJournalMatch ? (
+                              <span className="map-search-result-journal-fit">
+                                For your journal · {searchJournalMatch.reason}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="map-search-result-score">
+                            <strong>{cafeRating}</strong>
+                            <span>{cafe.reviewSummary.reviewCount} reviews</span>
+                          </div>
+                        </button>
+                      );
+                    }
+
+                    const place = row.place;
                     return (
                       <button
-                        key={cafe.id}
-                        className="map-search-result-row"
+                        key={place.id}
+                        className="map-search-result-row map-search-result-row-external"
                         type="button"
-                        onClick={() => {
-                          selectCafe(cafe.id, {
-                            explicit: true,
-                            pan: true,
-                            nextSheetState: "collapsed",
-                            source: "search",
-                          });
-                          closeSearch();
-                        }}
+                        onClick={() => selectSearchPlace(place)}
                       >
                         <div className="map-search-result-copy">
-                          <strong>{cafe.name}</strong>
+                          <strong>{place.name}</strong>
                           <span>
-                            {[cafe.city, cafeDistance ? formatDistance(cafeDistance) : null, cafe.tags[0] ?? null]
+                            {[place.city, place.distanceKm > 0 ? formatDistance(place.distanceKm) : null, place.category]
                               .filter(Boolean)
                               .join(" · ")}
                           </span>
-                          {searchJournalMatch ? (
-                            <span className="map-search-result-journal-fit">
-                              For your journal · {searchJournalMatch.reason}
-                            </span>
-                          ) : null}
+                          <span className="map-search-result-journal-fit">
+                            Add to map · Review this place now
+                          </span>
                         </div>
                         <div className="map-search-result-score">
-                          <strong>{cafeRating}</strong>
-                          <span>{cafe.reviewSummary.reviewCount} reviews</span>
+                          <strong>New</strong>
+                          <span>Not on Near Me yet</span>
                         </div>
                       </button>
                     );
@@ -2339,7 +2432,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 ) : (
                   <div className="map-search-empty">
                     <strong>No cafes found</strong>
-                    <span>Try a different cafe name, city, or roaster.</span>
+                    <span>
+                      {searchPlaceState === "loading"
+                        ? "Searching nearby coffee spots..."
+                        : "Try a different cafe name, city, or roaster."}
+                    </span>
                   </div>
                 )}
               </div>
