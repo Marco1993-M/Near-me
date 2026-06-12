@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
 import { isValidAdminToken } from "@/lib/admin";
@@ -17,6 +18,63 @@ function slugify(value: string) {
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+type CandidateReviewPayload = {
+  rating?: number;
+  drink?: string | null;
+  note?: string;
+  tags?: string[];
+  submitted_at?: string;
+  anon_id?: string | null;
+};
+
+type SourcePlacePayload = {
+  latest_review?: CandidateReviewPayload | null;
+  reviews?: CandidateReviewPayload[];
+  approved_at?: string;
+  approved_via?: string;
+};
+
+function normalizeCandidateReviews(payload: SourcePlacePayload | null | undefined) {
+  const reviews = Array.isArray(payload?.reviews) ? payload.reviews : [];
+  const fallbackLatest = payload?.latest_review ? [payload.latest_review] : [];
+  const candidates = [...reviews, ...fallbackLatest];
+  const seen = new Set<string>();
+
+  return candidates.filter((review): review is Required<Pick<CandidateReviewPayload, "rating" | "note">> &
+    CandidateReviewPayload => {
+    const rating = Number(review?.rating);
+    const note = review?.note?.trim();
+
+    if (!Number.isFinite(rating) || rating < 1 || rating > 10 || !note) {
+      return false;
+    }
+
+    const key = [
+      rating,
+      review?.drink?.trim()?.toLowerCase() ?? "",
+      note.toLowerCase(),
+      review?.submitted_at ?? "",
+    ].join("__");
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function normalizeReviewTags(tags: string[] | undefined) {
+  return Array.from(
+    new Set(
+      (tags ?? [])
+        .map((tag) => tag.trim().toLowerCase().replace(/\s+/g, "-"))
+        .filter(Boolean),
+    ),
+  ).slice(0, 5);
 }
 
 async function resolveUniqueCafeSlug(
@@ -155,6 +213,52 @@ export async function approveCandidate(formData: FormData) {
     redirectBack(token, "approve-error");
   }
 
+  const candidatePayload =
+    sourcePlace.payload && typeof sourcePlace.payload === "object"
+      ? (sourcePlace.payload as SourcePlacePayload)
+      : null;
+  const candidateReviews = normalizeCandidateReviews(candidatePayload);
+
+  for (const review of candidateReviews) {
+    const { data: insertedReview, error: reviewInsertError } = await adminSupabase
+      .from(CANONICAL_TABLES.reviews)
+      .insert([
+        {
+          cafe_id: cafeRow.id,
+          rating: Number(review.rating),
+          note: review.note.trim(),
+          drink: review.drink?.trim() || null,
+          anon_id: review.anon_id?.trim() || "candidate-migration",
+          status: "approved",
+          user_id: null,
+          created_at: review.submitted_at || undefined,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (reviewInsertError || !insertedReview?.id) {
+      console.error("[admin/candidates] Failed to migrate candidate review.", reviewInsertError);
+      continue;
+    }
+
+    const tags = normalizeReviewTags(review.tags);
+    if (tags.length === 0) {
+      continue;
+    }
+
+    const { error: tagInsertError } = await adminSupabase.from(CANONICAL_TABLES.reviewTags).insert(
+      tags.map((tag) => ({
+        review_id: insertedReview.id,
+        tag,
+      })),
+    );
+
+    if (tagInsertError) {
+      console.error("[admin/candidates] Failed to migrate candidate review tags.", tagInsertError);
+    }
+  }
+
   const nextPayload =
     sourcePlace.payload && typeof sourcePlace.payload === "object"
       ? {
@@ -179,6 +283,11 @@ export async function approveCandidate(formData: FormData) {
   if (updateError) {
     redirectBack(token, "match-error");
   }
+
+  revalidatePath("/");
+  revalidatePath("/guides");
+  revalidatePath(`/cafes/${cafeSlug}`);
+  revalidatePath(`/cities/${citySlug}`);
 
   redirectBack(token, "approved");
 }
