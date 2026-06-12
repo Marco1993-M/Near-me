@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace } from "@/types/cafe";
+import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace, MapCafe } from "@/types/cafe";
 import { CoffeeProfileCard } from "@/components/coffee-profile-card";
 import { CoffeeJournalPanel } from "@/components/coffee-journal-panel";
 import { DiscoveryMap } from "@/components/discovery-map";
@@ -284,6 +284,57 @@ function mergeFallbackPlaces(
 
     seen.add(place.id);
     return true;
+  });
+}
+
+function normalizePlaceNameForMarkerMatch(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\b(coffee|company|cafe|corner)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function fallbackMatchesCanonicalCafe(place: FallbackPlace, cafes: MapCafe[]) {
+  const normalizedPlaceName = normalizePlaceNameForMarkerMatch(place.name);
+
+  return cafes.some((cafe) => {
+    if (typeof cafe.latitude !== "number" || typeof cafe.longitude !== "number") {
+      return false;
+    }
+
+    const distanceKm = getDistanceInKm(
+      { latitude: place.latitude, longitude: place.longitude },
+      { latitude: cafe.latitude, longitude: cafe.longitude },
+    );
+
+    if (distanceKm > 0.2) {
+      return false;
+    }
+
+    const normalizedCafeName = normalizePlaceNameForMarkerMatch(cafe.name);
+
+    if (!normalizedPlaceName || !normalizedCafeName) {
+      return false;
+    }
+
+    return (
+      normalizedPlaceName === normalizedCafeName ||
+      normalizedPlaceName.includes(normalizedCafeName) ||
+      normalizedCafeName.includes(normalizedPlaceName)
+    );
+  });
+}
+
+function filterNearbyFallbackPlaces(nextNearbyPlaces: FallbackPlace[], cafes: MapCafe[]) {
+  return nextNearbyPlaces.filter((place) => {
+    if (place.source !== "osm-overpass") {
+      return true;
+    }
+
+    return !fallbackMatchesCanonicalCafe(place, cafes);
   });
 }
 
@@ -1243,7 +1294,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           return;
         }
 
-        const places = payload.places ?? [];
+        const places = filterNearbyFallbackPlaces(payload.places ?? [], mappableCafes);
         let mergedPlaces = places;
         setFallbackPlaces((current) => {
           mergedPlaces = mergeFallbackPlaces(current, places);
@@ -1268,7 +1319,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       });
 
     return () => controller.abort();
-  }, [selectedRadiusKm, userLocation]);
+  }, [mappableCafes, selectedRadiusKm, userLocation]);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
