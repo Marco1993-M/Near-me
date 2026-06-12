@@ -636,9 +636,17 @@ img {
 .diesel-bottom-rail-dot {
   width: 0.42rem;
   height: 0.42rem;
+  padding: 0;
+  border: 0;
   border-radius: 999px;
   background: rgba(20, 32, 24, 0.14);
+  cursor: pointer;
   transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.diesel-bottom-rail-dot:focus-visible {
+  outline: 2px solid rgba(31, 106, 56, 0.32);
+  outline-offset: 3px;
 }
 
 .diesel-bottom-rail-dot.is-active {
