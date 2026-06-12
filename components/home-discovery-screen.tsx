@@ -3105,12 +3105,12 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
             <section
               className={`diesel-selection-card diesel-selection-card-${sheetState === "expanded" ? "half" : "collapsed"}${isOverlayOpen ? " search-muted" : ""} fade-slide-in`}
               aria-live="polite"
-              onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
-              onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
             >
               <button
                 className="diesel-sheet-handle"
                 type="button"
+                onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
+                onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
                 onClick={() =>
                   setSheetState((current) => {
                     const nextState = current === "collapsed" ? "expanded" : "collapsed";
@@ -3624,7 +3624,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 </>
               ) : todayCupPrimary ? (
                 <>
-                  <div className="diesel-selection-head diesel-selection-head-today">
+                  <div
+                    className="diesel-selection-head diesel-selection-head-today"
+                    onTouchStart={enableBottomRailSwipe ? handleBottomRailTouchStart : undefined}
+                    onTouchEnd={enableBottomRailSwipe ? handleBottomRailTouchEnd : undefined}
+                  >
                     <div className="diesel-selection-meta">
                       <span>{bottomRailCard === "featured" ? "For coffee shops" : "Today's cup"}</span>
                       <span>
@@ -3668,23 +3672,23 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     </div>
                   </div>
 
-                  {shouldShowSponsoredPlacement ? (
-                    <div className="diesel-bottom-rail-pager" aria-label="Bottom card views">
-                      <div className="diesel-bottom-rail-dots" aria-hidden="true">
-                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "today" ? " is-active" : ""}`} />
-                        <span className={`diesel-bottom-rail-dot${bottomRailCard === "featured" ? " is-active" : ""}`} />
-                      </div>
-                      <small>
-                        {bottomRailCard === "featured"
-                          ? "Swipe right to return to Today's Cup"
-                          : "Swipe left to view the coffee shop feature"}
-                      </small>
-                    </div>
-                  ) : null}
-
                   <div
-                    className={`diesel-bottom-rail-stage${shouldShowSponsoredPlacement ? " is-swipeable" : ""}`}
+                    className={`diesel-bottom-rail-shell${shouldShowSponsoredPlacement ? " has-peek" : ""}${
+                      bottomRailCard === "featured" ? " is-featured" : " is-today"
+                    }`}
                   >
+                    {shouldShowSponsoredPlacement ? (
+                      <div
+                        className={`diesel-bottom-rail-peek${
+                          bottomRailCard === "featured" ? " is-left" : " is-right"
+                        }`}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+
+                    <div
+                      className={`diesel-bottom-rail-stage${shouldShowSponsoredPlacement ? " is-swipeable" : ""}`}
+                    >
                   {bottomRailCard === "featured" && sponsoredPlacement ? (
                     <>
                       <div className="diesel-selection-copy diesel-selection-copy-today diesel-selection-copy-featured">
@@ -3934,6 +3938,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                       </div>
                     </>
                   )}
+                    </div>
                   </div>
                 </>
               ) : null}
