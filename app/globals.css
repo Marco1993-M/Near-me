@@ -613,38 +613,41 @@ img {
   min-width: 0;
 }
 
-.diesel-bottom-rail-switch {
+.diesel-bottom-rail-pager {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding-top: 0.1rem;
+}
+
+.diesel-bottom-rail-pager small {
+  color: rgba(20, 32, 24, 0.48);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.diesel-bottom-rail-dots {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.26rem;
-  border: 1px solid rgba(20, 32, 24, 0.08);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 100%),
-    rgba(255, 255, 252, 0.52);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
+  gap: 0.36rem;
 }
 
-.diesel-bottom-rail-chip {
-  min-height: 2rem;
-  padding: 0 0.78rem;
-  border: 0;
+.diesel-bottom-rail-dot {
+  width: 0.42rem;
+  height: 0.42rem;
   border-radius: 999px;
-  background: transparent;
-  color: rgba(20, 32, 24, 0.56);
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
+  background: rgba(20, 32, 24, 0.14);
+  transition: transform 160ms ease, background-color 160ms ease;
 }
 
-.diesel-bottom-rail-chip.is-active {
-  background:
-    linear-gradient(180deg, rgba(199, 245, 211, 0.4) 0%, rgba(199, 245, 211, 0.2) 100%),
-    rgba(255, 255, 252, 0.8);
-  color: #1f6a38;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+.diesel-bottom-rail-dot.is-active {
+  background: #1f6a38;
+  transform: scale(1.18);
+}
+
+.diesel-bottom-rail-stage.is-swipeable {
+  touch-action: pan-y;
 }
 
 .diesel-selection-copy-featured {
