@@ -75,6 +75,10 @@ type ReviewTagRow = {
   tag: string;
 };
 
+export const CANONICAL_CAFES_HOT_CACHE_TAG = "canonical-cafes-hot";
+export const CANONICAL_CAFES_COLD_CACHE_TAG = "canonical-cafes-cold";
+export const CAFE_TRUST_SIGNALS_CACHE_TAG = "cafe-trust-signals";
+
 const SUPABASE_IN_CHUNK_SIZE = 120;
 const LAUNCH_EXCLUDED_NAME_PATTERNS = [
   /\bstarbucks\b/i,
@@ -556,7 +560,7 @@ const getHotCanonicalCafeBundle = cache(
   unstable_cache(
     async () => fetchCanonicalCafeBundleUncached(),
     ["canonical-cafe-bundle-hot"],
-    { revalidate: 3600 },
+    { revalidate: 3600, tags: [CANONICAL_CAFES_HOT_CACHE_TAG] },
   ),
 );
 
@@ -564,7 +568,7 @@ const getColdCanonicalCafeBundle = cache(
   unstable_cache(
     async () => fetchCanonicalCafeBundleUncached(),
     ["canonical-cafe-bundle-cold"],
-    { revalidate: 86400 },
+    { revalidate: 86400, tags: [CANONICAL_CAFES_COLD_CACHE_TAG] },
   ),
 );
 
@@ -661,7 +665,7 @@ const getCafeTrustSignalsBySlugCached = unstable_cache(
     };
   },
   ["cafe-trust-signals-by-slug"],
-  { revalidate: 21600 },
+  { revalidate: 21600, tags: [CAFE_TRUST_SIGNALS_CACHE_TAG] },
 );
 
 export function getCafeTrustSignalsBySlug(slug: string): Promise<CafeTrustSignals | null> {
