@@ -613,6 +613,55 @@ img {
   min-width: 0;
 }
 
+.diesel-bottom-rail-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.26rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(255, 255, 252, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
+}
+
+.diesel-bottom-rail-chip {
+  min-height: 2rem;
+  padding: 0 0.78rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.diesel-bottom-rail-chip.is-active {
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.4) 0%, rgba(199, 245, 211, 0.2) 100%),
+    rgba(255, 255, 252, 0.8);
+  color: #1f6a38;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.diesel-selection-copy-featured {
+  gap: 0.45rem;
+}
+
+.diesel-selection-decision-badge-featured {
+  background:
+    radial-gradient(circle at top left, rgba(199, 245, 211, 0.24), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(255, 255, 252, 0.6);
+}
+
+.diesel-featured-glance-grid .diesel-today-glance-card small {
+  color: rgba(20, 32, 24, 0.56);
+}
+
 .diesel-action-cluster {
   position: relative;
   gap: 0.45rem;
