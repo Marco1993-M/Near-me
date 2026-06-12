@@ -590,6 +590,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   );
   const [activeCafeId, setActiveCafeId] = useState<string | null>(null);
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
+  const [searchFocusedCafeId, setSearchFocusedCafeId] = useState<string | null>(null);
+  const [searchFocusedFallbackId, setSearchFocusedFallbackId] = useState<string | null>(null);
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
@@ -1410,7 +1412,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
 
     dismissIntro();
     setActiveFallbackId(null);
+    setSearchFocusedFallbackId(null);
     setActiveCafeId(cafeId);
+    setSearchFocusedCafeId(options?.source === "search" ? cafeId : null);
 
     if (options?.source) {
       const selectedCafe =
@@ -1444,7 +1448,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     setIsCafeCardVisible(false);
     dismissIntro();
     setActiveCafeId(null);
+    setSearchFocusedCafeId(null);
     setActiveFallbackId(placeId);
+    setSearchFocusedFallbackId(options?.source === "search" ? placeId : null);
     setSheetState("collapsed");
 
     if (options?.source) {
@@ -1506,6 +1512,10 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       return;
     }
 
+    if (searchFocusedCafeId || searchFocusedFallbackId || activeFallbackId) {
+      return;
+    }
+
     const radiusChanged = previousRadiusKmRef.current !== selectedRadiusKm;
     previousRadiusKmRef.current = selectedRadiusKm;
     const activeDistance = activeCafeId ? cafeDistances.get(activeCafeId) : undefined;
@@ -1562,6 +1572,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     cafesByDistance,
     mappableCafes,
     selectedRadiusKm,
+    activeFallbackId,
+    searchFocusedCafeId,
+    searchFocusedFallbackId,
     isTodayCupDismissed,
     todayCupPrimary,
     userLocation,
@@ -2212,12 +2225,14 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         activeCafeId={activeCafe?.id ?? null}
         onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true, source: "map_marker" })}
         panToActiveCafeToken={panToActiveCafeToken}
+        searchFocusedCafeId={searchFocusedCafeId}
         fallbackPlaces={fallbackPlaces}
         activeFallbackPlaceId={activeFallbackPlace?.id ?? null}
         onSelectFallbackPlace={(placeId) =>
           selectFallbackPlace(placeId, { pan: true, source: "map_marker" })
         }
         panToFallbackPlaceToken={panToFallbackPlaceToken}
+        searchFocusedFallbackPlaceId={searchFocusedFallbackId}
         userLocation={userLocation}
         selectedRadiusKm={selectedRadiusKm}
         locateRequestToken={locateRequestToken}
