@@ -23,7 +23,6 @@ const EXCLUDED_FALLBACK_NAME_PATTERNS = [
   /\bvida e caff[eè]\b/i,
   /\bmugg\s*&\s*bean\b/i,
   /\bwoolworths\b/i,
-  /\bbootleggers?\b/i,
 ];
 
 function getDistanceInKm(
