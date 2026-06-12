@@ -102,6 +102,15 @@ type TodayCupIntentConfig = {
   accentClass: string;
 };
 
+type SponsoredPlacement = {
+  slug: string;
+  radiusKm: number;
+  label: string;
+  headline: string;
+  body: string;
+  cta: string;
+};
+
 const reviewDrinkOptions = [
   {
     label: "Espresso",
@@ -147,6 +156,24 @@ const journalTags = [
 const radiusOptionsKm = [1, 3, 5, 10];
 const TODAY_CUP_FEEDBACK_STORAGE_KEY = "near-me-today-cup-feedback";
 const TODAY_CUP_HISTORY_STORAGE_KEY = "near-me-today-cup-history";
+const TEST_SPONSORED_PLACEMENTS: SponsoredPlacement[] = [
+  {
+    slug: "sorcery-coffee-roasters-diep-in-die-berg",
+    radiusKm: 40,
+    label: "Sponsored nearby",
+    headline: "A stronger espresso stop worth surfacing nearby",
+    body: "Test flow: Near Me controls the design, the cafe supplies the message, and the suggestion only appears when it is locally relevant.",
+    cta: "Open feature",
+  },
+  {
+    slug: "plato-garsfontein",
+    radiusKm: 40,
+    label: "Sponsored nearby",
+    headline: "An easy flat white stop close to your route",
+    body: "Test flow: this lets us judge whether a paid local feature can feel useful instead of intrusive.",
+    cta: "Open feature",
+  },
+];
 
 const todayCupFeedbackCopy: Record<
   TodayCupFeedbackReason,
@@ -643,6 +670,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [activeFallbackId, setActiveFallbackId] = useState<string | null>(null);
   const [searchFocusedCafeId, setSearchFocusedCafeId] = useState<string | null>(null);
   const [searchFocusedFallbackId, setSearchFocusedFallbackId] = useState<string | null>(null);
+  const [dismissedSponsoredSlug, setDismissedSponsoredSlug] = useState<string | null>(null);
+  const [bottomRailCard, setBottomRailCard] = useState<"today" | "featured">("today");
   const [panToActiveCafeToken, setPanToActiveCafeToken] = useState(0);
   const [panToFallbackPlaceToken, setPanToFallbackPlaceToken] = useState(0);
   const [locateRequestToken, setLocateRequestToken] = useState(0);
@@ -1006,6 +1035,50 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
+  const sponsoredPlacement = useMemo(() => {
+    if (!userLocation || activeCafe || activeFallbackPlace || isOverlayOpen) {
+      return null;
+    }
+
+    const matches = TEST_SPONSORED_PLACEMENTS.map((placement) => {
+      const cafe = hydratedCafes.find((candidate) => candidate.slug === placement.slug);
+
+      if (!cafe || typeof cafe.latitude !== "number" || typeof cafe.longitude !== "number") {
+        return null;
+      }
+
+      const distanceKm = getDistanceInKm(userLocation, {
+        latitude: cafe.latitude,
+        longitude: cafe.longitude,
+      });
+
+      if (distanceKm > placement.radiusKm) {
+        return null;
+      }
+
+      return { placement, cafe, distanceKm };
+    })
+      .filter(
+        (
+          value,
+        ): value is {
+          placement: SponsoredPlacement;
+          cafe: Cafe;
+          distanceKm: number;
+        } => Boolean(value),
+      )
+      .sort((left, right) => left.distanceKm - right.distanceKm);
+
+    return matches[0] ?? null;
+  }, [activeCafe, activeFallbackPlace, hydratedCafes, isOverlayOpen, userLocation]);
+  const shouldShowSponsoredPlacement =
+    Boolean(sponsoredPlacement) &&
+    sponsoredPlacement?.placement.slug !== dismissedSponsoredSlug;
+  useEffect(() => {
+    if (!shouldShowSponsoredPlacement && bottomRailCard === "featured") {
+      setBottomRailCard("today");
+    }
+  }, [bottomRailCard, shouldShowSponsoredPlacement]);
   const isCollapsedCard = sheetState === "collapsed";
   const isExpandedCard = sheetState === "expanded";
   const shouldShowIntro =
@@ -3292,7 +3365,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                             setSheetState("collapsed");
                           }}
                         >
-                          Today&apos;s cup
+                          Today's cup
                         </button>
                       ) : null}
                     </div>
@@ -3485,222 +3558,316 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 <>
                   <div className="diesel-selection-head diesel-selection-head-today">
                     <div className="diesel-selection-meta">
-                      <span>Today&apos;s cup</span>
-                      <span>{todayCupMoment.shortLabel}</span>
+                      <span>{bottomRailCard === "featured" ? "Featured nearby" : "Today's cup"}</span>
+                      <span>
+                        {bottomRailCard === "featured" && sponsoredPlacement
+                          ? sponsoredPlacement.placement.label
+                          : todayCupMoment.shortLabel}
+                      </span>
                     </div>
                     <div className="diesel-selection-head-actions">
-                      <div className="diesel-selection-score diesel-selection-score-today">
-                        <strong>{formatDistance(todayCupPrimary.distance)}</strong>
-                        <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
-                      </div>
+                      {bottomRailCard === "featured" && sponsoredPlacement ? (
+                        <>
+                          <div className="diesel-selection-score diesel-selection-score-today">
+                            <strong>{formatDistance(sponsoredPlacement.distanceKm)}</strong>
+                            <span>Paid local feature test</span>
+                          </div>
+                          <button
+                            className="map-search-close diesel-selection-dismiss"
+                            type="button"
+                            onClick={() => setDismissedSponsoredSlug(sponsoredPlacement.placement.slug)}
+                            aria-label="Dismiss featured nearby card"
+                          >
+                            Dismiss
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="diesel-selection-score diesel-selection-score-today">
+                            <strong>{formatDistance(todayCupPrimary.distance)}</strong>
+                            <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                          </div>
+                          <button
+                            className="map-search-close diesel-selection-dismiss"
+                            type="button"
+                            onClick={dismissTodayCup}
+                            aria-label="Dismiss Today's Cup"
+                          >
+                            Dismiss
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {shouldShowSponsoredPlacement && sponsoredPlacement ? (
+                    <div className="diesel-bottom-rail-switch" aria-label="Bottom card views">
                       <button
-                        className="map-search-close diesel-selection-dismiss"
                         type="button"
-                        onClick={dismissTodayCup}
-                        aria-label="Dismiss Today's Cup"
+                        className={`diesel-bottom-rail-chip${bottomRailCard === "today" ? " is-active" : ""}`}
+                        onClick={() => setBottomRailCard("today")}
+                        aria-pressed={bottomRailCard === "today"}
                       >
-                        Dismiss
+                        Today's Cup
+                      </button>
+                      <button
+                        type="button"
+                        className={`diesel-bottom-rail-chip${bottomRailCard === "featured" ? " is-active" : ""}`}
+                        onClick={() => setBottomRailCard("featured")}
+                        aria-pressed={bottomRailCard === "featured"}
+                      >
+                        Featured nearby
                       </button>
                     </div>
-                  </div>
-
-                  <div className="diesel-selection-copy diesel-selection-copy-today">
-                    <strong>{todayCupPrimary.cafe.name}</strong>
-                    {!isCollapsedCard ? (
-                      <div className={`diesel-today-mood-band ${todayCupIntentConfig.accentClass}`}>
-                        <div className="diesel-today-mood-orb" aria-hidden="true" />
-                        <div className="diesel-today-mood-copy">
-                          <span>{todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.label}</span>
-                          <strong>{todayCupIntentConfig.tone}</strong>
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className="diesel-today-intents" aria-label="Choose what you are in the mood for">
-                      {(
-                        Object.entries(todayCupIntentCopy) as Array<
-                          [TodayCupIntentKey, TodayCupIntentConfig]
-                        >
-                      ).map(([intentKey, intentConfig]) => (
-                        <button
-                          key={intentKey}
-                          type="button"
-                          className={`diesel-today-intent-chip${
-                            todayCupIntent === intentKey ? " is-active" : ""
-                          }`}
-                          onClick={() => handleTodayCupIntentSelect(intentKey)}
-                          aria-pressed={todayCupIntent === intentKey}
-                        >
-                          {intentConfig.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
-                      <span className="diesel-selection-decision-kicker">Today&apos;s strength</span>
-                      <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
-                    </div>
-                    {isCollapsedCard ? (
-                      <>
-                        <div className="diesel-today-signal-strip" aria-label="Today&apos;s cup signals">
-                          {todayCupVisualSignals.map((signal) => (
-                            <div key={signal.label} className="diesel-today-signal-card">
-                              <div className="diesel-today-signal-head">
-                                <span>{signal.label}</span>
-                                <strong>{signal.detail}</strong>
-                              </div>
-                              <div className="diesel-today-signal-meter" aria-hidden="true">
-                                <span style={{ width: `${Math.round(signal.value * 100)}%` }} />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="diesel-today-glance-grid">
-                          <div className="diesel-today-glance-card">
-                            <span>Order first</span>
-                            <strong>{todayCupPrimary.decisionGuide.order}</strong>
-                          </div>
-                          <div className="diesel-today-glance-card">
-                            <span>{todayCupIntent === "default" ? todayCupMoment.shortLabel : "Mood"}</span>
-                            <strong>
-                              {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
-                            </strong>
-                            <small>
-                              {todayCupPrimary.journalMatch?.reason ??
-                                todayCupPrimary.profileMatch?.label ??
-                                todayCupPrimary.decisionGuide.bestFor}
-                            </small>
-                          </div>
-                        </div>
-                        <div className="diesel-today-support-line">
-                          <span className="diesel-today-support-dot" aria-hidden="true" />
-                          <span>
-                            {todayCupPrimary.routineNote ??
-                              todayCupPrimary.journalMatch?.support ??
-                              todayCupIntentConfig.cue}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <p>
-                        {todayCupPrimary.journalMatch?.support ??
-                          todayCupPrimary.profileMatch?.reasons?.[0] ??
-                          todayCupPrimary.decisionGuide.goIfSupport}
-                      </p>
-                    )}
-                  </div>
-
-                  <div
-                    className={`diesel-today-feedback diesel-today-feedback-inline${
-                      isCollapsedCard ? " diesel-today-feedback-compact" : ""
-                    }`}
-                  >
-                    <span>{isCollapsedCard ? "Teach Near Me" : "Help Near Me learn"}</span>
-                    <div className="diesel-today-feedback-list">
-                      {(Object.entries(todayCupFeedbackCopy) as Array<
-                        [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
-                      >).map(([reason, config]) => (
-                        <button
-                          key={reason}
-                          className="diesel-today-feedback-chip"
-                          type="button"
-                          onClick={() => handleTodayCupFeedback(reason)}
-                        >
-                          {config.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {!isCollapsedCard ? (
-                    <>
-                      <div className="diesel-selection-trust diesel-today-context">
-                        <span>Why this now</span>
-                        <strong>
-                          {todayCupPrimary.routineBoost > 0.8 ? "Routine-aware pick" : "Best fit for this moment"}
-                        </strong>
-                        <p>
-                          {todayCupPrimary.routineNote ??
-                            todayCupPrimary.journalMatch?.support ??
-                            todayCupIntentConfig.cue}
-                        </p>
-                      </div>
-
-                      <div className="diesel-selection-quick-grid">
-                        <div className="diesel-selection-quick-card">
-                          <span>Order first</span>
-                          <strong>{todayCupPrimary.decisionGuide.order}</strong>
-                        </div>
-                        <div className="diesel-selection-quick-card">
-                          <span>Best for</span>
-                          <strong>{todayCupPrimary.decisionGuide.bestFor}</strong>
-                        </div>
-                      </div>
-
-                      {todayCupBackups.length > 0 ? (
-                        <div className="diesel-today-backups">
-                          <span>Backups</span>
-                          <div className="diesel-today-backup-list">
-                            {todayCupBackups.map((backup) => (
-                              <button
-                                key={backup.cafe.id}
-                                className="diesel-today-backup-row"
-                                type="button"
-                                onClick={() => {
-                                  rememberTodayCupChoice(backup.cafe.id, "backup");
-                                  selectCafe(backup.cafe.id, {
-                                    explicit: true,
-                                    pan: true,
-                                    nextSheetState: "collapsed",
-                                    source: "today_cup",
-                                  });
-                                }}
-                              >
-                                <div className="diesel-today-backup-copy">
-                                  <strong>{backup.cafe.name}</strong>
-                                  <span>
-                                    {[backup.cafe.city, formatDistance(backup.distance), backup.decisionGuide.order]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  </span>
-                                </div>
-                                <span className="diesel-today-backup-score">
-                                  {backup.profileMatch
-                                    ? `${backup.profileMatch.percentage}%`
-                                    : backup.journalMatch?.label ?? "Backup"}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </>
                   ) : null}
 
-                  <div className="diesel-selection-actions">
-                    <div className="diesel-selection-actions-main">
-                      <button
-                        className="diesel-selection-primary diesel-selection-primary-main control-primary"
-                        type="button"
-                        onClick={() => {
-                          rememberTodayCupChoice(todayCupPrimary.cafe.id, "primary");
-                          selectCafe(todayCupPrimary.cafe.id, {
-                            explicit: true,
-                            pan: true,
-                            nextSheetState: "expanded",
-                            source: "today_cup",
-                          });
-                        }}
+                  {bottomRailCard === "featured" && sponsoredPlacement ? (
+                    <>
+                      <div className="diesel-selection-copy diesel-selection-copy-today diesel-selection-copy-featured">
+                        <strong>{sponsoredPlacement.cafe.name}</strong>
+                        <div className="diesel-selection-decision-badge diesel-selection-decision-badge-featured">
+                          <span className="diesel-selection-decision-kicker">Featured nearby</span>
+                          <strong>{sponsoredPlacement.placement.headline}</strong>
+                        </div>
+                        <p>{sponsoredPlacement.placement.body}</p>
+                      </div>
+
+                      <div className="diesel-today-glance-grid diesel-featured-glance-grid">
+                        <div className="diesel-today-glance-card">
+                          <span>Distance</span>
+                          <strong>{formatDistance(sponsoredPlacement.distanceKm)}</strong>
+                        </div>
+                        <div className="diesel-today-glance-card">
+                          <span>Format</span>
+                          <strong>Paid local feature</strong>
+                          <small>Design controlled by Near Me</small>
+                        </div>
+                      </div>
+
+                      <div className="diesel-selection-actions">
+                        <div className="diesel-selection-actions-main">
+                          <button
+                            className="diesel-selection-primary diesel-selection-primary-main control-primary"
+                            type="button"
+                            onClick={() => {
+                              trackEvent("sponsored_card_opened", {
+                                cafe_slug: sponsoredPlacement.cafe.slug,
+                                source: "bottom_rail",
+                              });
+                              selectCafe(sponsoredPlacement.cafe.id, {
+                                explicit: true,
+                                pan: true,
+                                nextSheetState: "expanded",
+                                source: "active_card",
+                              });
+                            }}
+                          >
+                            {sponsoredPlacement.placement.cta}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="diesel-selection-copy diesel-selection-copy-today">
+                        <strong>{todayCupPrimary.cafe.name}</strong>
+                        {!isCollapsedCard ? (
+                          <div className={`diesel-today-mood-band ${todayCupIntentConfig.accentClass}`}>
+                            <div className="diesel-today-mood-orb" aria-hidden="true" />
+                            <div className="diesel-today-mood-copy">
+                              <span>{todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.label}</span>
+                              <strong>{todayCupIntentConfig.tone}</strong>
+                            </div>
+                          </div>
+                        ) : null}
+                        <div className="diesel-today-intents" aria-label="Choose what you are in the mood for">
+                          {(
+                            Object.entries(todayCupIntentCopy) as Array<
+                              [TodayCupIntentKey, TodayCupIntentConfig]
+                            >
+                          ).map(([intentKey, intentConfig]) => (
+                            <button
+                              key={intentKey}
+                              type="button"
+                              className={`diesel-today-intent-chip${
+                                todayCupIntent === intentKey ? " is-active" : ""
+                              }`}
+                              onClick={() => handleTodayCupIntentSelect(intentKey)}
+                              aria-pressed={todayCupIntent === intentKey}
+                            >
+                              {intentConfig.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
+                          <span className="diesel-selection-decision-kicker">Today's strength</span>
+                          <strong>{todayCupPrimary.decisionGuide.goIfHeadline}</strong>
+                        </div>
+                        {isCollapsedCard ? (
+                          <>
+                            <div className="diesel-today-signal-strip" aria-label="Today's cup signals">
+                              {todayCupVisualSignals.map((signal) => (
+                                <div key={signal.label} className="diesel-today-signal-card">
+                                  <div className="diesel-today-signal-head">
+                                    <span>{signal.label}</span>
+                                    <strong>{signal.detail}</strong>
+                                  </div>
+                                  <div className="diesel-today-signal-meter" aria-hidden="true">
+                                    <span style={{ width: `${Math.round(signal.value * 100)}%` }} />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="diesel-today-glance-grid">
+                              <div className="diesel-today-glance-card">
+                                <span>Order first</span>
+                                <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                              </div>
+                              <div className="diesel-today-glance-card">
+                                <span>{todayCupIntent === "default" ? todayCupMoment.shortLabel : "Mood"}</span>
+                                <strong>
+                                  {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
+                                </strong>
+                                <small>
+                                  {todayCupPrimary.journalMatch?.reason ??
+                                    todayCupPrimary.profileMatch?.label ??
+                                    todayCupPrimary.decisionGuide.bestFor}
+                                </small>
+                              </div>
+                            </div>
+                            <div className="diesel-today-support-line">
+                              <span className="diesel-today-support-dot" aria-hidden="true" />
+                              <span>
+                                {todayCupPrimary.routineNote ??
+                                  todayCupPrimary.journalMatch?.support ??
+                                  todayCupIntentConfig.cue}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <p>
+                            {todayCupPrimary.journalMatch?.support ??
+                              todayCupPrimary.profileMatch?.reasons?.[0] ??
+                              todayCupPrimary.decisionGuide.goIfSupport}
+                          </p>
+                        )}
+                      </div>
+
+                      <div
+                        className={`diesel-today-feedback diesel-today-feedback-inline${
+                          isCollapsedCard ? " diesel-today-feedback-compact" : ""
+                        }`}
                       >
-                        Open pick
-                      </button>
-                      <button
-                        className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
-                        type="button"
-                        onClick={() => openTopPicks("today_cup")}
-                      >
-                        More picks
-                      </button>
-                    </div>
-                  </div>
+                        <span>{isCollapsedCard ? "Teach Near Me" : "Help Near Me learn"}</span>
+                        <div className="diesel-today-feedback-list">
+                          {(Object.entries(todayCupFeedbackCopy) as Array<
+                            [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
+                          >).map(([reason, config]) => (
+                            <button
+                              key={reason}
+                              className="diesel-today-feedback-chip"
+                              type="button"
+                              onClick={() => handleTodayCupFeedback(reason)}
+                            >
+                              {config.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {!isCollapsedCard ? (
+                        <>
+                          <div className="diesel-selection-trust diesel-today-context">
+                            <span>Why this now</span>
+                            <strong>
+                              {todayCupPrimary.routineBoost > 0.8 ? "Routine-aware pick" : "Best fit for this moment"}
+                            </strong>
+                            <p>
+                              {todayCupPrimary.routineNote ??
+                                todayCupPrimary.journalMatch?.support ??
+                                todayCupIntentConfig.cue}
+                            </p>
+                          </div>
+
+                          <div className="diesel-selection-quick-grid">
+                            <div className="diesel-selection-quick-card">
+                              <span>Order first</span>
+                              <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                            </div>
+                            <div className="diesel-selection-quick-card">
+                              <span>Best for</span>
+                              <strong>{todayCupPrimary.decisionGuide.bestFor}</strong>
+                            </div>
+                          </div>
+
+                          {todayCupBackups.length > 0 ? (
+                            <div className="diesel-today-backups">
+                              <span>Backups</span>
+                              <div className="diesel-today-backup-list">
+                                {todayCupBackups.map((backup) => (
+                                  <button
+                                    key={backup.cafe.id}
+                                    className="diesel-today-backup-row"
+                                    type="button"
+                                    onClick={() => {
+                                      rememberTodayCupChoice(backup.cafe.id, "backup");
+                                      selectCafe(backup.cafe.id, {
+                                        explicit: true,
+                                        pan: true,
+                                        nextSheetState: "collapsed",
+                                        source: "today_cup",
+                                      });
+                                    }}
+                                  >
+                                    <div className="diesel-today-backup-copy">
+                                      <strong>{backup.cafe.name}</strong>
+                                      <span>
+                                        {[backup.cafe.city, formatDistance(backup.distance), backup.decisionGuide.order]
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </span>
+                                    </div>
+                                    <span className="diesel-today-backup-score">
+                                      {backup.profileMatch
+                                        ? `${backup.profileMatch.percentage}%`
+                                        : backup.journalMatch?.label ?? "Backup"}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </>
+                      ) : null}
+
+                      <div className="diesel-selection-actions">
+                        <div className="diesel-selection-actions-main">
+                          <button
+                            className="diesel-selection-primary diesel-selection-primary-main control-primary"
+                            type="button"
+                            onClick={() => {
+                              rememberTodayCupChoice(todayCupPrimary.cafe.id, "primary");
+                              selectCafe(todayCupPrimary.cafe.id, {
+                                explicit: true,
+                                pan: true,
+                                nextSheetState: "expanded",
+                                source: "today_cup",
+                              });
+                            }}
+                          >
+                            Open pick
+                          </button>
+                          <button
+                            className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                            type="button"
+                            onClick={() => openTopPicks("today_cup")}
+                          >
+                            More picks
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : null}
             </section>
