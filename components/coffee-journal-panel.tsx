@@ -662,6 +662,59 @@ export function CoffeeJournalPanel({
             </div>
           </section>
 
+          {insight.tasteDrivers.length > 0 ? (
+            <section className="coffee-journal-drivers" aria-label="What changed your taste">
+              <div className="coffee-journal-spectrum-head">
+                <span>What changed your taste</span>
+                <strong>The cups moving your wheel most</strong>
+              </div>
+
+              <div className="coffee-journal-driver-grid">
+                {insight.tasteDrivers.map((driver) => (
+                  <article className="coffee-journal-driver-card" key={driver.id}>
+                    <div className="coffee-journal-driver-topline">
+                      <div>
+                        <span>{driver.cafeName}</span>
+                        <strong>{driver.headline}</strong>
+                      </div>
+                      <div className="coffee-journal-driver-score">
+                        <strong>{driver.rating}</strong>
+                        <span>/10</span>
+                      </div>
+                    </div>
+
+                    <p>{driver.body}</p>
+
+                    <div className="coffee-journal-driver-meter">
+                      <div className="coffee-journal-driver-meter-track" aria-hidden="true">
+                        <div
+                          className="coffee-journal-driver-meter-fill"
+                          style={{ width: `${Math.max(18, Math.round(driver.impact * 100))}%` }}
+                        />
+                      </div>
+                      <span>{Math.round(driver.impact * 100)}% taste pull</span>
+                    </div>
+
+                    <div className="coffee-journal-driver-foot">
+                      <span>
+                        {[driver.drink, formatRelativeDate(driver.createdAt)].filter(Boolean).join(" · ")}
+                      </span>
+                      {driver.tags.length > 0 ? (
+                        <div className="diesel-selection-tags">
+                          {driver.tags.slice(0, 2).map((tag) => (
+                            <span className="diesel-selection-tag" key={`${driver.id}-${tag}`}>
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {insight.patternInsights.length > 0 || insight.profileAlignment ? (
             <section className="coffee-journal-insights" aria-label="Journal insights">
               <div className="coffee-journal-spectrum-head">
