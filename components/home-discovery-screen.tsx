@@ -778,6 +778,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const lastTrackedLocationStateRef = useRef<string | null>(null);
   const profilerSourceRef = useRef<DiscoverySource>("toolbar");
   const handledTasteIntentRef = useRef(false);
+  const lastClaimedReviewLinkKeyRef = useRef<string | null>(null);
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -853,13 +854,53 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     }
 
     const anonId = getAnonymousReviewerId();
+    const localReviewIds = Array.from(
+      new Set(
+        journalEntries
+          .filter((entry) => entry.source === "review" && typeof entry.reviewId === "string" && entry.reviewId.length > 0)
+          .map((entry) => entry.reviewId as string),
+      ),
+    );
+    const claimKey = `${authUser.id}:${anonId}:${localReviewIds.sort().join(",")}`;
 
-    void supabase
+    if (lastClaimedReviewLinkKeyRef.current === claimKey) {
+      return;
+    }
+
+    lastClaimedReviewLinkKeyRef.current = claimKey;
+
+    const byAnonIdUpdate = supabase
       .from(CANONICAL_TABLES.reviews)
       .update({ user_id: authUser.id })
       .eq("anon_id", anonId)
-      .is("user_id", null);
-  }, [authUser]);
+      .is("user_id", null)
+      .select("id");
+
+    const byReviewIdsUpdate =
+      localReviewIds.length > 0
+        ? supabase
+            .from(CANONICAL_TABLES.reviews)
+            .update({ user_id: authUser.id })
+            .in("id", localReviewIds)
+            .is("user_id", null)
+            .select("id")
+        : Promise.resolve({ error: null });
+
+    void Promise.all([byAnonIdUpdate, byReviewIdsUpdate]).then(([anonResult, reviewIdResult]) => {
+      const migratedCount =
+        (Array.isArray(anonResult.data) ? anonResult.data.length : 0) +
+        (Array.isArray((reviewIdResult as { data?: unknown[] }).data)
+          ? ((reviewIdResult as { data?: unknown[] }).data?.length ?? 0)
+          : 0);
+
+      if (migratedCount > 0) {
+        trackEvent("auth_claimed_past_reviews", {
+          migrated_count: migratedCount,
+          had_local_review_ids: localReviewIds.length > 0,
+        });
+      }
+    });
+  }, [authUser, journalEntries]);
 
   useEffect(() => {
     const nextFeedback = pruneTodayCupFeedback(readTodayCupFeedback());
