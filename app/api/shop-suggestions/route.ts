@@ -7,6 +7,7 @@ type SuggestionPayload = {
   name?: string;
   area?: string;
   note?: string;
+  mode?: "suggest" | "feature";
   latitude?: number | null;
   longitude?: number | null;
 };
@@ -22,6 +23,8 @@ export async function POST(request: Request) {
   const name = payload.name?.trim();
   const area = payload.area?.trim() ?? "";
   const note = payload.note?.trim() ?? "";
+  const mode = payload.mode === "feature" ? "feature" : "suggest";
+  const submissionType = mode === "feature" ? "feature_interest" : "user_add_shop";
   const latitude = typeof payload.latitude === "number" ? payload.latitude : null;
   const longitude = typeof payload.longitude === "number" ? payload.longitude : null;
 
@@ -66,9 +69,13 @@ export async function POST(request: Request) {
       : [];
     const nextPayload = {
       ...existingPayload,
-      submission_type: "user_add_shop",
+      submission_type: submissionType,
       note: note || (existingPayload as { note?: string }).note || "",
       submitted_at: new Date().toISOString(),
+      feature_interest_at:
+        mode === "feature"
+          ? new Date().toISOString()
+          : (existingPayload as { feature_interest_at?: string }).feature_interest_at ?? null,
       support_count: Number((existingPayload as { support_count?: number }).support_count ?? 0) + 1,
       support_notes: note ? [...existingSupportNotes, note].slice(-8) : existingSupportNotes,
     };
@@ -86,9 +93,10 @@ export async function POST(request: Request) {
   }
 
   const nextPayload = {
-    submission_type: "user_add_shop",
+    submission_type: submissionType,
     note,
     submitted_at: new Date().toISOString(),
+    feature_interest_at: mode === "feature" ? new Date().toISOString() : null,
     support_count: 1,
     support_notes: note ? [note] : [],
   };
