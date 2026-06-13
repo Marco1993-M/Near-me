@@ -1,4 +1,6 @@
 import type { Cafe, FallbackPlace } from "@/types/cafe";
+import type { CoffeeProfileState, CoffeeProfilerDimension } from "@/lib/coffee-profiler";
+import { getCoffeeProfileBySlug } from "@/lib/coffee-profiler";
 
 export type CoffeeJournalEntry = {
   id: string;
@@ -47,6 +49,12 @@ export type CoffeeJournalInsight = {
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
+  profileAlignment: {
+    status: "confirming" | "broadening" | "challenging";
+    eyebrow: string;
+    title: string;
+    body: string;
+  } | null;
   shareMoments: Array<{
     id: "taste-read" | "taste-shift" | "standout-cup";
     eyebrow: string;
@@ -119,6 +127,42 @@ type TasteWheelSegment = {
   shortLabel: string;
   value: number;
   color: string;
+};
+
+const PROFILE_DIMENSION_TO_WHEEL: Record<CoffeeProfilerDimension, Array<{ key: TasteWheelKey; amount: number }>> = {
+  sweet: [
+    { key: "chocolatey", amount: 1 },
+    { key: "nutty", amount: 0.45 },
+  ],
+  acidity: [
+    { key: "bright", amount: 1 },
+    { key: "fruity", amount: 0.35 },
+    { key: "floral", amount: 0.25 },
+  ],
+  body: [
+    { key: "bold", amount: 0.45 },
+    { key: "chocolatey", amount: 0.35 },
+    { key: "nutty", amount: 0.35 },
+  ],
+  nutty: [
+    { key: "nutty", amount: 1 },
+    { key: "chocolatey", amount: 0.4 },
+  ],
+  fruity: [
+    { key: "fruity", amount: 1 },
+    { key: "bright", amount: 0.35 },
+  ],
+  floral: [
+    { key: "floral", amount: 1 },
+    { key: "bright", amount: 0.25 },
+  ],
+  spicy: [
+    { key: "bold", amount: 0.7 },
+    { key: "chocolatey", amount: 0.2 },
+  ],
+  intensity: [
+    { key: "bold", amount: 1 },
+  ],
 };
 
 function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
@@ -420,8 +464,39 @@ function createWheelScoreMap() {
   return new Map<TasteWheelKey, number>(TASTE_WHEEL_META.map((item) => [item.key, 0]));
 }
 
+function getEntryPreferenceWeight(entry: Pick<CoffeeJournalEntry, "rating">) {
+  if (!Number.isFinite(entry.rating) || entry.rating <= 0) {
+    return 1;
+  }
+
+  if (entry.rating >= 10) {
+    return 2.05;
+  }
+  if (entry.rating >= 9) {
+    return 1.75;
+  }
+  if (entry.rating >= 8) {
+    return 1.4;
+  }
+  if (entry.rating >= 7) {
+    return 1.05;
+  }
+  if (entry.rating >= 6) {
+    return 0.8;
+  }
+  if (entry.rating >= 5) {
+    return 0.6;
+  }
+
+  return 0.4;
+}
+
+function addWeightedLabelScore(map: Map<string, number>, key: string, amount: number) {
+  map.set(key, Number(((map.get(key) ?? 0) + amount).toFixed(3)));
+}
+
 function applyDrinkWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<TasteWheelKey, number>) {
-  const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
+  const entryMultiplier = getEntryPreferenceWeight(entry);
   const add = (key: TasteWheelKey, amount: number) => {
     wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount * entryMultiplier);
   };
@@ -448,7 +523,7 @@ function applyDrinkWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<Taste
 }
 
 function applyTagWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<TasteWheelKey, number>) {
-  const entryMultiplier = entry.rating >= 8 ? 1.15 : entry.rating <= 5 ? 0.8 : 1;
+  const entryMultiplier = getEntryPreferenceWeight(entry);
   const add = (key: TasteWheelKey, amount: number) => {
     wheelScores.set(key, (wheelScores.get(key) ?? 0) + amount * entryMultiplier);
   };
@@ -513,29 +588,150 @@ function buildTasteWheel(wheelScores: Map<TasteWheelKey, number>) {
   return { sortedWheel, tasteWheel };
 }
 
-export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJournalInsight {
+function buildExpectedProfileWheel(profileState: CoffeeProfileState | null | undefined) {
+  const profile = getCoffeeProfileBySlug(profileState?.profileSlug);
+
+  if (!profile) {
+    return null;
+  }
+
+  const wheelScores = createWheelScoreMap();
+  const addDimension = (dimension: CoffeeProfilerDimension, multiplier: number) => {
+    for (const target of PROFILE_DIMENSION_TO_WHEEL[dimension]) {
+      wheelScores.set(target.key, (wheelScores.get(target.key) ?? 0) + target.amount * multiplier);
+    }
+  };
+
+  for (const dimension of profile.traits) {
+    addDimension(dimension, 1);
+  }
+
+  for (const dimension of profile.secondaryTraits ?? []) {
+    addDimension(dimension, 0.6);
+  }
+
+  return {
+    profile,
+    ...buildTasteWheel(wheelScores),
+  };
+}
+
+function describeWheelLean(primary: string | null, secondary: string | null) {
+  if (primary && secondary) {
+    return `${primary.toLowerCase()} with a ${secondary.toLowerCase()} edge`;
+  }
+  if (primary) {
+    return primary.toLowerCase();
+  }
+  return "still-forming taste";
+}
+
+function buildProfileAlignmentInsight(
+  profileState: CoffeeProfileState | null | undefined,
+  journalSortedWheel: Array<{ key: TasteWheelKey; label: string; rawValue: number }>,
+) {
+  const expected = buildExpectedProfileWheel(profileState);
+
+  if (!expected) {
+    return null;
+  }
+
+  const journalPrimary = journalSortedWheel[0] ?? null;
+  const journalSecondary = (journalSortedWheel[1]?.rawValue ?? 0) > 0 ? journalSortedWheel[1] : null;
+  const expectedPrimary = expected.sortedWheel[0] ?? null;
+  const expectedSecondary = (expected.sortedWheel[1]?.rawValue ?? 0) > 0 ? expected.sortedWheel[1] : null;
+
+  const journalTopKeys = new Set(
+    journalSortedWheel.filter((segment) => segment.rawValue > 0).slice(0, 2).map((segment) => segment.key),
+  );
+  const expectedTopKeys = new Set(
+    expected.sortedWheel.filter((segment) => segment.rawValue > 0).slice(0, 2).map((segment) => segment.key),
+  );
+
+  let overlapCount = 0;
+  for (const key of journalTopKeys) {
+    if (expectedTopKeys.has(key)) {
+      overlapCount += 1;
+    }
+  }
+
+  if (
+    journalPrimary &&
+    expectedPrimary &&
+    (journalPrimary.key === expectedPrimary.key || overlapCount >= 2)
+  ) {
+    return {
+      status: "confirming" as const,
+      eyebrow: "Profiler check",
+      title: `Your scored cups are reinforcing your ${expected.profile.shortName.toLowerCase()} setup`,
+      body: `The cups you rate highest still lean ${describeWheelLean(
+        journalPrimary.label,
+        journalSecondary?.label ?? null,
+      )}, which is lining up well with your original profiler read.`,
+    };
+  }
+
+  if (journalPrimary && expectedTopKeys.has(journalPrimary.key)) {
+    return {
+      status: "broadening" as const,
+      eyebrow: "Profiler check",
+      title: `Your journal is broadening your original ${expected.profile.shortName.toLowerCase()} setup`,
+      body: `Your stronger scores still touch the ${expectedPrimary?.label.toLowerCase() ?? "core"} side of your profile, but they are also pulling toward ${describeWheelLean(
+        journalPrimary.label,
+        journalSecondary?.label ?? null,
+      )}.`,
+    };
+  }
+
+  return {
+    status: "challenging" as const,
+    eyebrow: "Profiler check",
+    title: `Your real scores are drifting away from your original ${expected.profile.shortName.toLowerCase()} setup`,
+    body: `Your highest-rated cups now lean ${describeWheelLean(
+      journalPrimary?.label ?? null,
+      journalSecondary?.label ?? null,
+    )}, which is pulling away from the ${describeWheelLean(
+      expectedPrimary?.label ?? null,
+      expectedSecondary?.label ?? null,
+    )} profile you started with.`,
+  };
+}
+
+export function getCoffeeJournalInsight(
+  entries: CoffeeJournalEntry[],
+  profileState?: CoffeeProfileState | null,
+): CoffeeJournalInsight {
   const drinkCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
   const cafeCounts = new Map<string, number>();
   const cities = new Set<string>();
   const ratings: number[] = [];
   const wheelScores = createWheelScoreMap();
+  let standoutEntry: CoffeeJournalEntry | null = null;
 
   for (const entry of entries) {
-    drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
-    cafeCounts.set(entry.cafeName, (cafeCounts.get(entry.cafeName) ?? 0) + 1);
+    const weight = getEntryPreferenceWeight(entry);
+    addWeightedLabelScore(drinkCounts, entry.drink, weight);
+    addWeightedLabelScore(cafeCounts, entry.cafeName, weight);
     if (entry.city.trim()) {
       cities.add(entry.city.trim().toLowerCase());
     }
     if (Number.isFinite(entry.rating) && entry.rating > 0) {
       ratings.push(entry.rating);
     }
+    if (
+      !standoutEntry ||
+      entry.rating > standoutEntry.rating ||
+      (entry.rating === standoutEntry.rating && entry.createdAt > standoutEntry.createdAt)
+    ) {
+      standoutEntry = entry;
+    }
 
     applyDrinkWheelScores(entry, wheelScores);
 
     for (const tag of entry.tags) {
       const normalized = tag.toLowerCase();
-      tagCounts.set(normalized, (tagCounts.get(normalized) ?? 0) + 1);
+      addWeightedLabelScore(tagCounts, normalized, weight);
     }
     applyTagWheelScores(entry, wheelScores);
   }
@@ -577,7 +773,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     "Your journal gets more useful when you describe what you felt in the cup, not just whether it was good.";
 
   const learningPrompt = favoriteDrink
-    ? `You keep returning to ${favoriteDrinkFamily}. That is a strong clue for what Near Me should prioritize for you.`
+    ? `Your higher scores keep pulling toward ${favoriteDrinkFamily}. That is a stronger clue than repeat orders alone.`
     : "A few more logs will help Near Me understand whether you lean brighter, smoother, or more espresso-forward.";
 
   const homeCue =
@@ -595,7 +791,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   const recentWheelScores = createWheelScoreMap();
   const earlierWheelScores = createWheelScoreMap();
   for (const entry of recentEntries) {
-    recentDrinkCounts.set(entry.drink, (recentDrinkCounts.get(entry.drink) ?? 0) + 1);
+    addWeightedLabelScore(recentDrinkCounts, entry.drink, getEntryPreferenceWeight(entry));
     applyDrinkWheelScores(entry, recentWheelScores);
     applyTagWheelScores(entry, recentWheelScores);
   }
@@ -615,12 +811,12 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
   const earlierPrimaryLabel = TASTE_WHEEL_META.find((item) => item.key === earlierPrimaryKey)?.label ?? null;
   const evolutionSummary =
     recentPrimaryLabel && earlierPrimaryLabel && recentPrimaryLabel !== earlierPrimaryLabel
-      ? `Your recent cups are leaning more ${recentPrimaryLabel.toLowerCase()} than before.`
+      ? `Your higher recent scores are leaning more ${recentPrimaryLabel.toLowerCase()} than before.`
       : recentPrimaryLabel
-        ? `Your recent cups are reinforcing a ${recentPrimaryLabel.toLowerCase()} lean.`
+        ? `Your higher recent scores are reinforcing a ${recentPrimaryLabel.toLowerCase()} lean.`
         : "Your taste evolution will sharpen as you add a few more logs.";
 
-  const latestHighlight = entries.find((entry) => entry.rating >= 8)?.cafeName ?? topCafe;
+  const latestHighlight = standoutEntry?.cafeName ?? topCafe;
   const milestoneTargets = [5, 10, 20, 30];
   const nextMilestone = milestoneTargets.find((target) => entries.length < target) ?? null;
   const milestoneLabel =
@@ -637,13 +833,14 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
         : null;
 
   const patternInsights = [
-    favoriteDrinkFamily ? `${titleize(favoriteDrinkFamily)} are your strongest repeat style right now.` : null,
-    topCafe ? `${topCafe} is showing up most often in your journal.` : null,
-    latestHighlight ? `${latestHighlight} is one of your standout recent cups.` : null,
+    favoriteDrinkFamily ? `${titleize(favoriteDrinkFamily)} are getting your strongest scores right now.` : null,
+    topCafe ? `${topCafe} is where your stronger scores keep clustering.` : null,
+    latestHighlight ? `${latestHighlight} is one of your highest-rated cups so far.` : null,
     recentFavoriteDrink && recentFavoriteDrink !== favoriteDrink
-      ? `Lately you have been reaching for ${recentFavoriteDrinkFamily} more often.`
+      ? `Lately your better scores have been tilting toward ${recentFavoriteDrinkFamily}.`
       : null,
   ].filter((value): value is string => Boolean(value)).slice(0, 3);
+  const profileAlignment = buildProfileAlignmentInsight(profileState, sortedWheel);
 
   const shareMoments: CoffeeJournalInsight["shareMoments"] = [
     {
@@ -723,6 +920,7 @@ export function getCoffeeJournalInsight(entries: CoffeeJournalEntry[]): CoffeeJo
     learningPrompt,
     glossaryTip,
     homeCue,
+    profileAlignment,
     shareMoments,
   };
 }
