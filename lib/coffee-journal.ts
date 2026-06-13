@@ -215,8 +215,18 @@ function readJournalSnapshot() {
 
   try {
     const parsed = JSON.parse(raw) as unknown;
+    const normalized = normalizeEntries(parsed);
+    const normalizedRaw = JSON.stringify(normalized);
+
+    if (normalizedRaw !== raw && typeof window !== "undefined") {
+      window.localStorage.setItem(COFFEE_JOURNAL_STORAGE_KEY, normalizedRaw);
+      cachedJournalRaw = normalizedRaw;
+      cachedJournalSnapshot = normalized;
+      return cachedJournalSnapshot;
+    }
+
     cachedJournalRaw = raw;
-    cachedJournalSnapshot = normalizeEntries(parsed);
+    cachedJournalSnapshot = normalized;
     return cachedJournalSnapshot;
   } catch {
     cachedJournalRaw = raw;
@@ -270,7 +280,7 @@ export function setStoredCoffeeJournal(entries: CoffeeJournalEntry[]) {
     return;
   }
 
-  const normalized = [...entries].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  const normalized = normalizeEntries(entries);
   const raw = JSON.stringify(normalized);
   window.localStorage.setItem(COFFEE_JOURNAL_STORAGE_KEY, raw);
   cachedJournalRaw = raw;
