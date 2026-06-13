@@ -549,11 +549,6 @@ export function CoffeeJournalPanel({
               <span>Journal, taste memory, and how your coffee lean is evolving.</span>
             </div>
             <div className="map-top-picks-head-actions">
-              {onLogCurrent ? (
-                <button className="map-top-picks-profile-button" type="button" onClick={onLogCurrent}>
-                  {currentCafeName ? `Log ${currentCafeName}` : "Log a visit"}
-                </button>
-              ) : null}
               <button className="map-search-close" type="button" onClick={onClose} aria-label="Close your taste">
                 Close
               </button>
