@@ -34,8 +34,14 @@ function writeFavorites(nextFavorites: string[]) {
     return;
   }
 
-  window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(nextFavorites));
-  window.dispatchEvent(new CustomEvent(FAVORITES_EVENT, { detail: nextFavorites }));
+  const normalizedFavorites = Array.from(
+    new Set(nextFavorites.filter((value): value is string => typeof value === "string" && value.trim().length > 0)),
+  );
+
+  window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(normalizedFavorites));
+  cachedFavoritesRaw = window.localStorage.getItem(FAVORITES_STORAGE_KEY);
+  cachedFavoritesValue = normalizedFavorites;
+  window.dispatchEvent(new CustomEvent(FAVORITES_EVENT, { detail: normalizedFavorites }));
 }
 
 export function getFavoriteCafeIds() {
@@ -58,6 +64,11 @@ export function toggleFavoriteCafe(cafeId: string) {
 
   writeFavorites(nextFavorites);
   return nextFavorites;
+}
+
+export function setFavoriteCafeIds(cafeIds: string[]) {
+  writeFavorites(cafeIds);
+  return readFavorites();
 }
 
 export function subscribeToFavoriteCafes(listener: (favoriteIds: string[]) => void) {

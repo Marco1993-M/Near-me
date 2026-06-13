@@ -8,4 +8,5 @@ export const CANONICAL_TABLES = {
   reviewTags: "review_tags_new",
   placeSources: "place_sources_new",
   sourcePlaces: "source_places_new",
+  userCoffeeData: "user_coffee_data",
 } as const;
