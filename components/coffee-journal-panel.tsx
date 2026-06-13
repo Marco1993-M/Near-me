@@ -8,6 +8,11 @@ import {
   getStoredCoffeeJournalServerSnapshot,
   subscribeToCoffeeJournal,
 } from "@/lib/coffee-journal";
+import {
+  getStoredCoffeeProfileState,
+  getStoredCoffeeProfileStateServerSnapshot,
+  subscribeToCoffeeProfile,
+} from "@/lib/coffee-profiler";
 
 type CoffeeJournalPanelProps = {
   onClose: () => void;
@@ -211,8 +216,13 @@ export function CoffeeJournalPanel({
     getStoredCoffeeJournal,
     getStoredCoffeeJournalServerSnapshot,
   );
+  const profileState = useSyncExternalStore(
+    subscribeToCoffeeProfile,
+    getStoredCoffeeProfileState,
+    getStoredCoffeeProfileStateServerSnapshot,
+  );
 
-  const insight = useMemo(() => getCoffeeJournalInsight(entries), [entries]);
+  const insight = useMemo(() => getCoffeeJournalInsight(entries, profileState), [entries, profileState]);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const leadingTags = insight.topTags.slice(0, 3);
   const journalSections = useMemo(() => getJournalSections(entries), [entries]);
@@ -657,13 +667,22 @@ export function CoffeeJournalPanel({
             </div>
           </section>
 
-          {insight.patternInsights.length > 0 ? (
+          {insight.patternInsights.length > 0 || insight.profileAlignment ? (
             <section className="coffee-journal-insights" aria-label="Journal insights">
               <div className="coffee-journal-spectrum-head">
                 <span>Pattern notes</span>
                 <strong>What Near Me is noticing</strong>
               </div>
               <div className="coffee-journal-insights-grid">
+                {insight.profileAlignment ? (
+                  <article
+                    className={`coffee-journal-evolution-card coffee-journal-profile-alignment is-${insight.profileAlignment.status}`}
+                  >
+                    <span>{insight.profileAlignment.eyebrow}</span>
+                    <strong>{insight.profileAlignment.title}</strong>
+                    <span>{insight.profileAlignment.body}</span>
+                  </article>
+                ) : null}
                 {insight.patternInsights.map((item) => (
                   <article className="coffee-journal-insight-card" key={item}>
                     <strong>{item}</strong>
