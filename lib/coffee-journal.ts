@@ -46,6 +46,18 @@ export type CoffeeJournalInsight = {
   evolutionSummary: string;
   latestHighlight: string | null;
   patternInsights: string[];
+  tasteDrivers: Array<{
+    id: string;
+    cafeName: string;
+    drink: string;
+    rating: number;
+    createdAt: string;
+    impact: number;
+    targetTaste: string;
+    headline: string;
+    body: string;
+    tags: string[];
+  }>;
   learningPrompt: string;
   glossaryTip: string;
   homeCue: string;
@@ -435,6 +447,30 @@ function getDrinkFamilyLabel(drink: string | null, tone: "title" | "sentence" = 
   return tone === "title" ? titleize(base) : base;
 }
 
+function getDrinkMomentLabel(drink: string | null) {
+  if (!drink) {
+    return "cup";
+  }
+
+  if (drink === "Espresso") {
+    return "espresso";
+  }
+  if (drink === "Milk drink") {
+    return "milk drink";
+  }
+  if (drink === "Filter") {
+    return "filter cup";
+  }
+  if (drink === "Cold") {
+    return "cold coffee";
+  }
+  if (drink === "Seasonal") {
+    return "seasonal cup";
+  }
+
+  return drink.toLowerCase();
+}
+
 function getCafeDrinkFamilies(cafe: Cafe) {
   const families = new Set<string>();
 
@@ -562,6 +598,13 @@ function applyTagWheelScores(entry: CoffeeJournalEntry, wheelScores: Map<TasteWh
       add("floral", 0.5);
     }
   }
+}
+
+function buildEntryWheelScores(entry: CoffeeJournalEntry) {
+  const wheelScores = createWheelScoreMap();
+  applyDrinkWheelScores(entry, wheelScores);
+  applyTagWheelScores(entry, wheelScores);
+  return wheelScores;
 }
 
 function buildTasteWheel(wheelScores: Map<TasteWheelKey, number>) {
@@ -695,6 +738,94 @@ function buildProfileAlignmentInsight(
       expectedSecondary?.label ?? null,
     )} profile you started with.`,
   };
+}
+
+function buildTasteDrivers(
+  entries: CoffeeJournalEntry[],
+  currentPrimary: { key: TasteWheelKey; label: string; rawValue: number } | null,
+  currentSecondary: { key: TasteWheelKey; label: string; rawValue: number } | null,
+  recentWheel: Array<{ key: TasteWheelKey; label: string; rawValue: number }>,
+  earlierWheel: Array<{ key: TasteWheelKey; label: string; rawValue: number }>,
+): CoffeeJournalInsight["tasteDrivers"] {
+  if (!currentPrimary) {
+    return [];
+  }
+
+  const earlierMap = new Map(earlierWheel.map((segment) => [segment.key, segment.rawValue]));
+  const strongestRecentShift = recentWheel
+    .map((segment) => ({
+      ...segment,
+      delta: segment.rawValue - (earlierMap.get(segment.key) ?? 0),
+    }))
+    .sort((left, right) => right.delta - left.delta)[0];
+
+  const shiftTarget =
+    strongestRecentShift && strongestRecentShift.delta > 0.7 ? strongestRecentShift : null;
+  const targetKey = shiftTarget?.key ?? currentPrimary.key;
+  const targetLabel = shiftTarget?.label ?? currentPrimary.label;
+  const supportKey = currentPrimary.key === targetKey ? currentSecondary?.key ?? null : currentPrimary.key;
+  const supportLabel = currentPrimary.key === targetKey ? currentSecondary?.label ?? null : currentPrimary.label;
+
+  const driverPool = entries.slice(0, Math.min(entries.length, 8));
+  const scoredDrivers = driverPool
+    .map((entry) => {
+      const entryWheel = buildEntryWheelScores(entry);
+      const directImpact = entryWheel.get(targetKey) ?? 0;
+      const supportImpact = supportKey ? (entryWheel.get(supportKey) ?? 0) * 0.45 : 0;
+      const totalImpact = Number((directImpact + supportImpact).toFixed(2));
+
+      if (totalImpact <= 0.3) {
+        return null;
+      }
+
+      const sortedEntryWheel = TASTE_WHEEL_META.map((item) => ({
+        key: item.key,
+        label: item.label,
+        rawValue: entryWheel.get(item.key) ?? 0,
+      })).sort((left, right) => right.rawValue - left.rawValue);
+      const entryPrimary = sortedEntryWheel[0];
+      const drinkLabel = getDrinkMomentLabel(entry.drink);
+      const noteTags = entry.tags.slice(0, 2).map((tag) => tag.toLowerCase());
+      const tagLabel =
+        noteTags.length >= 2
+          ? `${noteTags[0]} and ${noteTags[1]} notes`
+          : noteTags.length === 1
+            ? `${noteTags[0]} notes`
+            : null;
+      const scoreLead = `${entry.rating}/10 ${drinkLabel}`;
+
+      return {
+        id: entry.id,
+        cafeName: entry.cafeName,
+        drink: entry.drink,
+        rating: entry.rating,
+        createdAt: entry.createdAt,
+        impact: totalImpact,
+        targetTaste: targetLabel,
+        headline:
+          shiftTarget && shiftTarget.key === targetKey
+            ? `Pushed you ${targetLabel.toLowerCase()} lately`
+            : `Reinforced your ${targetLabel.toLowerCase()} lean`,
+        body:
+          shiftTarget && shiftTarget.key === targetKey
+            ? `${scoreLead}${tagLabel ? ` with ${tagLabel}` : ""} is one of the recent cups nudging your wheel more ${targetLabel.toLowerCase()}.${supportLabel ? ` It still brushes the ${supportLabel.toLowerCase()} side too.` : ""}`
+            : `${scoreLead}${tagLabel ? ` with ${tagLabel}` : ""} is one of the cups most reinforcing your ${targetLabel.toLowerCase()} side right now.${entryPrimary && entryPrimary.key !== targetKey ? ` It also carries a ${entryPrimary.label.toLowerCase()} edge.` : ""}`,
+        tags: entry.tags.slice(0, 3),
+      };
+    })
+    .filter((driver): driver is NonNullable<typeof driver> => Boolean(driver))
+    .sort((left, right) => right.impact - left.impact || right.rating - left.rating || right.createdAt.localeCompare(left.createdAt))
+    .slice(0, 3);
+
+  if (scoredDrivers.length === 0) {
+    return [];
+  }
+
+  const maxImpact = scoredDrivers[0]?.impact ?? 1;
+  return scoredDrivers.map((driver) => ({
+    ...driver,
+    impact: Number((driver.impact / maxImpact).toFixed(2)),
+  }));
 }
 
 export function getCoffeeJournalInsight(
@@ -840,6 +971,13 @@ export function getCoffeeJournalInsight(
       ? `Lately your better scores have been tilting toward ${recentFavoriteDrinkFamily}.`
       : null,
   ].filter((value): value is string => Boolean(value)).slice(0, 3);
+  const tasteDrivers = buildTasteDrivers(
+    entries,
+    sortedWheel[0] ?? null,
+    (sortedWheel[1]?.rawValue ?? 0) > 0 ? sortedWheel[1] : null,
+    sortedRecentWheel,
+    sortedEarlierWheel,
+  );
   const profileAlignment = buildProfileAlignmentInsight(profileState, sortedWheel);
 
   const shareMoments: CoffeeJournalInsight["shareMoments"] = [
@@ -917,6 +1055,7 @@ export function getCoffeeJournalInsight(
     evolutionSummary,
     latestHighlight,
     patternInsights,
+    tasteDrivers,
     learningPrompt,
     glossaryTip,
     homeCue,
