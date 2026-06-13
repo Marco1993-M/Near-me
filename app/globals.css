@@ -1477,6 +1477,24 @@ img {
   line-height: 1.35;
 }
 
+.coffee-journal-profile-alignment {
+  background:
+    radial-gradient(circle at top left, rgba(199, 245, 211, 0.2), transparent 48%),
+    rgba(255, 255, 252, 0.72);
+}
+
+.coffee-journal-profile-alignment.is-confirming {
+  border-color: rgba(69, 137, 86, 0.14);
+}
+
+.coffee-journal-profile-alignment.is-broadening {
+  border-color: rgba(207, 171, 84, 0.18);
+}
+
+.coffee-journal-profile-alignment.is-challenging {
+  border-color: rgba(168, 116, 88, 0.18);
+}
+
 .coffee-journal-evolution-lanes {
   display: grid;
   gap: 0.55rem;
