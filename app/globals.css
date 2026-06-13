@@ -613,6 +613,54 @@ img {
   min-width: 0;
 }
 
+.diesel-auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  min-width: 0;
+  padding: 0 0.82rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 252, 0.74);
+  color: rgba(20, 32, 24, 0.74);
+  font: inherit;
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.diesel-auth-chip span {
+  white-space: nowrap;
+}
+
+.diesel-auth-chip svg {
+  flex-shrink: 0;
+}
+
+.diesel-auth-chip:hover,
+.diesel-auth-chip:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(45, 89, 58, 0.18);
+  color: rgba(20, 32, 24, 0.9);
+  outline: none;
+}
+
+.diesel-auth-chip.is-signed-in {
+  background:
+    radial-gradient(circle at top left, rgba(199, 245, 211, 0.24), transparent 54%),
+    rgba(255, 255, 252, 0.82);
+  border-color: rgba(79, 157, 102, 0.22);
+  color: #1f6a38;
+}
+
 .diesel-featured-link-shell {
   position: fixed;
   top: calc(max(1rem, env(safe-area-inset-top)) + 3.55rem);
