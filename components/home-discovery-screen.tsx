@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import type { Cafe, CafeReviewSummary, CafeTrustPreview, FallbackPlace, MapCafe } from "@/types/cafe";
 import { CoffeeProfileCard } from "@/components/coffee-profile-card";
 import { CoffeeJournalPanel } from "@/components/coffee-journal-panel";
@@ -73,6 +74,29 @@ type JournalTarget =
   | { type: "fallback"; place: FallbackPlace };
 
 type AddShopMode = "suggest" | "feature";
+
+function getAuthDisplayName(user: User | null) {
+  if (!user) {
+    return null;
+  }
+
+  const fullName =
+    typeof user.user_metadata?.full_name === "string"
+      ? user.user_metadata.full_name
+      : typeof user.user_metadata?.name === "string"
+        ? user.user_metadata.name
+        : null;
+
+  if (fullName) {
+    return fullName.split(/\s+/).filter(Boolean)[0] ?? fullName;
+  }
+
+  if (user.email) {
+    return user.email.split("@")[0] ?? user.email;
+  }
+
+  return "Account";
+}
 
 type TodayCupFeedbackReason = "too-far" | "not-for-me" | "already-been" | "not-today";
 
@@ -680,6 +704,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const [locationState, setLocationState] = useState<
     "idle" | "requesting" | "granted" | "denied" | "unavailable"
   >("idle");
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [sheetState, setSheetState] = useState<"collapsed" | "expanded">("collapsed");
   const [isCafeCardVisible, setIsCafeCardVisible] = useState(false);
   const [todayCupIntent, setTodayCupIntent] = useState<TodayCupIntentKey>("default");
@@ -767,10 +794,72 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     getStoredCoffeeJournal,
     getStoredCoffeeJournalServerSnapshot,
   );
+  const authDisplayName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
   const currentHour = useMemo(() => new Date().getHours(), []);
   const todayCupMoment = useMemo(() => getTodayCupMoment(currentHour), [currentHour]);
   const todayCupIntentConfig = todayCupIntentCopy[todayCupIntent];
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+
+    if (!supabase || typeof window === "undefined") {
+      setAuthReady(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (cancelled) {
+        return;
+      }
+
+      if (error) {
+        setAuthError(error.message);
+      }
+
+      setAuthUser(data.session?.user ?? null);
+      setAuthReady(true);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setAuthUser(session?.user ?? null);
+      setAuthReady(true);
+      setAuthError(null);
+
+      if (event === "SIGNED_IN") {
+        trackEvent("auth_signed_in", { provider: session?.user?.app_metadata?.provider ?? "google" });
+      }
+
+      if (event === "SIGNED_OUT") {
+        trackEvent("auth_signed_out", {});
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+
+    if (!supabase || !authUser || typeof window === "undefined") {
+      return;
+    }
+
+    const anonId = getAnonymousReviewerId();
+
+    void supabase
+      .from(CANONICAL_TABLES.reviews)
+      .update({ user_id: authUser.id })
+      .eq("anon_id", anonId)
+      .is("user_id", null);
+  }, [authUser]);
 
   useEffect(() => {
     const nextFeedback = pruneTodayCupFeedback(readTodayCupFeedback());
@@ -1448,13 +1537,17 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     const knownCafes = new Map(hydratedCafes.map((cafe) => [cafe.id, cafe] as const));
     let cancelled = false;
 
-    void supabase
+    let reviewQuery = supabase
       .from(CANONICAL_TABLES.reviews)
       .select("id,cafe_id,rating,note,drink,created_at")
-      .eq("anon_id", anonId)
       .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
+      .order("created_at", { ascending: false });
+
+    reviewQuery = authUser
+      ? reviewQuery.or(`user_id.eq.${authUser.id},anon_id.eq.${anonId}`)
+      : reviewQuery.eq("anon_id", anonId);
+
+    void reviewQuery.then(({ data, error }) => {
         if (cancelled || error || !data?.length) {
           return;
         }
@@ -1488,7 +1581,45 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     return () => {
       cancelled = true;
     };
-  }, [hydratedCafes]);
+  }, [authUser, hydratedCafes]);
+
+  async function handleGoogleSignIn() {
+    const supabase = getSupabaseClient();
+
+    if (!supabase || typeof window === "undefined") {
+      setAuthError("Sign in is unavailable until Supabase is configured.");
+      return;
+    }
+
+    setAuthError(null);
+
+    const redirectTo = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+
+    trackEvent("auth_sign_in_started", { provider: "google" });
+  }
+
+  async function handleSignOut() {
+    const supabase = getSupabaseClient();
+
+    if (!supabase) {
+      return;
+    }
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      setAuthError(error.message);
+    }
+  }
 
   async function handleAddShopSubmit() {
     if (!addShopName.trim()) {
@@ -2245,10 +2376,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     }
 
     const anonId = getAnonymousReviewerId();
+    const actorId = authUser?.id ?? anonId;
     const duplicateKey =
       reviewTarget.type === "cafe"
-        ? `near-me-review:${reviewTarget.cafe.id}:${anonId}`
-        : `near-me-fallback-review:${reviewTarget.place.source}:${reviewTarget.place.id}:${anonId}`;
+        ? `near-me-review:${reviewTarget.cafe.id}:${actorId}`
+        : `near-me-fallback-review:${reviewTarget.place.source}:${reviewTarget.place.id}:${actorId}`;
 
     if (window.localStorage.getItem(duplicateKey)) {
       setReviewState("error");
@@ -2278,9 +2410,9 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
         rating: reviewRating,
         note: reviewNote.trim(),
         drink: reviewDrink,
-        anon_id: anonId,
+        anon_id: authUser ? null : anonId,
         status: "approved",
-        user_id: null,
+        user_id: authUser?.id ?? null,
       };
 
       const { data, error } = await supabase
@@ -2509,6 +2641,36 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                 <circle cx="11" cy="11" r="6.5" />
                 <path d="m16 16 4.5 4.5" />
               </svg>
+            </button>
+            <button
+              className={`diesel-auth-chip${authUser ? " is-signed-in" : ""}`}
+              type="button"
+              aria-label={authUser ? `Signed in as ${authDisplayName}. Sign out.` : "Save and sync your coffee data"}
+              onClick={authUser ? handleSignOut : handleGoogleSignIn}
+              title={
+                authError
+                  ? authError
+                  : authUser
+                    ? `Signed in as ${authDisplayName}. Tap to sign out.`
+                    : authReady
+                      ? "Save and sync your coffee memory"
+                      : "Preparing sign in"
+              }
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                {authUser ? (
+                  <>
+                    <path d="M5 12.5 9.2 17 19 7.5" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M12 16V8" />
+                    <path d="M8.5 11.5 12 8l3.5 3.5" />
+                    <path d="M5 18.5h14" />
+                  </>
+                )}
+              </svg>
+              <span>{authUser ? authDisplayName ?? "Signed in" : authReady ? "Save & sync" : "..."}</span>
             </button>
           </div>
         </div>
