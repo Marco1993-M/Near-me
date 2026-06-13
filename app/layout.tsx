@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { AppVersionRefresh } from "@/components/app-version-refresh";
+import { CoffeeMemorySync } from "@/components/coffee-memory-sync";
 import { LegacyCacheReset } from "@/components/legacy-cache-reset";
 import { defaultMetadata } from "@/lib/site";
 
@@ -41,6 +42,7 @@ export default function RootLayout({
         </Script>
         <LegacyCacheReset />
         <AppVersionRefresh currentVersion={appVersion} />
+        <CoffeeMemorySync />
         <AppShell>{children}</AppShell>
         <Analytics />
       </body>
