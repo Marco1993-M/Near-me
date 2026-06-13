@@ -1510,6 +1510,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           name: addShopName.trim(),
           area: addShopArea.trim(),
           note: addShopNote.trim(),
+          mode: addShopMode,
           latitude: userLocation?.latitude ?? null,
           longitude: userLocation?.longitude ?? null,
         }),
@@ -1532,13 +1533,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       trackEvent("add_shop_submitted", {
         area: addShopArea.trim() || null,
         has_location: Boolean(userLocation),
+        mode: addShopMode,
       });
       setAddShopState("success");
       const trustLine = payload.trust
         ? payload.trust.supporterCount > 1 || payload.trust.reviewCount > 0
           ? `${payload.trust.stageLabel}. ${payload.trust.supporterCount} local supporters so far.`
           : `${payload.trust.stageLabel}. You started the signal for this place.`
-        : "Shop sent for review. Thanks for helping grow Near Me.";
+        : addShopMode === "feature"
+          ? "Interest saved. Near Me will follow up on this cafe enquiry."
+          : "Shop sent for review. Thanks for helping grow Near Me.";
       setAddShopMessage(trustLine);
       setReviewToast(`Shop submitted: ${addShopName.trim()}`);
 
