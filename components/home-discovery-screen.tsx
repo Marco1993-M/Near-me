@@ -3988,43 +3988,55 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                         </div>
                         {isCollapsedCard ? (
                           <>
-                            <div className="diesel-today-signal-strip" aria-label="Today's cup signals">
-                              {todayCupVisualSignals.map((signal) => (
-                                <div key={signal.label} className="diesel-today-signal-card">
-                                  <div className="diesel-today-signal-head">
-                                    <span>{signal.label}</span>
-                                    <strong>{signal.detail}</strong>
-                                  </div>
-                                  <div className="diesel-today-signal-meter" aria-hidden="true">
-                                    <span style={{ width: `${Math.round(signal.value * 100)}%` }} />
+                            <div className="diesel-today-collage">
+                              <div className="diesel-today-collage-main">
+                                <div className="diesel-today-editorial-stage">
+                                  <div className="diesel-today-editorial-glow" aria-hidden="true" />
+                                  <div className="diesel-today-editorial-note">
+                                    <span className="diesel-today-editorial-kicker">
+                                      {todayCupPrimary.isCurrentPlace ? "Live read" : "Why this fits"}
+                                    </span>
+                                    <strong>
+                                      {todayCupPrimary.journalMatch?.reason ??
+                                        todayCupPrimary.profileMatch?.label ??
+                                        todayCupPrimary.decisionGuide.bestFor}
+                                    </strong>
+                                    <p>
+                                      {todayCupPrimary.routineNote ??
+                                        todayCupPrimary.journalMatch?.support ??
+                                        todayCupIntentConfig.cue}
+                                    </p>
                                   </div>
                                 </div>
+                              </div>
+                              <div className="diesel-today-collage-side">
+                                <div className="diesel-today-utility-card diesel-today-utility-card-primary">
+                                  <span>{todayCupPrimary.isCurrentPlace ? "Status" : "Distance"}</span>
+                                  <strong>
+                                    {todayCupPrimary.isCurrentPlace ? "You're here" : formatDistance(todayCupPrimary.distance)}
+                                  </strong>
+                                  <small>
+                                    {todayCupPrimary.isCurrentPlace
+                                      ? "Live stop"
+                                      : todayCupPrimary.decisionGuide.confidenceRead}
+                                  </small>
+                                </div>
+                                <div className="diesel-today-utility-card diesel-today-utility-card-secondary">
+                                  <span>Order first</span>
+                                  <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                                  <small>
+                                    {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="diesel-today-signal-ribbon" aria-label="Today's cup signals">
+                              {todayCupVisualSignals.map((signal) => (
+                                <div key={signal.label} className="diesel-today-ribbon-item">
+                                  <span>{signal.label}</span>
+                                  <strong>{signal.detail}</strong>
+                                </div>
                               ))}
-                            </div>
-                            <div className="diesel-today-glance-grid">
-                              <div className="diesel-today-glance-card">
-                                <span>Order first</span>
-                                <strong>{todayCupPrimary.decisionGuide.order}</strong>
-                              </div>
-                              <div className="diesel-today-glance-card">
-                                <span>{todayCupIntent === "default" ? todayCupMoment.shortLabel : "Mood"}</span>
-                                <strong>
-                                  {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
-                                </strong>
-                                <small>
-                                  {todayCupPrimary.journalMatch?.reason ??
-                                    todayCupPrimary.profileMatch?.label ??
-                                    todayCupPrimary.decisionGuide.bestFor}
-                                </small>
-                              </div>
-                            </div>
-                            <div className="diesel-today-support-line">
-                              <span className="diesel-today-support-dot" aria-hidden="true" />
-                              <span>
-                                {todayCupPrimary.routineNote ??
-                                  todayCupPrimary.journalMatch?.support ??
-                                  todayCupIntentConfig.cue}
-                              </span>
                             </div>
                           </>
                         ) : (
