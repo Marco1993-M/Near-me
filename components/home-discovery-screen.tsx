@@ -1025,6 +1025,46 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       ? activeCafe.reviewSummary.averageRating.toFixed(1)
       : null;
   const activeDistance = activeCafe && userLocation ? cafeDistances.get(activeCafe.id) ?? null : null;
+  const activeCafeVisualSignals =
+    activeCafe && activeDecisionGuide
+      ? [
+          {
+            label: "Trust",
+            value: clampNumber(
+              ((activeCafe.reviewSummary.averageRating - 6.2) / 3) * 0.65 +
+                Math.min(activeCafe.reviewSummary.reviewCount, 12) / 12 * 0.35,
+              0.18,
+              1,
+            ),
+            detail: activeDecisionGuide.confidenceRead,
+          },
+          {
+            label: "Taste",
+            value: clampNumber(
+              activeProfileMatch
+                ? activeProfileMatch.percentage / 100
+                : (activeJournalMatch?.score ?? 0) / 4.4,
+              0.18,
+              1,
+            ),
+            detail:
+              activeJournalMatch?.label ??
+              activeProfileMatch?.label ??
+              activeDecisionGuide.bestFor,
+          },
+          {
+            label: "Distance",
+            value: clampNumber(
+              activeDistance !== null
+                ? 1 - activeDistance / Math.max(selectedRadiusKm + 0.6, 2)
+                : 0.22,
+              0.18,
+              1,
+            ),
+            detail: activeDistance !== null ? formatDistance(activeDistance) : activeCafe.countryCode,
+          },
+        ]
+      : [];
   const directionsHref =
     activeCafe && typeof activeCafe.latitude === "number" && typeof activeCafe.longitude === "number"
       ? `https://www.google.com/maps/search/?api=1&query=${activeCafe.latitude},${activeCafe.longitude}`
@@ -3755,25 +3795,69 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                         <strong>{activeDecisionGuide.goIfHeadline}</strong>
                       </div>
                     ) : null}
-                    {isCollapsedCard && (activeProfileMatch || activeJournalMatch) ? (
-                      <div className="diesel-selection-match-nudge">
-                        <span className="diesel-selection-match-nudge-value">
-                          {activeProfileMatch
-                            ? `${activeProfileMatch.percentage}% taste match`
-                            : activeJournalMatch?.label ?? "Journal fit"}
-                        </span>
-                        <span className="diesel-selection-match-nudge-copy">
-                          {activeProfileMatch
-                            ? activeProfileMatch.label
-                            : activeJournalMatch?.reason ?? "Near Me is learning from your journal"}
-                        </span>
-                      </div>
-                    ) : null}
-                    <p>
-                      {isCollapsedCard
-                        ? activeDecisionGuide?.goIfSupport ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary
-                        : activeDecisionGuide?.bestForDetail ?? activeDecisionGuide?.goIfSupport ?? activeDecisionGuide?.trustSummary ?? activeCafe.summary}
-                    </p>
+                    {isCollapsedCard ? (
+                      <>
+                        <div className="diesel-today-collage">
+                          <div className="diesel-today-collage-main">
+                            <div className="diesel-today-editorial-stage">
+                              <div className="diesel-today-editorial-glow" aria-hidden="true" />
+                              <div className="diesel-today-editorial-note">
+                                <span className="diesel-today-editorial-kicker">
+                                  {activeJournalMatch || activeProfileMatch ? "Why this fits" : "Why go"}
+                                </span>
+                                <strong>
+                                  {activeJournalMatch?.reason ??
+                                    activeProfileMatch?.label ??
+                                    activeDecisionGuide?.bestFor ??
+                                    activeDecisionGuide?.confidenceRead ??
+                                    "Worth a look"}
+                                </strong>
+                                <p>
+                                  {activeJournalMatch?.support ??
+                                    activeProfileMatch?.reasons?.[0] ??
+                                    activeDecisionGuide?.goIfSupport ??
+                                    activeDecisionGuide?.trustSummary ??
+                                    activeCafe.summary}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="diesel-today-collage-side">
+                            <div className="diesel-today-utility-card diesel-today-utility-card-primary">
+                              <span>Trust</span>
+                              <strong>{activeRating ?? "New"}</strong>
+                              <small>
+                                {activeCafe.reviewSummary.reviewCount > 0
+                                  ? `${activeCafe.reviewSummary.reviewCount} reviews`
+                                  : activeDecisionGuide?.confidenceRead ?? "No reviews yet"}
+                              </small>
+                            </div>
+                            <div className="diesel-today-utility-card diesel-today-utility-card-secondary">
+                              <span>Order first</span>
+                              <strong>{activeDecisionGuide?.order ?? activeCafe.city}</strong>
+                              <small>{activeDistance ? formatDistance(activeDistance) : activeCafe.countryCode}</small>
+                            </div>
+                          </div>
+                        </div>
+                        {activeCafeVisualSignals.length > 0 ? (
+                          <div className="diesel-today-signal-ribbon" aria-label="Cafe signals">
+                            {activeCafeVisualSignals.map((signal) => (
+                              <div key={signal.label} className="diesel-today-ribbon-item">
+                                <span>{signal.label}</span>
+                                <strong>{signal.detail}</strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p>
+                        {activeDecisionGuide?.bestForDetail ??
+                          activeDecisionGuide?.goIfSupport ??
+                          activeDecisionGuide?.trustSummary ??
+                          activeCafe.summary}
+                      </p>
+                    )}
                   </div>
 
                   {activeDecisionGuide && !isCollapsedCard ? (
