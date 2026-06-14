@@ -6,6 +6,7 @@ import {
   getCoffeeJournalInsight,
   getStoredCoffeeJournal,
   getStoredCoffeeJournalServerSnapshot,
+  removeCoffeeJournalEntry,
   subscribeToCoffeeJournal,
 } from "@/lib/coffee-journal";
 import {
@@ -172,6 +173,59 @@ function getCanvasWheelSubtitleSize(label: string | null) {
   return 22;
 }
 
+function getTastePullLabel(value: number, index: number) {
+  if (index === 0) {
+    return "Strongest lane right now";
+  }
+  if (value >= 0.66) {
+    return "Strong pull right now";
+  }
+  if (value >= 0.42) {
+    return "Clear pull right now";
+  }
+  return "Starting to show up";
+}
+
+function getRepeatedSignal(entries: ReturnType<typeof getStoredCoffeeJournal>) {
+  const drinkCounts = new Map<string, number>();
+  const tagCounts = new Map<string, number>();
+  const cafeCounts = new Map<string, number>();
+
+  for (const entry of entries) {
+    drinkCounts.set(entry.drink, (drinkCounts.get(entry.drink) ?? 0) + 1);
+    cafeCounts.set(entry.cafeName, (cafeCounts.get(entry.cafeName) ?? 0) + 1);
+
+    for (const tag of entry.tags) {
+      const normalizedTag = tag.toLowerCase();
+      tagCounts.set(normalizedTag, (tagCounts.get(normalizedTag) ?? 0) + 1);
+    }
+  }
+
+  const strongestDrink = Array.from(drinkCounts.entries()).sort((left, right) => right[1] - left[1])[0] ?? null;
+  const strongestTag = Array.from(tagCounts.entries()).sort((left, right) => right[1] - left[1])[0] ?? null;
+  const strongestCafe = Array.from(cafeCounts.entries()).sort((left, right) => right[1] - left[1])[0] ?? null;
+
+  if (strongestTag && strongestTag[1] >= 2) {
+    return titleCase(strongestTag[0]);
+  }
+  if (strongestDrink && strongestDrink[1] >= 2) {
+    return getDrinkFamilyLabel(strongestDrink[0]) ?? strongestDrink[0];
+  }
+  if (strongestCafe && strongestCafe[1] >= 2) {
+    return strongestCafe[0];
+  }
+
+  return null;
+}
+
+function titleCase(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
 const TASTE_SETUP_SHARE_URL = "https://www.near-me.cafe/?intent=taste";
 
 function getWheelColor(color: string, value: number) {
@@ -224,10 +278,21 @@ export function CoffeeJournalPanel({
 
   const insight = useMemo(() => getCoffeeJournalInsight(entries, profileState), [entries, profileState]);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+  const [openEntryMenuId, setOpenEntryMenuId] = useState<string | null>(null);
   const leadingTags = insight.topTags.slice(0, 3);
   const journalSections = useMemo(() => getJournalSections(entries), [entries]);
   const favoriteDrinkFamily = getDrinkFamilyLabel(insight.favoriteDrink);
   const recentDrinkFamily = getDrinkFamilyLabel(insight.recentFavoriteDrink);
+  const repeatedSignal = useMemo(() => getRepeatedSignal(entries), [entries]);
+  const hasStarterRead = entries.length >= 3;
+  const hasMeaningfulStory = entries.length >= 5 && Boolean(repeatedSignal);
+  const strongestSignal =
+    repeatedSignal ??
+    (insight.primaryTaste && favoriteDrinkFamily ? `${insight.primaryTaste} ${favoriteDrinkFamily}` : null) ??
+    insight.primaryTaste ??
+    favoriteDrinkFamily ??
+    "Still learning";
+  const strongestEvidence = insight.tasteDrivers[0]?.cafeName ?? insight.topCafe ?? "A few more logs will sharpen this";
   const wheelGradient = useMemo(() => {
     const total = insight.tasteWheel.length || 1;
     return `conic-gradient(${insight.tasteWheel
@@ -539,6 +604,20 @@ export function CoffeeJournalPanel({
     }
   }
 
+  function handleDeleteEntry(entry: ReturnType<typeof getStoredCoffeeJournal>[number]) {
+    const message =
+      entry.source === "review"
+        ? "Remove this from your Journal? Your public review stays published."
+        : "Delete this log? This removes it from your Journal and taste read.";
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    removeCoffeeJournalEntry(entry.id);
+    setOpenEntryMenuId(null);
+  }
+
   return (
     <div className="map-journal-shell fade-slide-in">
       <section className="map-journal-panel" role="dialog" aria-modal="false" aria-label="Your taste">
@@ -621,48 +700,46 @@ export function CoffeeJournalPanel({
 
             <div className="coffee-journal-summary-grid">
               <article className="coffee-journal-summary-card">
-                <span>Entries</span>
-                <strong>{insight.entryCount}</strong>
+                <span>Based on</span>
+                <strong>{insight.entryCount === 1 ? "1 cup" : `${insight.entryCount} cups`}</strong>
               </article>
               <article className="coffee-journal-summary-card">
-                <span>Average score</span>
-                <strong>{insight.averageRating ? `${insight.averageRating}/10` : "No score yet"}</strong>
+                <span>Strongest signal</span>
+                <strong>{strongestSignal}</strong>
               </article>
               <article className="coffee-journal-summary-card">
-                <span>Cities</span>
-                <strong>{insight.cityCount}</strong>
-              </article>
-              <article className="coffee-journal-summary-card">
-                <span>Repeat cafe</span>
-                <strong>{insight.topCafe ?? "Still learning"}</strong>
+                <span>Best evidence</span>
+                <strong>{strongestEvidence}</strong>
               </article>
             </div>
           </section>
 
-          <section className="coffee-journal-spectrum" aria-label="Taste wheel notes">
-            <div className="coffee-journal-spectrum-head">
-              <span>Near Me wheel</span>
-              <strong>{insight.primaryTaste && insight.secondaryTaste ? `${insight.primaryTaste} + ${insight.secondaryTaste}` : insight.primaryTaste ?? "Still learning"}</strong>
-            </div>
+          {hasStarterRead ? (
+            <section className="coffee-journal-spectrum" aria-label="Taste wheel notes">
+              <div className="coffee-journal-spectrum-head">
+                <span>Near Me wheel</span>
+                <strong>{insight.primaryTaste && insight.secondaryTaste ? `${insight.primaryTaste} + ${insight.secondaryTaste}` : insight.primaryTaste ?? "Still learning"}</strong>
+              </div>
 
-            <div className="coffee-journal-spectrum-grid">
-              {visibleWheelTags.map((segment) => (
-                <article className="coffee-journal-spectrum-card" key={segment.key}>
-                  <div
-                    className="coffee-journal-spectrum-swatch"
-                    style={{ backgroundColor: segment.color }}
-                    aria-hidden="true"
-                  />
-                  <div className="coffee-journal-spectrum-copy">
-                    <strong>{segment.label}</strong>
-                    <span>{Math.round(segment.value * 100)}% pull right now</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
+              <div className="coffee-journal-spectrum-grid">
+                {visibleWheelTags.map((segment, index) => (
+                  <article className="coffee-journal-spectrum-card" key={segment.key}>
+                    <div
+                      className="coffee-journal-spectrum-swatch"
+                      style={{ backgroundColor: segment.color }}
+                      aria-hidden="true"
+                    />
+                    <div className="coffee-journal-spectrum-copy">
+                      <strong>{segment.label}</strong>
+                      <span>{getTastePullLabel(segment.value, index)}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-          {insight.tasteDrivers.length > 0 ? (
+          {hasMeaningfulStory && insight.tasteDrivers.length > 0 ? (
             <section className="coffee-journal-drivers" aria-label="What changed your taste">
               <div className="coffee-journal-spectrum-head">
                 <span>What changed your taste</span>
@@ -692,7 +769,7 @@ export function CoffeeJournalPanel({
                           style={{ width: `${Math.max(18, Math.round(driver.impact * 100))}%` }}
                         />
                       </div>
-                      <span>{Math.round(driver.impact * 100)}% taste pull</span>
+                      <span>{driver.impact >= 0.72 ? "Strong taste pull" : "Taste signal"}</span>
                     </div>
 
                     <div className="coffee-journal-driver-foot">
@@ -715,7 +792,7 @@ export function CoffeeJournalPanel({
             </section>
           ) : null}
 
-          {insight.patternInsights.length > 0 || insight.profileAlignment ? (
+          {hasMeaningfulStory && (insight.patternInsights.length > 0 || insight.profileAlignment) ? (
             <section className="coffee-journal-insights" aria-label="Journal insights">
               <div className="coffee-journal-spectrum-head">
                 <span>Pattern notes</span>
@@ -740,93 +817,97 @@ export function CoffeeJournalPanel({
             </section>
           ) : null}
 
-          <section className="coffee-journal-evolution" aria-label="Taste evolution">
-            <div className="coffee-journal-spectrum-head">
-              <span>Taste evolution</span>
-              <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
-            </div>
-            <div className="coffee-journal-evolution-card">
-              <strong>{insight.evolutionSummary}</strong>
-              {insight.latestHighlight ? <span>Recent standout: {insight.latestHighlight}</span> : null}
-            </div>
-            <div className="coffee-journal-evolution-lanes">
-              {evolutionLanes.map((segment) => {
-                const trendLabel =
-                  segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
+          {hasMeaningfulStory ? (
+            <section className="coffee-journal-evolution" aria-label="Taste evolution">
+              <div className="coffee-journal-spectrum-head">
+                <span>Taste evolution</span>
+                <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
+              </div>
+              <div className="coffee-journal-evolution-card">
+                <strong>{insight.evolutionSummary}</strong>
+                {insight.latestHighlight ? <span>Recent standout: {insight.latestHighlight}</span> : null}
+              </div>
+              <div className="coffee-journal-evolution-lanes">
+                {evolutionLanes.map((segment) => {
+                  const trendLabel =
+                    segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
 
-                return (
-                  <article className="coffee-journal-evolution-lane" key={segment.key}>
-                    <div className="coffee-journal-evolution-lane-head">
-                      <div className="coffee-journal-evolution-lane-title">
-                        <span
-                          className="coffee-journal-evolution-lane-dot"
-                          style={{ backgroundColor: segment.color }}
-                          aria-hidden="true"
-                        />
-                        <strong>{segment.label}</strong>
+                  return (
+                    <article className="coffee-journal-evolution-lane" key={segment.key}>
+                      <div className="coffee-journal-evolution-lane-head">
+                        <div className="coffee-journal-evolution-lane-title">
+                          <span
+                            className="coffee-journal-evolution-lane-dot"
+                            style={{ backgroundColor: segment.color }}
+                            aria-hidden="true"
+                          />
+                          <strong>{segment.label}</strong>
+                        </div>
+                        <span>{trendLabel}</span>
                       </div>
-                      <span>{trendLabel}</span>
-                    </div>
-                    <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
-                      <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
-                        <div
-                          className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
-                          style={{
-                            width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
-                            backgroundColor: segment.color,
-                          }}
-                        />
+                      <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
+                        <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
+                          <div
+                            className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
+                            style={{
+                              width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
+                              backgroundColor: segment.color,
+                            }}
+                          />
+                        </div>
+                        <div className="coffee-journal-evolution-bar-track">
+                          <div
+                            className="coffee-journal-evolution-bar-fill"
+                            style={{
+                              width: `${Math.max(12, Math.round(segment.value * 100))}%`,
+                              backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="coffee-journal-evolution-bar-track">
-                        <div
-                          className="coffee-journal-evolution-bar-fill"
-                          style={{
-                            width: `${Math.max(12, Math.round(segment.value * 100))}%`,
-                            backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
-                          }}
-                        />
+                      <div className="coffee-journal-evolution-legend">
+                        <span>Recent</span>
+                        <span>All time</span>
                       </div>
-                    </div>
-                    <div className="coffee-journal-evolution-legend">
-                      <span>Recent</span>
-                      <span>All time</span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
 
           <article className="coffee-journal-pulse">
             <span>Near Me is learning</span>
             <strong>{insight.learningPrompt}</strong>
           </article>
 
-          <section className="coffee-journal-share" aria-label="Shareable journal moments">
-            <div className="coffee-journal-spectrum-head">
-              <span>Shareable moments</span>
-              <strong>Little snapshots of your coffee story</strong>
-            </div>
+          {hasMeaningfulStory ? (
+            <section className="coffee-journal-share" aria-label="Shareable journal moments">
+              <div className="coffee-journal-spectrum-head">
+                <span>Shareable moments</span>
+                <strong>Your taste read has a clear story</strong>
+              </div>
 
-            <div className="coffee-journal-share-grid">
-              {insight.shareMoments.map((moment) => (
-                <article className="coffee-journal-share-card" key={moment.id}>
-                  <span>{moment.eyebrow}</span>
-                  <strong>{moment.title}</strong>
-                  <p>{moment.body}</p>
-                  <button
-                    className="coffee-journal-share-button"
-                    type="button"
-                    onClick={() => void handleShareMoment(moment)}
-                  >
-                    Share card
-                  </button>
-                </article>
-              ))}
-            </div>
+              <div className="coffee-journal-share-grid">
+                {insight.shareMoments.map((moment) => (
+                  <article className="coffee-journal-share-card" key={moment.id}>
+                    <span>{moment.eyebrow}</span>
+                    <strong>{moment.title}</strong>
+                    <p>{moment.body}</p>
+                    <button
+                      className="coffee-journal-share-button"
+                      type="button"
+                      onClick={() => void handleShareMoment(moment)}
+                    >
+                      Share card
+                    </button>
+                  </article>
+                ))}
+              </div>
 
-            {shareFeedback ? <div className="coffee-journal-share-feedback">{shareFeedback}</div> : null}
-          </section>
+              {shareFeedback ? <div className="coffee-journal-share-feedback">{shareFeedback}</div> : null}
+            </section>
+          ) : null}
         </div>
 
         <div className="map-top-picks-results coffee-journal-results">
@@ -863,6 +944,26 @@ export function CoffeeJournalPanel({
                             <div className="coffee-journal-entry-score">
                               <strong>{entry.rating}</strong>
                               <span>/10</span>
+                            </div>
+
+                            <div className="coffee-journal-entry-actions">
+                              <button
+                                className="coffee-journal-entry-menu-button"
+                                type="button"
+                                aria-label={`More actions for ${entry.cafeName}`}
+                                aria-expanded={openEntryMenuId === entry.id}
+                                onClick={() => setOpenEntryMenuId((current) => (current === entry.id ? null : entry.id))}
+                              >
+                                ...
+                              </button>
+
+                              {openEntryMenuId === entry.id ? (
+                                <div className="coffee-journal-entry-menu">
+                                  <button type="button" onClick={() => handleDeleteEntry(entry)}>
+                                    {entry.source === "review" ? "Remove from Journal" : "Delete log"}
+                                  </button>
+                                </div>
+                              ) : null}
                             </div>
                           </div>
 
