@@ -182,6 +182,8 @@ const journalTags = [
 const radiusOptionsKm = [1, 3, 5, 10];
 const TODAY_CUP_FEEDBACK_STORAGE_KEY = "near-me-today-cup-feedback";
 const TODAY_CUP_HISTORY_STORAGE_KEY = "near-me-today-cup-history";
+const CURRENT_PLACE_STRONG_DISTANCE_KM = 0.08;
+const CURRENT_PLACE_MAX_DISTANCE_KM = 0.16;
 const TEST_SPONSORED_PLACEMENTS: SponsoredPlacement[] = [
   {
     slug: "sorcery-coffee-roasters-diep-in-die-berg",
@@ -320,6 +322,11 @@ function formatDistance(distanceKm: number) {
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getCafeScoreForCurrentPlaceTieBreak(cafe: Cafe) {
+  const rating = cafe.reviewSummary.reviewCount > 0 ? cafe.reviewSummary.averageRating : 6.5;
+  return rating + Math.min(cafe.reviewSummary.reviewCount, 18) * 0.05;
 }
 
 function mergeFallbackPlaces(
@@ -1181,6 +1188,48 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
       return typeof distance === "number" && distance <= selectedRadiusKm;
     });
   }, [cafeDistances, cafesByDistance, selectedRadiusKm, userLocation]);
+  const currentPlaceCafe = useMemo(() => {
+    if (!userLocation || cafesByDistance.length === 0) {
+      return null;
+    }
+
+    const closeCandidates = cafesByDistance
+      .map((cafe) => ({
+        cafe,
+        distanceKm: cafeDistances.get(cafe.id) ?? Number.POSITIVE_INFINITY,
+      }))
+      .filter((candidate) => Number.isFinite(candidate.distanceKm) && candidate.distanceKm <= CURRENT_PLACE_MAX_DISTANCE_KM)
+      .slice(0, 4);
+
+    if (closeCandidates.length === 0) {
+      return null;
+    }
+
+    const sortedCandidates = [...closeCandidates].sort((left, right) => {
+      if (Math.abs(left.distanceKm - right.distanceKm) > 0.03) {
+        return left.distanceKm - right.distanceKm;
+      }
+
+      return getCafeScoreForCurrentPlaceTieBreak(right.cafe) - getCafeScoreForCurrentPlaceTieBreak(left.cafe);
+    });
+
+    const primary = sortedCandidates[0];
+    const secondary = sortedCandidates[1] ?? null;
+
+    if (primary.distanceKm <= CURRENT_PLACE_STRONG_DISTANCE_KM) {
+      return primary;
+    }
+
+    if (!secondary) {
+      return primary;
+    }
+
+    if (secondary.distanceKm - primary.distanceKm >= 0.05) {
+      return primary;
+    }
+
+    return null;
+  }, [cafeDistances, cafesByDistance, userLocation]);
   const nextRadiusKm = radiusOptionsKm.find((radiusKm) => radiusKm > selectedRadiusKm) ?? null;
   const hasNoRadiusMatches = Boolean(userLocation) && cafesWithinRadius.length === 0;
   const activeFallbackPlace =
@@ -1246,6 +1295,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
               : journalVisitCount > 1
                 ? `${cafe.name} already shows up in your journal, so Near Me knows it is part of your orbit.`
                 : null;
+        const isCurrentPlace = currentPlaceCafe?.cafe.id === cafe.id;
+        const onSiteBoost =
+          isCurrentPlace
+            ? currentPlaceCafe.distanceKm <= CURRENT_PLACE_STRONG_DISTANCE_KM
+              ? 5.4
+              : 4.3
+            : 0;
+        const onSiteNote = isCurrentPlace
+          ? `Near Me thinks you are at ${cafe.name} right now, so it is treating this as your live coffee stop.`
+          : null;
 
         let momentBoost = 0;
         if (todayCupMoment.key === "morning") {
@@ -1372,14 +1431,16 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
           momentBoost -
           distance * distanceWeight +
           intentBoost +
-          routineBoost;
+          routineBoost +
+          onSiteBoost;
 
         return {
           cafe,
           distance,
           totalScore,
           routineBoost,
-          routineNote,
+          routineNote: onSiteNote ?? routineNote,
+          isCurrentPlace,
           decisionGuide: getCafeDecisionGuide(cafe),
           journalMatch,
           profileMatch:
@@ -1403,6 +1464,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     todayCupFeedbackByCafeId,
     todayCupMoment.key,
     todayCupMoment.shortLabel,
+    currentPlaceCafe,
     userLocation,
   ]);
 
@@ -3877,8 +3939,8 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                     </div>
                     <div className="diesel-selection-head-actions">
                       <div className="diesel-selection-score diesel-selection-score-today">
-                        <strong>{formatDistance(todayCupPrimary.distance)}</strong>
-                        <span>{todayCupPrimary.decisionGuide.confidenceRead}</span>
+                        <strong>{todayCupPrimary.isCurrentPlace ? "You're here" : formatDistance(todayCupPrimary.distance)}</strong>
+                        <span>{todayCupPrimary.isCurrentPlace ? "Live stop detected" : todayCupPrimary.decisionGuide.confidenceRead}</span>
                       </div>
                       <button
                         className="map-search-close diesel-selection-dismiss"
@@ -4001,7 +4063,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                           <div className="diesel-selection-trust diesel-today-context">
                             <span>Why this now</span>
                             <strong>
-                              {todayCupPrimary.routineBoost > 0.8 ? "Routine-aware pick" : "Best fit for this moment"}
+                              {todayCupPrimary.isCurrentPlace
+                                ? "Live stop detected"
+                                : todayCupPrimary.routineBoost > 0.8
+                                  ? "Routine-aware pick"
+                                  : "Best fit for this moment"}
                             </strong>
                             <p>
                               {todayCupPrimary.routineNote ??
