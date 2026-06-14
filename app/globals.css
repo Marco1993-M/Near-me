@@ -1337,7 +1337,7 @@ img {
 
 .coffee-journal-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -1900,12 +1900,12 @@ img {
 .coffee-journal-entry {
   gap: 0.5rem;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .coffee-journal-entry-topline {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.72rem;
 }
@@ -1995,6 +1995,66 @@ img {
 .coffee-journal-entry-score span {
   font-size: 0.66rem;
   font-weight: 700;
+}
+
+.coffee-journal-entry-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coffee-journal-entry-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 252, 0.68);
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.coffee-journal-entry-menu-button:hover,
+.coffee-journal-entry-menu-button:focus-visible {
+  border-color: rgba(31, 106, 56, 0.22);
+  color: #1f6a38;
+  background: rgba(199, 245, 211, 0.22);
+}
+
+.coffee-journal-entry-menu {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 0.34rem);
+  right: 0;
+  min-width: 9.5rem;
+  padding: 0.32rem;
+  border: 1px solid rgba(20, 32, 24, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow: 0 14px 30px rgba(20, 32, 24, 0.14);
+}
+
+.coffee-journal-entry-menu button {
+  width: 100%;
+  padding: 0.58rem 0.64rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #7a2f23;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.coffee-journal-entry-menu button:hover,
+.coffee-journal-entry-menu button:focus-visible {
+  background: rgba(122, 47, 35, 0.08);
 }
 
 .coffee-journal-entry-foot {
