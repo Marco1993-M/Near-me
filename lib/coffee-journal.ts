@@ -370,6 +370,18 @@ export function addCoffeeJournalEntry(input: JournalInput) {
   return nextEntry;
 }
 
+export function removeCoffeeJournalEntry(entryId: string) {
+  const current = getStoredCoffeeJournal();
+  const nextEntries = current.filter((entry) => entry.id !== entryId);
+
+  if (nextEntries.length === current.length) {
+    return false;
+  }
+
+  setStoredCoffeeJournal(nextEntries);
+  return true;
+}
+
 type ReviewJournalImport = {
   reviewId: string;
   cafeId: string | null;
