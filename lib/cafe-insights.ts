@@ -3,7 +3,12 @@ import type { Cafe, CafeTrustSignals } from "@/types/cafe";
 export type CafeDecisionGuide = {
   trustTitle: string;
   trustSummary: string;
+  confidenceLabel: string;
+  confidenceDetail: string;
+  evidenceQualityLabel: string;
   confidenceRead: string;
+  visitDecision: string;
+  detourRead: string;
   goIfHeadline: string;
   goIfSupport: string;
   bestFor: string;
@@ -12,6 +17,10 @@ export type CafeDecisionGuide = {
   orderDetail: string;
   travelFit: string;
   reviewHook: string;
+  reviewCtaLabel: string;
+  reviewPrompt: string;
+  reviewPlaceholder: string;
+  shouldPromoteReview: boolean;
   trustBullets: string[];
 };
 
@@ -43,6 +52,98 @@ function formatList(values: string[]) {
   return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
 }
 
+function getConfidenceRead(reviewCount: number, averageRating: number) {
+  if (reviewCount === 0) {
+    return {
+      label: "Unverified",
+      detail: "No reviews yet",
+      ctaLabel: "Be the first to review",
+      promoteReview: true,
+      solid: false,
+    };
+  }
+
+  if (reviewCount <= 2) {
+    return {
+      label: "Very early read",
+      detail: `${reviewCount} review${reviewCount === 1 ? "" : "s"} so far`,
+      ctaLabel: "Add a quick review",
+      promoteReview: true,
+      solid: false,
+    };
+  }
+
+  if (reviewCount <= 5 && averageRating < 7.5) {
+    return {
+      label: "Mixed early read",
+      detail: `${averageRating.toFixed(1)} from ${reviewCount} reviews`,
+      ctaLabel: "Been here? Review",
+      promoteReview: true,
+      solid: false,
+    };
+  }
+
+  if (reviewCount <= 5) {
+    return {
+      label: "Promising early read",
+      detail: `${averageRating.toFixed(1)} from ${reviewCount} reviews`,
+      ctaLabel: "Add your take",
+      promoteReview: true,
+      solid: false,
+    };
+  }
+
+  if (reviewCount >= 10 && averageRating >= 8.5) {
+    return {
+      label: "Strong bet",
+      detail: `${averageRating.toFixed(1)} from ${reviewCount} reviews`,
+      ctaLabel: "Add your take",
+      promoteReview: false,
+      solid: true,
+    };
+  }
+
+  if (reviewCount >= 6 && averageRating >= 8) {
+    return {
+      label: "Solid local signal",
+      detail: `${averageRating.toFixed(1)} from ${reviewCount} reviews`,
+      ctaLabel: "Add your take",
+      promoteReview: false,
+      solid: true,
+    };
+  }
+
+  return {
+    label: "Mixed local read",
+    detail: `${averageRating.toFixed(1)} from ${reviewCount} reviews`,
+    ctaLabel: "Been here? Review",
+    promoteReview: true,
+    solid: false,
+  };
+}
+
+export function getCafeReviewPlaceholder(cafe: Pick<Cafe, "drinks">) {
+  const cortadoDrink = pickFirst(cafe.drinks, ["cortado"]);
+  const espressoDrink = pickFirst(cafe.drinks, ["espresso", "macchiato"]);
+  const filterDrink = pickFirst(cafe.drinks, ["filter", "pour over", "pourover", "batch"]);
+  const flatWhiteDrink = pickFirst(cafe.drinks, ["flat white"]);
+  const drinkPair = [cortadoDrink, espressoDrink].filter((drink): drink is string => Boolean(drink));
+
+  if (drinkPair.length > 0) {
+    return `Tried the ${formatList(drinkPair).toLowerCase()}? Say what you ordered, how it landed, and whether you would send someone nearby.`;
+  }
+
+  if (filterDrink) {
+    return `Tried the ${filterDrink.toLowerCase()}? Mention clarity, sweetness, and whether it is worth a detour.`;
+  }
+
+  if (flatWhiteDrink) {
+    return `Tried the ${flatWhiteDrink.toLowerCase()}? Mention texture, sweetness, and whether you would recommend it nearby.`;
+  }
+
+  return "What did you order, how did it taste, and would you recommend it as a quick stop or a destination?";
+}
+
 export function getCafeDecisionGuide(
   cafe: Cafe,
   trustSignals?: CafeTrustSignals | null,
@@ -57,6 +158,7 @@ export function getCafeDecisionGuide(
   const lowerSignals = signals.map((value) => value.toLowerCase());
   const reviewCount = cafe.reviewSummary.reviewCount;
   const averageRating = cafe.reviewSummary.averageRating;
+  const confidence = getConfidenceRead(reviewCount, averageRating);
 
   const cortadoDrink = pickFirst(cafe.drinks, ["cortado"]);
   const flatWhiteDrink = pickFirst(cafe.drinks, ["flat white"]);
@@ -79,6 +181,14 @@ export function getCafeDecisionGuide(
   const topRated = averageRating >= 8.5 && reviewCount >= 3;
   const socialProof = reviewCount >= 6;
   const worthDetour = topRated || (socialProof && averageRating >= 8);
+  const reviewPlaceholder = getCafeReviewPlaceholder(cafe);
+  const detailedReviewCount = (trustSignals?.recentReviews ?? []).filter((review) => review.note.trim().length >= 64).length;
+  const evidenceQualityLabel =
+    reviewCount === 0
+      ? "No reviews yet"
+      : detailedReviewCount >= Math.ceil(reviewCount / 2)
+        ? `${reviewCount} review${reviewCount === 1 ? "" : "s"} with some detail`
+        : `${reviewCount} short review${reviewCount === 1 ? "" : "s"} so far`;
 
   const bestFor = quiet
     ? "Slow coffee breaks and lingering a little longer"
@@ -135,7 +245,7 @@ export function getCafeDecisionGuide(
           : socialProof
             ? `Social proof: ${reviewCount} reviews already shaping the picture here.`
             : reviewCount > 0
-              ? `${reviewCount} review${reviewCount === 1 ? "" : "s"} in so far, which is enough to start reading patterns.`
+              ? `${reviewCount} review${reviewCount === 1 ? "" : "s"} in so far, which is enough to start a read but not enough to settle it.`
               : "Still early: this one needs more reviews before the full picture sharpens.",
         trustSignals?.topTags?.[0]
           ? `People consistently mention ${formatList(trustSignals.topTags.slice(0, 2)).toLowerCase()}.`
@@ -148,21 +258,17 @@ export function getCafeDecisionGuide(
     ),
   ).slice(0, 4);
 
-  const trustTitle = topRated
-    ? "Worth going out of your way for"
-    : specialtyForward
-      ? "A strong specialty-first signal"
-      : socialProof
-        ? "Already building trust with locals"
-        : "Promising, but still early";
+  const trustTitle = confidence.label;
 
   const trustSummary = topRated
     ? `${cafe.name} looks like one of the stronger bets in ${cafe.city} if you want specialty coffee without doing detective work first.`
-    : specialtyForward
-      ? `${cafe.name} gives off the right specialty-coffee signals and looks like a reasonable first stop in ${cafe.city}.`
-      : socialProof
-        ? `${cafe.name} is building enough review signal to feel more trustworthy than a random map listing.`
-        : `${cafe.name} still needs more reviews, but the early signals are interesting enough to keep it on the radar.`;
+    : confidence.promoteReview
+      ? `${cafe.name} has some useful signals, but Near Me needs a few more specific reviews before calling it a strong pick.`
+      : specialtyForward
+        ? `${cafe.name} gives off the right specialty-coffee signals and looks like a reasonable first stop in ${cafe.city}.`
+    : socialProof
+      ? `${cafe.name} is building enough review signal to feel more trustworthy than a random map listing.`
+      : `${cafe.name} still needs more reviews, but the early signals are interesting enough to keep it on the radar.`;
 
   const travelFit = worthDetour
     ? "Good candidate if you are visiting the area and only have time for one careful coffee stop."
@@ -172,17 +278,23 @@ export function getCafeDecisionGuide(
 
   const reviewHook =
     reviewCount > 0
-      ? "A few more thoughtful reviews would make this recommendation much sharper."
+      ? `${evidenceQualityLabel}. A few more thoughtful reviews would make this recommendation much sharper.`
       : "This is exactly the kind of cafe where an early review can really help the next person.";
 
-  const confidenceRead = topRated
-    ? "High trust read"
-    : socialProof || specialtyForward
-      ? "Solid local signal"
-      : "Early but promising";
+  const confidenceRead = confidence.label;
+
+  const detourRead = worthDetour
+    ? "Worth a detour"
+    : reviewCount === 0
+      ? "Still unverified"
+      : confidence.solid
+        ? "Reliable nearby pick"
+        : "Nearby try, not a detour yet";
 
   const goIfHeadline = quiet
     ? "Quiet coffee time"
+    : confidence.promoteReview && reviewCount > 0
+      ? `${order} nearby try`
     : milkForward
       ? "Reliable cortados and flat whites"
       : filterForward
@@ -193,26 +305,58 @@ export function getCafeDecisionGuide(
 
   const goIfSupport = quiet
     ? "Go if you want a calmer stop where the coffee can be the main event."
-    : milkForward
-      ? "Go if you usually judge a place by its short milk drinks and want an easy first order."
+    : confidence.promoteReview && reviewCount > 0
+      ? `Worth trying if you are nearby for ${order.toLowerCase()}, but the review signal is still mixed.`
+      : milkForward
+        ? "Go if you usually judge a place by its short milk drinks and want an easy first order."
       : filterForward
         ? "Go if you enjoy cleaner, more curious specialty cups instead of the safest default."
         : espressoForward
           ? "Go if you like reading a cafe quickly through espresso and shorter drinks."
           : "Go if you want a specialty-leaning stop without doing too much detective work first.";
 
+  const calibratedBestForDetail =
+    confidence.promoteReview && reviewCount > 0
+      ? `Probably most useful if you are nearby and want to test the ${order.toLowerCase()} for yourself.`
+      : bestForDetail;
+
+  const visitDecision =
+    reviewCount === 0
+      ? `Not enough review signal yet; add a first coffee read if you have been to ${cafe.name}.`
+      : confidence.promoteReview
+        ? `Worth trying if you are nearby for ${order.toLowerCase()}, but the review signal is still mixed.`
+        : worthDetour
+          ? `Worth a detour for ${order.toLowerCase()} if it matches your taste.`
+          : `Worth trying for ${order.toLowerCase()}, with enough local signal to trust the read.`;
+
+  const reviewPrompt =
+    reviewCount === 0
+      ? `Be the first to sharpen this page. ${reviewPlaceholder}`
+      : confidence.promoteReview
+        ? `This page needs a few more useful notes. ${reviewPlaceholder}`
+        : `Add your take for the next coffee run. ${reviewPlaceholder}`;
+
   return {
     trustTitle,
     trustSummary,
+    confidenceLabel: confidence.label,
+    confidenceDetail: confidence.detail,
+    evidenceQualityLabel,
     confidenceRead,
+    visitDecision,
+    detourRead,
     goIfHeadline,
     goIfSupport,
     bestFor,
     order,
-    bestForDetail,
+    bestForDetail: calibratedBestForDetail,
     orderDetail,
     travelFit,
     reviewHook,
+    reviewCtaLabel: confidence.ctaLabel,
+    reviewPrompt,
+    reviewPlaceholder,
+    shouldPromoteReview: confidence.promoteReview,
     trustBullets,
   };
 }
