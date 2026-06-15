@@ -50,6 +50,7 @@ import {
 type HomeDiscoveryScreenProps = {
   cafes: Cafe[];
   openTasteSetup?: boolean;
+  initialReviewCafeSlug?: string;
 };
 
 type DiscoverySource =
@@ -61,6 +62,7 @@ type DiscoverySource =
   | "map_marker"
   | "auto_nearby"
   | "deep_link"
+  | "detail_page"
   | "empty_state"
   | "fallback_card"
   | "active_card";
@@ -671,7 +673,11 @@ function buildOptimisticReviewState(
   };
 }
 
-export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDiscoveryScreenProps) {
+export function HomeDiscoveryScreen({
+  cafes,
+  openTasteSetup = false,
+  initialReviewCafeSlug,
+}: HomeDiscoveryScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isIntroVisible, setIsIntroVisible] = useState(false);
@@ -785,6 +791,7 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
   const lastTrackedLocationStateRef = useRef<string | null>(null);
   const profilerSourceRef = useRef<DiscoverySource>("toolbar");
   const handledTasteIntentRef = useRef(false);
+  const handledReviewIntentRef = useRef(false);
   const lastClaimedReviewLinkKeyRef = useRef<string | null>(null);
 
   const coffeeProfileState = useSyncExternalStore(
@@ -930,6 +937,42 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
     openProfiler("deep_link");
     router.replace(pathname, { scroll: false });
   }, [openTasteSetup, pathname, router]);
+
+  useEffect(() => {
+    if (!initialReviewCafeSlug || handledReviewIntentRef.current) {
+      return;
+    }
+
+    const matchedCafe =
+      mappableCafes.find((cafe) => cafe.slug === initialReviewCafeSlug) ??
+      hydratedCafes.find((cafe) => cafe.slug === initialReviewCafeSlug);
+
+    if (!matchedCafe) {
+      return;
+    }
+
+    handledReviewIntentRef.current = true;
+    hasExplicitCafeSelectionRef.current = true;
+    setIsIntroVisible(false);
+    setIsCafeCardVisible(true);
+    setActiveCafeId(matchedCafe.id);
+    setActiveFallbackId(null);
+    setSearchFocusedCafeId(null);
+    setSearchFocusedFallbackId(null);
+    setSheetState("expanded");
+    setIsSearchOpen(false);
+    setIsTopPicksOpen(false);
+    setIsProfilerOpen(false);
+    setIsJournalOpen(false);
+    setReviewTarget({ type: "cafe", cafe: matchedCafe });
+    resetReviewForm();
+    setIsReviewOpen(true);
+    trackEvent("review_started", {
+      source: "detail_page",
+      target_type: "cafe",
+    });
+    router.replace(pathname, { scroll: false });
+  }, [hydratedCafes, initialReviewCafeSlug, mappableCafes, pathname, router]);
 
   const cafeDistances = useMemo(() => {
     if (!userLocation) {
