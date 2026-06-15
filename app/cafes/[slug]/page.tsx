@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CafeDetailShareActions } from "@/components/cafe-detail-share-actions";
 import { CafeDetailJournalMemory } from "@/components/cafe-detail-journal-memory";
 import { CafeDetailProfileInsight } from "@/components/cafe-detail-profile-insight";
 import { ProfileMatchPill } from "@/components/profile-match-pill";
@@ -23,6 +24,8 @@ export async function generateMetadata({
 }: CafePageProps): Promise<Metadata> {
   const { slug } = await params;
   const cafe = await getCafeBySlug(slug);
+  const trustSignals = cafe ? await getCafeTrustSignalsBySlug(slug) : null;
+  const decisionGuide = cafe ? getCafeDecisionGuide(cafe, trustSignals) : null;
   const title = cafe?.name
     ? cafe.name
     : slug
@@ -30,13 +33,28 @@ export async function generateMetadata({
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
 
+  const description = cafe && decisionGuide
+    ? `${decisionGuide.confidenceLabel}: ${decisionGuide.visitDecision}`
+    : "Canonical cafe page scaffold for future trusted cafe information, reviews, and local discovery.";
+  const pagePath = `/cafes/${slug}`;
+
   return {
     title: cafe ? `${cafe.name} in ${cafe.city}` : title,
-    description: cafe?.summary
-      ? cafe.summary
-      : "Canonical cafe page scaffold for future trusted cafe information, reviews, and local discovery.",
+    description,
     alternates: {
-      canonical: `/cafes/${slug}`,
+      canonical: pagePath,
+    },
+    openGraph: {
+      title: cafe ? `${cafe.name} in ${cafe.city} | Near Me` : `${title} | Near Me`,
+      description,
+      url: `https://www.near-me.cafe${pagePath}`,
+      siteName: "Near Me Cafe",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: cafe ? `${cafe.name} in ${cafe.city} | Near Me` : `${title} | Near Me`,
+      description,
     },
   };
 }
@@ -89,12 +107,9 @@ export default async function CafePage({ params }: CafePageProps) {
   const decisionGuide = getCafeDecisionGuide(cafe, trustSignals);
   const leadingTags = topTags.length > 0 ? topTags : cafe.tags.slice(0, 4);
   const pageUrl = `https://www.near-me.cafe/cafes/${cafe.slug}`;
-  const askReviewShareHref = `mailto:?subject=${encodeURIComponent(`Have you tried ${cafe.name}?`)}&body=${encodeURIComponent(
-    `Near Me has a ${decisionGuide.confidenceLabel.toLowerCase()} on ${cafe.name}: ${decisionGuide.confidenceDetail}. If you have been, add a quick review and help sharpen whether it is worth a stop: ${pageUrl}#leave-review`,
-  )}`;
-  const visitShareHref = `mailto:?subject=${encodeURIComponent(`${cafe.name} on Near Me`)}&body=${encodeURIComponent(
-    `${decisionGuide.visitDecision}\n\n${pageUrl}`,
-  )}`;
+  const reviewUrl = `https://www.near-me.cafe/?review=${encodeURIComponent(cafe.slug)}`;
+  const visitShareText = `${cafe.name} in ${cafe.city}: ${decisionGuide.visitDecision}`;
+  const reviewShareText = `Near Me has a ${decisionGuide.confidenceLabel.toLowerCase()} on ${cafe.name}: ${decisionGuide.confidenceDetail}. If you have been, add a quick review and help sharpen whether it is worth a stop.`;
   const trustSummary = (() => {
     const parts = [
       leadingTags[0] ? `${leadingTags[0].toLowerCase()} energy` : null,
@@ -220,21 +235,21 @@ export default async function CafePage({ params }: CafePageProps) {
                   Directions
                 </a>
               ) : null}
-              <Link className="diesel-selection-secondary" href={`/cafes/${cafe.slug}#leave-review`}>
+              <Link className="diesel-selection-secondary" href={`/?review=${encodeURIComponent(cafe.slug)}`}>
                 {decisionGuide.reviewCtaLabel}
               </Link>
-              <a className="diesel-selection-secondary" href={askReviewShareHref}>
-                Ask someone to review
-              </a>
               <Link className="diesel-selection-secondary" href={`/cafes/${cafe.slug}#recent-reviews`}>
                 Read reviews
               </Link>
             </div>
 
-            <div className="cafe-detail-share-row">
-              <a href={visitShareHref}>Send to a friend</a>
-              <span>{decisionGuide.shouldPromoteReview ? "More reviews will sharpen this read." : "Already enough signal for a visit read."}</span>
-            </div>
+            <CafeDetailShareActions
+              cafeName={cafe.name}
+              visitUrl={pageUrl}
+              reviewUrl={reviewUrl}
+              visitText={visitShareText}
+              reviewText={reviewShareText}
+            />
 
             <ProfileMatchPill cafe={cafe} variant="card" />
             <CafeDetailJournalMemory cafeId={cafe.id} cafeName={cafe.name} />
@@ -344,12 +359,12 @@ export default async function CafePage({ params }: CafePageProps) {
               <article className="cafe-detail-section" id="leave-review">
                 <h2>{decisionGuide.reviewCtaLabel}</h2>
                 <p>{decisionGuide.reviewPrompt}</p>
-                <label className="cafe-detail-review-starter">
-                  <span>Comment nudge</span>
-                  <textarea placeholder={decisionGuide.reviewPlaceholder} rows={4} readOnly />
-                </label>
+                <div className="cafe-detail-review-starter">
+                  <span>Comment nudge in the review form</span>
+                  <p>{decisionGuide.reviewPlaceholder}</p>
+                </div>
                 <p className="cafe-detail-section-note">
-                  One specific note is more useful than a long review. Open this cafe from the map to submit it.
+                  <Link href={`/?review=${encodeURIComponent(cafe.slug)}`}>Open the review form</Link>. One specific note is more useful than a long review.
                 </p>
               </article>
 

@@ -5307,10 +5307,21 @@ img {
   background: rgba(255, 255, 252, 0.5);
 }
 
-.cafe-detail-share-row a {
+.cafe-detail-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cafe-detail-share-actions a,
+.cafe-detail-share-actions button {
+  border: 0;
+  background: transparent;
   color: #1f6a38;
   font-size: 0.78rem;
   font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .cafe-detail-share-row span {
@@ -5441,21 +5452,14 @@ img {
   gap: 0.42rem;
 }
 
-.cafe-detail-review-starter textarea {
-  width: 100%;
-  min-height: 6.8rem;
-  resize: vertical;
+.cafe-detail-review-starter p {
+  margin: 0;
   padding: 0.78rem 0.82rem;
   border: 1px solid rgba(20, 32, 24, 0.12);
   border-radius: 16px;
   background: rgba(255, 255, 252, 0.64);
-  color: rgba(20, 32, 24, 0.72);
-  font: inherit;
+  color: rgba(20, 32, 24, 0.58);
   line-height: 1.45;
-}
-
-.cafe-detail-review-starter textarea::placeholder {
-  color: rgba(20, 32, 24, 0.46);
 }
 
 @keyframes cafe-detail-card-enter {

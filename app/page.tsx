@@ -1,5 +1,5 @@
 import { HomeDiscoveryScreen } from "@/components/home-discovery-screen";
-import { getFeaturedCafes } from "@/lib/cafes";
+import { getCafeBySlug, getFeaturedCafes } from "@/lib/cafes";
 
 export const revalidate = 3600;
 
@@ -7,12 +7,20 @@ type HomePageProps = {
   searchParams: Promise<{
     intent?: string;
     open?: string;
+    review?: string;
   }>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const featuredCafes = await getFeaturedCafes();
-  const { intent, open } = await searchParams;
+  const { intent, open, review } = await searchParams;
+  const [featuredCafes, reviewCafe] = await Promise.all([
+    getFeaturedCafes(),
+    review ? getCafeBySlug(review) : Promise.resolve(null),
+  ]);
+  const cafes =
+    reviewCafe && !featuredCafes.some((cafe) => cafe.id === reviewCafe.id)
+      ? [reviewCafe, ...featuredCafes]
+      : featuredCafes;
   const openTasteSetup = intent === "taste" || open === "taste";
 
   const structuredData = {
@@ -35,7 +43,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <HomeDiscoveryScreen cafes={featuredCafes} openTasteSetup={openTasteSetup} />
+      <HomeDiscoveryScreen cafes={cafes} openTasteSetup={openTasteSetup} initialReviewCafeSlug={review} />
     </main>
   );
 }
