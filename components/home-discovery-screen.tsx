@@ -37,7 +37,7 @@ import {
   subscribeToCoffeeProfile,
 } from "@/lib/coffee-profiler";
 import { CANONICAL_TABLES } from "@/lib/db-schema";
-import { getCafeDecisionGuide } from "@/lib/cafe-insights";
+import { getCafeDecisionGuide, getCafeReviewPlaceholder } from "@/lib/cafe-insights";
 import { siteConfig } from "@/lib/site";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -4354,7 +4354,11 @@ export function HomeDiscoveryScreen({ cafes, openTasteSetup = false }: HomeDisco
                   className="review-note-input"
                   value={reviewNote}
                   onChange={(event) => setReviewNote(event.target.value)}
-                  placeholder="Great flat white, calm space, worth the detour."
+                  placeholder={
+                    reviewTarget.type === "cafe"
+                      ? getCafeReviewPlaceholder(reviewTarget.cafe)
+                      : "What did you order, how did it taste, and would you recommend it as a quick stop or a destination?"
+                  }
                   rows={4}
                 />
               </label>
