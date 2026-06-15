@@ -5248,9 +5248,76 @@ img {
   line-height: 1.05;
 }
 
+.cafe-detail-decision {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 0.6rem;
+}
+
+.cafe-detail-confidence,
+.cafe-detail-decision-copy {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.78rem 0.84rem;
+  border: 1px solid rgba(20, 32, 24, 0.1);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.58);
+}
+
+.cafe-detail-confidence {
+  border-color: rgba(31, 106, 56, 0.16);
+  background:
+    linear-gradient(135deg, rgba(199, 245, 211, 0.32), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.66);
+}
+
+.cafe-detail-confidence span,
+.cafe-detail-decision-copy span,
+.cafe-detail-review-starter span {
+  color: rgba(20, 32, 24, 0.5);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cafe-detail-confidence strong,
+.cafe-detail-decision-copy strong {
+  color: var(--near-me-ink);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
 .cafe-detail-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
+}
+
+.cafe-detail-share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.66rem 0.78rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 252, 0.5);
+}
+
+.cafe-detail-share-row a {
+  color: #1f6a38;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.cafe-detail-share-row span {
+  color: rgba(20, 32, 24, 0.56);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .cafe-detail-quick-grid {
@@ -5326,6 +5393,24 @@ img {
     rgba(255, 255, 252, 0.52);
 }
 
+.cafe-review-card-detailed {
+  border-color: rgba(31, 106, 56, 0.14);
+  background:
+    linear-gradient(180deg, rgba(199, 245, 211, 0.18), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.64);
+}
+
+.cafe-review-card-compact {
+  gap: 0.36rem;
+  padding: 0.62rem 0.72rem;
+  background: rgba(255, 255, 252, 0.42);
+}
+
+.cafe-review-card-compact p {
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.78rem;
+}
+
 .cafe-review-head {
   display: flex;
   align-items: center;
@@ -5349,6 +5434,28 @@ img {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.cafe-detail-review-starter {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.cafe-detail-review-starter textarea {
+  width: 100%;
+  min-height: 6.8rem;
+  resize: vertical;
+  padding: 0.78rem 0.82rem;
+  border: 1px solid rgba(20, 32, 24, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 252, 0.64);
+  color: rgba(20, 32, 24, 0.72);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.cafe-detail-review-starter textarea::placeholder {
+  color: rgba(20, 32, 24, 0.46);
 }
 
 @keyframes cafe-detail-card-enter {

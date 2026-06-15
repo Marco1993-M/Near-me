@@ -88,6 +88,13 @@ export default async function CafePage({ params }: CafePageProps) {
   const recentReviews = trustSignals?.recentReviews ?? [];
   const decisionGuide = getCafeDecisionGuide(cafe, trustSignals);
   const leadingTags = topTags.length > 0 ? topTags : cafe.tags.slice(0, 4);
+  const pageUrl = `https://www.near-me.cafe/cafes/${cafe.slug}`;
+  const askReviewShareHref = `mailto:?subject=${encodeURIComponent(`Have you tried ${cafe.name}?`)}&body=${encodeURIComponent(
+    `Near Me has a ${decisionGuide.confidenceLabel.toLowerCase()} on ${cafe.name}: ${decisionGuide.confidenceDetail}. If you have been, add a quick review and help sharpen whether it is worth a stop: ${pageUrl}#leave-review`,
+  )}`;
+  const visitShareHref = `mailto:?subject=${encodeURIComponent(`${cafe.name} on Near Me`)}&body=${encodeURIComponent(
+    `${decisionGuide.visitDecision}\n\n${pageUrl}`,
+  )}`;
   const trustSummary = (() => {
     const parts = [
       leadingTags[0] ? `${leadingTags[0].toLowerCase()} energy` : null,
@@ -170,25 +177,32 @@ export default async function CafePage({ params }: CafePageProps) {
 
             <div className="diesel-selection-copy">
               <h1 className="cafe-detail-title">{cafe.name}</h1>
-              <p>{decisionGuide.goIfSupport}</p>
+              <p>{decisionGuide.visitDecision}</p>
             </div>
 
-            <ProfileMatchPill cafe={cafe} variant="card" />
-            <CafeDetailJournalMemory cafeId={cafe.id} cafeName={cafe.name} />
-            <CafeDetailProfileInsight cafe={cafe} />
+            <section className="cafe-detail-decision">
+              <div className="cafe-detail-confidence">
+                <span>{decisionGuide.confidenceLabel}</span>
+                <strong>{decisionGuide.confidenceDetail}</strong>
+              </div>
+              <div className="cafe-detail-decision-copy">
+                <span>{decisionGuide.detourRead}</span>
+                <strong>{decisionGuide.evidenceQualityLabel}</strong>
+              </div>
+            </section>
 
             <div className="cafe-detail-quick-grid">
               <article className="cafe-detail-quick-card">
-                <span>Go here for</span>
+                <span>First order</span>
+                <strong>{decisionGuide.order}</strong>
+              </article>
+              <article className="cafe-detail-quick-card">
+                <span>Best current read</span>
                 <strong>{decisionGuide.goIfHeadline}</strong>
               </article>
               <article className="cafe-detail-quick-card">
-                <span>Confidence</span>
-                <strong>{decisionGuide.confidenceRead}</strong>
-              </article>
-              <article className="cafe-detail-quick-card">
-                <span>Order</span>
-                <strong>{decisionGuide.order}</strong>
+                <span>Practical</span>
+                <strong>{cafe.website ? "Website available" : "Hours not verified"}</strong>
               </article>
             </div>
 
@@ -206,20 +220,41 @@ export default async function CafePage({ params }: CafePageProps) {
                   Directions
                 </a>
               ) : null}
-              <Link className="diesel-selection-secondary" href={`/cafes/${cafe.slug}#reviews`}>
-                Reviews
+              <Link className="diesel-selection-secondary" href={`/cafes/${cafe.slug}#leave-review`}>
+                {decisionGuide.reviewCtaLabel}
+              </Link>
+              <a className="diesel-selection-secondary" href={askReviewShareHref}>
+                Ask someone to review
+              </a>
+              <Link className="diesel-selection-secondary" href={`/cafes/${cafe.slug}#recent-reviews`}>
+                Read reviews
               </Link>
             </div>
+
+            <div className="cafe-detail-share-row">
+              <a href={visitShareHref}>Send to a friend</a>
+              <span>{decisionGuide.shouldPromoteReview ? "More reviews will sharpen this read." : "Already enough signal for a visit read."}</span>
+            </div>
+
+            <ProfileMatchPill cafe={cafe} variant="card" />
+            <CafeDetailJournalMemory cafeId={cafe.id} cafeName={cafe.name} />
+            <CafeDetailProfileInsight cafe={cafe} />
 
             <div className="cafe-detail-grid">
               <article className="cafe-detail-section">
                 <h2>Address</h2>
                 <p>{cafe.address}</p>
+                <p className="cafe-detail-section-note">
+                  {cafe.website ? <a href={cafe.website} target="_blank" rel="noreferrer">Cafe website</a> : "Website missing"}
+                  {" · "}
+                  {cafe.phone ? <a href={`tel:${cafe.phone}`}>{cafe.phone}</a> : "Phone missing"}
+                  {" · Hours not verified"}
+                </p>
               </article>
 
               <article className="cafe-detail-section">
                 <h2>Why Near Me would send you here</h2>
-                <p className="cafe-detail-section-note">{decisionGuide.trustTitle}</p>
+                <p className="cafe-detail-section-note">{decisionGuide.trustSummary}</p>
                 <div className="cafe-detail-guide-list">
                   {decisionGuide.trustBullets.map((bullet) => (
                     <div className="cafe-detail-guide-row" key={bullet}>
@@ -232,18 +267,22 @@ export default async function CafePage({ params }: CafePageProps) {
               <article className="cafe-detail-section">
                 <h2>Quick read</h2>
                 <p>{trustSummary}</p>
+                <p className="cafe-detail-section-note">{decisionGuide.detourRead}.</p>
               </article>
 
-              <article className="cafe-detail-section" id="reviews">
-                <h2>What people mention</h2>
+              <article className="cafe-detail-section">
+                <h2>Signals from reviews</h2>
                 {topTags.length > 0 ? (
-                  <div className="diesel-selection-tags">
-                    {topTags.map((tag) => (
-                      <span className="diesel-selection-tag" key={tag}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  <>
+                    <div className="diesel-selection-tags">
+                      {topTags.map((tag) => (
+                        <span className="diesel-selection-tag" key={tag}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="cafe-detail-section-note">These signals come from the reviews below.</p>
+                  </>
                 ) : (
                   <p>Structured review signals will show up here as more people leave feedback.</p>
                 )}
@@ -261,37 +300,57 @@ export default async function CafePage({ params }: CafePageProps) {
               </article>
 
               <article className="cafe-detail-section">
-                <h2>Best for</h2>
+                <h2>{decisionGuide.shouldPromoteReview ? "Early best fit" : "Best for"}</h2>
                 <p>{decisionGuide.bestForDetail}</p>
                 <p className="cafe-detail-section-note">{decisionGuide.travelFit}</p>
               </article>
 
-              <article className="cafe-detail-section">
+              <article className="cafe-detail-section" id="recent-reviews">
                 <h2>Recent reviews</h2>
+                <p className="cafe-detail-section-note">{decisionGuide.evidenceQualityLabel}</p>
                 {recentReviews.length > 0 ? (
                   <div className="cafe-review-list">
-                    {recentReviews.map((review) => (
-                      <article className="cafe-review-card" key={review.id}>
-                        <div className="cafe-review-head">
-                          <strong>{review.rating.toFixed(1)}</strong>
-                          <span>{review.drink ?? "Coffee"}</span>
-                        </div>
-                        <p>{review.note}</p>
-                        {review.tags.length > 0 ? (
-                          <div className="cafe-review-tags">
-                            {review.tags.map((tag) => (
-                              <span className="diesel-selection-tag" key={`${review.id}-${tag}`}>
-                                {tag}
-                              </span>
-                            ))}
+                    {recentReviews.map((review) => {
+                      const isDetailedReview = review.note.trim().length >= 48 || review.tags.length > 0;
+
+                      return (
+                        <article
+                          className={`cafe-review-card${isDetailedReview ? " cafe-review-card-detailed" : " cafe-review-card-compact"}`}
+                          key={review.id}
+                        >
+                          <div className="cafe-review-head">
+                            <strong>{review.rating.toFixed(1)}</strong>
+                            <span>{review.drink ?? "Coffee"}</span>
                           </div>
-                        ) : null}
-                      </article>
-                    ))}
+                          <p>{review.note}</p>
+                          {review.tags.length > 0 ? (
+                            <div className="cafe-review-tags">
+                              {review.tags.map((tag) => (
+                                <span className="diesel-selection-tag" key={`${review.id}-${tag}`}>
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p>Be the first to leave a review and help the next coffee run.</p>
                 )}
+              </article>
+
+              <article className="cafe-detail-section" id="leave-review">
+                <h2>{decisionGuide.reviewCtaLabel}</h2>
+                <p>{decisionGuide.reviewPrompt}</p>
+                <label className="cafe-detail-review-starter">
+                  <span>Comment nudge</span>
+                  <textarea placeholder={decisionGuide.reviewPlaceholder} rows={4} readOnly />
+                </label>
+                <p className="cafe-detail-section-note">
+                  One specific note is more useful than a long review. Open this cafe from the map to submit it.
+                </p>
               </article>
 
               <article className="cafe-detail-section">
