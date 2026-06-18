@@ -1318,6 +1318,10 @@ export function HomeDiscoveryScreen({
   const activeFallbackPlace =
     fallbackPlaces.find((place) => place.id === activeFallbackId) ??
     (hasNoRadiusMatches ? fallbackPlaces[0] ?? null : null);
+  const mappableFallbackPlaces = useMemo(
+    () => fallbackPlaces.filter((place) => place.source === "osm-nominatim"),
+    [fallbackPlaces],
+  );
   const isCollapsedCard = sheetState === "collapsed";
   const isExpandedCard = sheetState === "expanded";
   const shouldShowIntro =
@@ -2728,8 +2732,8 @@ export function HomeDiscoveryScreen({
         onSelectCafe={(cafeId) => selectCafe(cafeId, { explicit: true, source: "map_marker" })}
         panToActiveCafeToken={panToActiveCafeToken}
         searchFocusedCafeId={searchFocusedCafeId}
-        fallbackPlaces={fallbackPlaces}
-        activeFallbackPlaceId={activeFallbackPlace?.id ?? null}
+        fallbackPlaces={mappableFallbackPlaces}
+        activeFallbackPlaceId={activeFallbackPlace?.source === "osm-nominatim" ? activeFallbackPlace.id : null}
         onSelectFallbackPlace={(placeId) =>
           selectFallbackPlace(placeId, { pan: true, source: "map_marker" })
         }
@@ -3457,6 +3461,7 @@ export function HomeDiscoveryScreen({
                         className={`review-tag-chip${isSelected ? " active" : ""}`}
                         type="button"
                         onClick={() => toggleJournalTag(tag)}
+                        aria-pressed={isSelected}
                       >
                         {tag}
                       </button>
