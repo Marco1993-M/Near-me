@@ -286,6 +286,12 @@ export function CoffeeJournalPanel({
   const repeatedSignal = useMemo(() => getRepeatedSignal(entries), [entries]);
   const hasStarterRead = entries.length >= 3;
   const hasMeaningfulStory = entries.length >= 5 && Boolean(repeatedSignal);
+  const sortedTasteSegments = useMemo(
+    () => [...insight.tasteWheel].sort((left, right) => right.value - left.value),
+    [insight.tasteWheel],
+  );
+  const leadTasteSegment = sortedTasteSegments[0] ?? null;
+  const secondaryTasteSegment = sortedTasteSegments[1] ?? null;
   const strongestSignal =
     repeatedSignal ??
     (insight.primaryTaste && favoriteDrinkFamily ? `${insight.primaryTaste} ${favoriteDrinkFamily}` : null) ??
@@ -293,6 +299,20 @@ export function CoffeeJournalPanel({
     favoriteDrinkFamily ??
     "Still learning";
   const strongestEvidence = insight.tasteDrivers[0]?.cafeName ?? insight.topCafe ?? "A few more logs will sharpen this";
+  const portraitTitle =
+    insight.primaryTaste && insight.secondaryTaste
+      ? `${insight.primaryTaste} with a ${insight.secondaryTaste.toLowerCase()} edge`
+      : insight.primaryTaste ?? "Taste portrait forming";
+  const portraitSupport = favoriteDrinkFamily
+    ? `Your higher-rated ${favoriteDrinkFamily} are shaping this read most clearly right now.`
+    : "A few more thoughtful logs will turn this into a clearer portrait of your taste.";
+  const journalHeroStyle = {
+    "--journal-accent": leadTasteSegment?.color ?? "#c7f5d3",
+    "--journal-accent-soft": leadTasteSegment
+      ? `color-mix(in srgb, ${leadTasteSegment.color} 18%, rgba(255, 253, 248, 0.96))`
+      : "rgba(199, 245, 211, 0.22)",
+    "--journal-secondary": secondaryTasteSegment?.color ?? "#ecd6af",
+  } as CSSProperties;
   const wheelGradient = useMemo(() => {
     const total = insight.tasteWheel.length || 1;
     return `conic-gradient(${insight.tasteWheel
@@ -622,8 +642,8 @@ export function CoffeeJournalPanel({
     <div className="map-journal-shell fade-slide-in">
       <section className="map-journal-panel" role="dialog" aria-modal="false" aria-label="Your taste">
         <div className="coffee-journal-static">
-          <div className="map-top-picks-head">
-            <div className="map-top-picks-title">
+          <div className="map-top-picks-head coffee-journal-head">
+            <div className="map-top-picks-title coffee-journal-head-copy">
               <strong>Your taste</strong>
               <span>Journal, taste memory, and how your coffee lean is evolving.</span>
             </div>
@@ -635,8 +655,17 @@ export function CoffeeJournalPanel({
           </div>
 
           <section className="coffee-journal-hero" aria-label="Journal snapshot">
-            <article className="coffee-journal-hero-card coffee-journal-hero-card-primary">
-              <div className="coffee-journal-hero-wheel">
+            <div className="coffee-journal-hero-intro">
+              <span>Visual portrait</span>
+              <strong>{portraitTitle}</strong>
+              <p>{insight.tasteMood}</p>
+            </div>
+
+            <article
+              className="coffee-journal-hero-card coffee-journal-hero-card-primary"
+              style={journalHeroStyle}
+            >
+              <div className="coffee-journal-hero-wheel coffee-journal-hero-stage">
                 <div className="coffee-journal-wheel-wrap">
                   <div
                     className="coffee-journal-wheel"
@@ -662,21 +691,46 @@ export function CoffeeJournalPanel({
 
                 <div className="coffee-journal-hero-copy">
                   <div className="coffee-journal-hero-head">
-                    <span>Taste read</span>
+                    <span>Taste portrait</span>
                   </div>
-                  <strong>{insight.tasteMood}</strong>
-                  <p>{favoriteDrinkFamily ? `${favoriteDrinkFamily} are your current go-to.` : "Your strongest taste lanes will settle in as you log more cups."}</p>
+                  <strong>{portraitTitle}</strong>
+                  <p>{portraitSupport}</p>
+
+                  <div className="coffee-journal-hero-metrics" aria-label="Portrait signals">
+                    <article className="coffee-journal-hero-metric">
+                      <span>Based on</span>
+                      <strong>{insight.entryCount === 1 ? "1 cup" : `${insight.entryCount} cups`}</strong>
+                    </article>
+                    <article className="coffee-journal-hero-metric">
+                      <span>Strongest signal</span>
+                      <strong>{strongestSignal}</strong>
+                    </article>
+                  </div>
                 </div>
               </div>
 
               <div className="coffee-journal-hero-footer">
                 <div className="coffee-journal-hero-note">
-                  <span>Right now</span>
+                  <span>What Near Me sees</span>
                   <strong>
                     {favoriteDrinkFamily
                       ? `${insight.primaryTaste?.toLowerCase() ?? "coffee"} notes are leading what you enjoy in ${favoriteDrinkFamily}.`
                       : "Near Me is starting to map the styles you naturally return to."}
                   </strong>
+                </div>
+
+                <div className="coffee-journal-hero-aside">
+                  <article className="coffee-journal-hero-metric coffee-journal-hero-metric-evidence">
+                    <span>Best evidence</span>
+                    <strong>{strongestEvidence}</strong>
+                  </article>
+
+                  {insight.milestoneLabel ? (
+                    <div className="coffee-journal-milestone">
+                      <span>{insight.milestoneLabel}</span>
+                      {insight.milestoneProgress ? <strong>{insight.milestoneProgress}</strong> : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 {leadingTags.length > 0 ? (
@@ -688,37 +742,19 @@ export function CoffeeJournalPanel({
                     ))}
                   </div>
                 ) : null}
-
-                {insight.milestoneLabel ? (
-                  <div className="coffee-journal-milestone">
-                    <span>{insight.milestoneLabel}</span>
-                    {insight.milestoneProgress ? <strong>{insight.milestoneProgress}</strong> : null}
-                  </div>
-                ) : null}
               </div>
             </article>
-
-            <div className="coffee-journal-summary-grid">
-              <article className="coffee-journal-summary-card">
-                <span>Based on</span>
-                <strong>{insight.entryCount === 1 ? "1 cup" : `${insight.entryCount} cups`}</strong>
-              </article>
-              <article className="coffee-journal-summary-card">
-                <span>Strongest signal</span>
-                <strong>{strongestSignal}</strong>
-              </article>
-              <article className="coffee-journal-summary-card">
-                <span>Best evidence</span>
-                <strong>{strongestEvidence}</strong>
-              </article>
-            </div>
           </section>
 
           {hasStarterRead ? (
             <section className="coffee-journal-spectrum" aria-label="Taste wheel notes">
               <div className="coffee-journal-spectrum-head">
-                <span>Near Me wheel</span>
-                <strong>{insight.primaryTaste && insight.secondaryTaste ? `${insight.primaryTaste} + ${insight.secondaryTaste}` : insight.primaryTaste ?? "Still learning"}</strong>
+                <span>Taste lanes</span>
+                <strong>
+                  {insight.primaryTaste && insight.secondaryTaste
+                    ? `${insight.primaryTaste} + ${insight.secondaryTaste}`
+                    : insight.primaryTaste ?? "Still learning"}
+                </strong>
               </div>
 
               <div className="coffee-journal-spectrum-grid">
@@ -748,7 +784,18 @@ export function CoffeeJournalPanel({
 
               <div className="coffee-journal-driver-grid">
                 {insight.tasteDrivers.map((driver) => (
-                  <article className="coffee-journal-driver-card" key={driver.id}>
+                  <article
+                    className="coffee-journal-driver-card"
+                    key={driver.id}
+                    style={
+                      {
+                        "--driver-accent":
+                          insight.tasteWheel.find(
+                            (segment) => segment.label.toLowerCase() === driver.targetTaste.toLowerCase(),
+                          )?.color ?? "#8ed8a2",
+                      } as CSSProperties
+                    }
+                  >
                     <div className="coffee-journal-driver-topline">
                       <div>
                         <span>{driver.cafeName}</span>
@@ -823,17 +870,35 @@ export function CoffeeJournalPanel({
                 <span>Taste evolution</span>
                 <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
               </div>
-              <div className="coffee-journal-evolution-card">
-                <strong>{insight.evolutionSummary}</strong>
-                {insight.latestHighlight ? <span>Recent standout: {insight.latestHighlight}</span> : null}
+              <div className="coffee-journal-evolution-hero">
+                <article className="coffee-journal-evolution-card coffee-journal-evolution-card-primary">
+                  <span>Current motion</span>
+                  <strong>{insight.evolutionSummary}</strong>
+                </article>
+                {insight.latestHighlight ? (
+                  <article className="coffee-journal-evolution-card coffee-journal-evolution-card-highlight">
+                    <span>Recent standout</span>
+                    <strong>{insight.latestHighlight}</strong>
+                  </article>
+                ) : null}
               </div>
               <div className="coffee-journal-evolution-lanes">
                 {evolutionLanes.map((segment) => {
                   const trendLabel =
                     segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
+                  const trendDetail =
+                    segment.delta > 0.08
+                      ? `Recent high scores are pulling you further toward ${segment.label.toLowerCase()} cups.`
+                      : segment.delta < -0.08
+                        ? `${segment.label} is still part of your taste, but it is shaping the wheel less right now.`
+                        : `${segment.label} is staying present in both your recent and long-term cups.`;
 
                   return (
-                    <article className="coffee-journal-evolution-lane" key={segment.key}>
+                    <article
+                      className="coffee-journal-evolution-lane"
+                      key={segment.key}
+                      style={{ "--evolution-accent": segment.color } as CSSProperties}
+                    >
                       <div className="coffee-journal-evolution-lane-head">
                         <div className="coffee-journal-evolution-lane-title">
                           <span
@@ -845,29 +910,32 @@ export function CoffeeJournalPanel({
                         </div>
                         <span>{trendLabel}</span>
                       </div>
+                      <p>{trendDetail}</p>
                       <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
-                        <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
-                          <div
-                            className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
-                            style={{
-                              width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
-                              backgroundColor: segment.color,
-                            }}
-                          />
+                        <div className="coffee-journal-evolution-bar-row">
+                          <span>Recent</span>
+                          <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
+                            <div
+                              className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
+                              style={{
+                                width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
+                                backgroundColor: segment.color,
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="coffee-journal-evolution-bar-track">
-                          <div
-                            className="coffee-journal-evolution-bar-fill"
-                            style={{
-                              width: `${Math.max(12, Math.round(segment.value * 100))}%`,
-                              backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
-                            }}
-                          />
+                        <div className="coffee-journal-evolution-bar-row">
+                          <span>All time</span>
+                          <div className="coffee-journal-evolution-bar-track">
+                            <div
+                              className="coffee-journal-evolution-bar-fill"
+                              style={{
+                                width: `${Math.max(12, Math.round(segment.value * 100))}%`,
+                                backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
+                              }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="coffee-journal-evolution-legend">
-                        <span>Recent</span>
-                        <span>All time</span>
                       </div>
                     </article>
                   );
@@ -913,6 +981,13 @@ export function CoffeeJournalPanel({
         <div className="map-top-picks-results coffee-journal-results">
           {entries.length > 0 ? (
             <>
+              <div className="coffee-journal-results-head">
+                <div>
+                  <span>Coffee memory</span>
+                  <strong>Your logged cups</strong>
+                </div>
+                <small>{entries.length === 1 ? "1 entry" : `${entries.length} entries`}</small>
+              </div>
               {journalSections.map((section) => (
                 <section className="coffee-journal-section" key={section.label}>
                   <div className="coffee-journal-section-head">
