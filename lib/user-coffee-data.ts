@@ -1,3 +1,4 @@
+import { normalizeCoffeeJournalEntries } from "@/lib/coffee-journal";
 import type { CoffeeJournalEntry } from "@/lib/coffee-journal";
 import type { CoffeeProfileState } from "@/lib/coffee-profiler";
 
@@ -40,11 +41,7 @@ function normalizeProfileState(input: unknown): CoffeeProfileState | null {
 }
 
 function normalizeJournalEntries(input: unknown) {
-  if (!Array.isArray(input)) {
-    return [] as CoffeeJournalEntry[];
-  }
-
-  return input.filter((entry): entry is CoffeeJournalEntry => Boolean(entry && typeof entry === "object"));
+  return normalizeCoffeeJournalEntries(input);
 }
 
 export function parseUserCoffeeDataRow(row: UserCoffeeDataRow | null | undefined): UserCoffeeDataSnapshot | null {
@@ -71,7 +68,10 @@ export function mergeUserCoffeeDataSnapshots(
     new Set([...localSnapshot.favoriteCafeIds, ...remoteSnapshot.favoriteCafeIds]),
   );
 
-  const mergedJournalEntries = [...localSnapshot.journalEntries, ...remoteSnapshot.journalEntries];
+  const mergedJournalEntries = normalizeJournalEntries([
+    ...localSnapshot.journalEntries,
+    ...remoteSnapshot.journalEntries,
+  ]);
 
   const localUpdatedAt = localSnapshot.profileState?.updatedAt ?? "";
   const remoteUpdatedAt = remoteSnapshot.profileState?.updatedAt ?? "";
@@ -87,7 +87,7 @@ export function mergeUserCoffeeDataSnapshots(
 
 export function serializeUserCoffeeDataSnapshot(snapshot: UserCoffeeDataSnapshot) {
   return {
-    journal_entries: snapshot.journalEntries,
+    journal_entries: normalizeJournalEntries(snapshot.journalEntries),
     favorite_cafe_ids: snapshot.favoriteCafeIds,
     profile_state: snapshot.profileState,
   };

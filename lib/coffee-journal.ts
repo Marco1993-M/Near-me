@@ -177,7 +177,7 @@ const PROFILE_DIMENSION_TO_WHEEL: Record<CoffeeProfilerDimension, Array<{ key: T
   ],
 };
 
-function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
+export function normalizeCoffeeJournalEntries(input: unknown): CoffeeJournalEntry[] {
   if (!Array.isArray(input)) {
     return [];
   }
@@ -211,10 +211,17 @@ function normalizeEntries(input: unknown): CoffeeJournalEntry[] {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 
   const dedupedEntries: CoffeeJournalEntry[] = [];
+  const seenEntryIds = new Set<string>();
   const seenReviewIds = new Set<string>();
   const seenReviewSignatures = new Set<string>();
 
   for (const entry of normalizedEntries) {
+    if (seenEntryIds.has(entry.id)) {
+      continue;
+    }
+
+    seenEntryIds.add(entry.id);
+
     if (entry.reviewId) {
       if (seenReviewIds.has(entry.reviewId)) {
         continue;
@@ -271,7 +278,7 @@ function readJournalSnapshot() {
 
   try {
     const parsed = JSON.parse(raw) as unknown;
-    const normalized = normalizeEntries(parsed);
+    const normalized = normalizeCoffeeJournalEntries(parsed);
     const normalizedRaw = JSON.stringify(normalized);
 
     if (normalizedRaw !== raw && typeof window !== "undefined") {
@@ -336,7 +343,7 @@ export function setStoredCoffeeJournal(entries: CoffeeJournalEntry[]) {
     return;
   }
 
-  const normalized = normalizeEntries(entries);
+  const normalized = normalizeCoffeeJournalEntries(entries);
   const raw = JSON.stringify(normalized);
   window.localStorage.setItem(COFFEE_JOURNAL_STORAGE_KEY, raw);
   cachedJournalRaw = raw;
