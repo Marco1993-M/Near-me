@@ -4482,6 +4482,7 @@ img {
 }
 
 .review-chip.active,
+.review-tag-chip.active,
 .review-drink-option.active {
   border-color: rgba(199, 245, 211, 0.7);
   background: rgba(199, 245, 211, 0.42);
