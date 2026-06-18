@@ -979,21 +979,21 @@ img {
 .map-journal-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1rem;
   width: 100%;
   max-height: 100%;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0.95rem;
-  border-radius: 24px;
+  padding: 1.15rem;
+  border-radius: 28px;
   border: 1px solid var(--glass-border);
   background:
-    radial-gradient(circle at top right, rgba(199, 245, 211, 0.22), transparent 24%),
-    radial-gradient(circle at left center, rgba(36, 65, 45, 0.07), transparent 34%),
+    radial-gradient(circle at top right, rgba(199, 245, 211, 0.16), transparent 22%),
+    radial-gradient(circle at 10% 18%, rgba(236, 214, 175, 0.14), transparent 28%),
     var(--glass-sheen),
-    rgba(255, 255, 252, 0.84);
+    rgba(255, 255, 252, 0.9);
   box-shadow: var(--glass-highlight), 0 24px 48px rgba(20, 32, 24, 0.16);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
@@ -1006,8 +1006,27 @@ img {
 
 .coffee-journal-static {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
   flex: 0 0 auto;
+}
+
+.coffee-journal-head {
+  align-items: center;
+  padding-bottom: 0.15rem;
+}
+
+.coffee-journal-head-copy {
+  gap: 0.3rem;
+}
+
+.coffee-journal-head-copy strong {
+  font-size: clamp(1.15rem, 3vw, 1.55rem);
+  letter-spacing: -0.04em;
+}
+
+.coffee-journal-head-copy span {
+  max-width: 28rem;
+  line-height: 1.45;
 }
 
 .map-top-picks-head {
@@ -1091,28 +1110,62 @@ img {
 
 .coffee-journal-hero {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.85rem;
   position: relative;
+}
+
+.coffee-journal-hero-intro {
+  display: grid;
+  gap: 0.24rem;
+  max-width: 30rem;
+}
+
+.coffee-journal-hero-intro span {
+  color: rgba(20, 32, 24, 0.44);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-hero-intro strong {
+  color: var(--near-me-ink);
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+  text-wrap: balance;
+}
+
+.coffee-journal-hero-intro p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  max-width: 24rem;
 }
 
 .coffee-journal-hero-wheel {
   display: grid;
   grid-template-columns: minmax(0, 11.4rem) minmax(0, 1fr);
   align-items: center;
-  gap: 1rem;
+  gap: 1.2rem;
+}
+
+.coffee-journal-hero-stage {
+  padding-bottom: 0.15rem;
 }
 
 .coffee-journal-wheel-wrap {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 10.7rem;
+  min-height: 11.3rem;
   filter: drop-shadow(0 18px 32px rgba(91, 66, 39, 0.12));
 }
 
 .coffee-journal-wheel {
   position: relative;
-  width: 9.8rem;
+  width: 10.4rem;
   aspect-ratio: 1;
   border-radius: 50%;
   background-size: cover;
@@ -1211,12 +1264,11 @@ img {
 
 .coffee-journal-hero-copy {
   display: grid;
-  gap: 0.28rem;
+  gap: 0.4rem;
   align-content: center;
 }
 
 .coffee-journal-hero-card,
-.coffee-journal-summary-card,
 .coffee-journal-entry {
   display: grid;
   gap: 0.18rem;
@@ -1230,17 +1282,17 @@ img {
 }
 
 .coffee-journal-hero-card-primary {
-  gap: 0.7rem;
-  padding: 0.95rem 1rem 1rem;
+  gap: 0.95rem;
+  padding: 1.1rem;
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.48), transparent 28%),
-    radial-gradient(circle at 18% 20%, rgba(199, 245, 211, 0.24), transparent 32%),
-    radial-gradient(circle at 82% 84%, rgba(238, 214, 175, 0.18), transparent 28%),
-    linear-gradient(135deg, rgba(199, 245, 211, 0.22) 0%, rgba(255, 255, 255, 0.08) 65%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.56), transparent 28%),
+    radial-gradient(circle at 20% 16%, var(--journal-accent-soft, rgba(199, 245, 211, 0.22)), transparent 34%),
+    radial-gradient(circle at 84% 78%, color-mix(in srgb, var(--journal-secondary, #ecd6af) 18%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--journal-accent, #c7f5d3) 9%, rgba(255, 255, 255, 0.05)) 0%, rgba(255, 255, 255, 0.08) 65%),
     rgba(255, 255, 252, 0.74);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 16px 34px rgba(20, 32, 24, 0.09);
+    0 18px 38px rgba(20, 32, 24, 0.08);
 }
 
 .coffee-journal-hero-head {
@@ -1250,8 +1302,7 @@ img {
   gap: 0.45rem;
 }
 
-.coffee-journal-hero-card span,
-.coffee-journal-summary-card span {
+.coffee-journal-hero-card span {
   color: rgba(20, 32, 24, 0.5);
   font-size: 0.7rem;
   font-weight: 700;
@@ -1259,36 +1310,37 @@ img {
   text-transform: uppercase;
 }
 
-.coffee-journal-hero-card strong,
-.coffee-journal-summary-card strong {
+.coffee-journal-hero-card strong {
   color: var(--near-me-ink);
   font-size: 0.88rem;
   line-height: 1.4;
 }
 
 .coffee-journal-hero-card-primary strong {
-  font-size: 1.28rem;
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
   letter-spacing: -0.04em;
+  line-height: 0.98;
 }
 
 .coffee-journal-hero-card p {
   margin: 0;
   color: rgba(20, 32, 24, 0.56);
-  font-size: 0.76rem;
-  line-height: 1.4;
+  font-size: 0.8rem;
+  line-height: 1.52;
+  max-width: 26rem;
 }
 
 .coffee-journal-hero-footer {
   display: grid;
-  gap: 0.55rem;
-  padding-top: 0.1rem;
+  gap: 0.68rem;
+  padding-top: 0.2rem;
 }
 
 .coffee-journal-hero-note {
   display: grid;
   gap: 0.14rem;
-  padding: 0.72rem 0.78rem;
-  border-radius: 18px;
+  padding: 0.84rem 0.92rem;
+  border-radius: 20px;
   border: 1px solid rgba(20, 32, 24, 0.08);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.18)),
@@ -1306,8 +1358,55 @@ img {
 
 .coffee-journal-hero-note strong {
   color: var(--near-me-ink);
-  font-size: 0.86rem;
-  line-height: 1.35;
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.coffee-journal-hero-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.coffee-journal-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.18rem;
+}
+
+.coffee-journal-hero-metric {
+  display: grid;
+  gap: 0.16rem;
+  min-width: 0;
+  padding: 0.72rem 0.76rem;
+  border-radius: 18px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.16)),
+    rgba(255, 255, 252, 0.72);
+}
+
+.coffee-journal-hero-metric span {
+  color: rgba(20, 32, 24, 0.44);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-hero-metric strong {
+  color: var(--near-me-ink);
+  font-size: 0.92rem;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+
+.coffee-journal-hero-metric-evidence {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--journal-secondary, #ecd6af) 20%, rgba(255, 255, 255, 0.22)), rgba(255, 255, 255, 0.18)),
+    rgba(255, 255, 252, 0.76);
 }
 
 .coffee-journal-milestone {
@@ -1335,38 +1434,14 @@ img {
   line-height: 1.35;
 }
 
-.coffee-journal-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-
-.coffee-journal-summary-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.coffee-journal-summary-card::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 3px;
-  background: linear-gradient(90deg, rgba(199, 245, 211, 0.14), rgba(36, 65, 45, 0.34), rgba(199, 245, 211, 0.14));
-}
-
-.coffee-journal-summary-card strong {
-  font-size: 1.08rem;
-  letter-spacing: -0.03em;
-}
-
 .coffee-journal-spectrum {
   display: grid;
   gap: 0.55rem;
-  padding: 0.82rem 0.9rem;
-  border: 1px solid rgba(20, 32, 24, 0.1);
-  border-radius: 18px;
+  padding: 0.9rem 0.95rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 20px;
   background:
-    radial-gradient(circle at right center, rgba(199, 245, 211, 0.18), transparent 24%),
+    radial-gradient(circle at right center, color-mix(in srgb, var(--journal-accent, #c7f5d3) 16%, transparent), transparent 24%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%),
     rgba(255, 255, 252, 0.56);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -1405,10 +1480,12 @@ img {
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
-  padding: 0.68rem 0.72rem;
+  padding: 0.74rem 0.78rem;
   border: 1px solid rgba(20, 32, 24, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 252, 0.66);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 252, 0.72);
 }
 
 .coffee-journal-spectrum-swatch {
@@ -1440,10 +1517,10 @@ img {
 .coffee-journal-drivers,
 .coffee-journal-evolution {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.82rem 0.9rem;
-  border: 1px solid rgba(20, 32, 24, 0.1);
-  border-radius: 18px;
+  gap: 0.65rem;
+  padding: 0.92rem 0.98rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%),
     rgba(255, 255, 252, 0.56);
@@ -1452,6 +1529,7 @@ img {
 
 .coffee-journal-insights-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -1463,13 +1541,13 @@ img {
 
 .coffee-journal-driver-card {
   display: grid;
-  gap: 0.52rem;
+  gap: 0.58rem;
   min-width: 0;
-  padding: 0.78rem 0.82rem;
-  border-radius: 16px;
+  padding: 0.86rem 0.9rem;
+  border-radius: 18px;
   border: 1px solid rgba(20, 32, 24, 0.08);
   background:
-    radial-gradient(circle at top left, rgba(199, 245, 211, 0.16), transparent 44%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--driver-accent, #8ed8a2) 18%, transparent), transparent 44%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)),
     rgba(255, 255, 252, 0.72);
 }
@@ -1547,7 +1625,11 @@ img {
 .coffee-journal-driver-meter-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #8ed8a2 0%, #2f7b49 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--driver-accent, #8ed8a2) 48%, #ffffff) 0%,
+    color-mix(in srgb, var(--driver-accent, #8ed8a2) 78%, #24412d) 100%
+  );
 }
 
 .coffee-journal-driver-meter span {
@@ -1573,10 +1655,12 @@ img {
 .coffee-journal-evolution-card {
   display: grid;
   gap: 0.14rem;
-  padding: 0.72rem 0.78rem;
-  border-radius: 16px;
+  padding: 0.78rem 0.84rem;
+  border-radius: 18px;
   border: 1px solid rgba(20, 32, 24, 0.08);
-  background: rgba(255, 255, 252, 0.66);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 252, 0.7);
 }
 
 .coffee-journal-insight-card strong,
@@ -1586,10 +1670,45 @@ img {
   line-height: 1.38;
 }
 
+.coffee-journal-insight-card {
+  min-height: 5.3rem;
+  align-content: end;
+}
+
 .coffee-journal-evolution-card span {
   color: rgba(20, 32, 24, 0.56);
   font-size: 0.74rem;
   line-height: 1.35;
+}
+
+.coffee-journal-evolution-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.coffee-journal-evolution-card-primary {
+  min-height: 7.25rem;
+  align-content: end;
+  background:
+    radial-gradient(circle at top left, rgba(199, 245, 211, 0.22), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 252, 0.76);
+}
+
+.coffee-journal-evolution-card-primary strong {
+  font-size: 1rem;
+  line-height: 1.34;
+  letter-spacing: -0.03em;
+}
+
+.coffee-journal-evolution-card-highlight {
+  min-height: 7.25rem;
+  align-content: end;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(236, 214, 175, 0.26), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 252, 0.72);
 }
 
 .coffee-journal-profile-alignment {
@@ -1617,11 +1736,12 @@ img {
 
 .coffee-journal-evolution-lane {
   display: grid;
-  gap: 0.32rem;
-  padding: 0.72rem 0.78rem;
-  border-radius: 16px;
+  gap: 0.46rem;
+  padding: 0.84rem 0.9rem;
+  border-radius: 18px;
   border: 1px solid rgba(20, 32, 24, 0.08);
   background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--evolution-accent, #c7f5d3) 16%, transparent), transparent 48%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.1)),
     rgba(255, 255, 252, 0.66);
 }
@@ -1662,14 +1782,37 @@ img {
   text-align: right;
 }
 
+.coffee-journal-evolution-lane p {
+  margin: 0;
+  color: rgba(20, 32, 24, 0.58);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  max-width: 32rem;
+}
+
 .coffee-journal-evolution-bar-stack {
   display: grid;
-  gap: 0.24rem;
+  gap: 0.38rem;
+}
+
+.coffee-journal-evolution-bar-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.coffee-journal-evolution-bar-row span {
+  color: rgba(20, 32, 24, 0.5);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .coffee-journal-evolution-bar-track {
   position: relative;
-  height: 0.45rem;
+  height: 0.52rem;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(20, 32, 24, 0.08);
@@ -1689,28 +1832,13 @@ img {
   filter: saturate(1.08) brightness(1.02);
 }
 
-.coffee-journal-evolution-legend {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.coffee-journal-evolution-legend span {
-  color: rgba(20, 32, 24, 0.48);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .coffee-journal-pulse,
 .coffee-journal-footer-note {
   display: grid;
   gap: 0.2rem;
-  padding: 0.78rem 0.88rem;
-  border: 1px solid rgba(20, 32, 24, 0.1);
-  border-radius: 18px;
+  padding: 0.88rem 0.96rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%),
     rgba(255, 255, 252, 0.56);
@@ -1725,10 +1853,10 @@ img {
 
 .coffee-journal-share {
   display: grid;
-  gap: 0.6rem;
-  padding: 0.82rem 0.9rem;
-  border: 1px solid rgba(20, 32, 24, 0.1);
-  border-radius: 18px;
+  gap: 0.65rem;
+  padding: 0.92rem 0.98rem;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.06) 100%),
     rgba(255, 255, 252, 0.56);
@@ -1738,17 +1866,18 @@ img {
 .coffee-journal-share-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .coffee-journal-share-card {
   display: grid;
-  gap: 0.36rem;
+  gap: 0.42rem;
   min-width: 0;
-  padding: 0.8rem 0.82rem;
-  border-radius: 16px;
+  padding: 0.98rem 1rem;
+  border-radius: 20px;
   border: 1px solid rgba(20, 32, 24, 0.08);
   background:
+    radial-gradient(circle at top right, rgba(199, 245, 211, 0.16), transparent 34%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)),
     rgba(255, 255, 252, 0.72);
 }
@@ -1763,8 +1892,9 @@ img {
 
 .coffee-journal-share-card strong {
   color: var(--near-me-ink);
-  font-size: 0.85rem;
-  line-height: 1.26;
+  font-size: 0.96rem;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
 }
 
 .coffee-journal-share-card p {
@@ -1822,24 +1952,53 @@ img {
 .coffee-journal-results {
   max-height: none;
   min-height: auto;
-  padding-bottom: 0.3rem;
+  gap: 0.95rem;
+  padding-top: 0.1rem;
+  padding-bottom: 0.4rem;
+}
+
+.coffee-journal-results-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.coffee-journal-results-head div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.coffee-journal-results-head span {
+  color: rgba(20, 32, 24, 0.44);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.coffee-journal-results-head strong {
+  color: var(--near-me-ink);
+  font-size: 1.08rem;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.coffee-journal-results-head small {
+  color: rgba(20, 32, 24, 0.54);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .coffee-journal-section {
   display: grid;
-  gap: 0.55rem;
-  position: relative;
-  padding-left: 1rem;
-}
-
-.coffee-journal-section::before {
-  content: "";
-  position: absolute;
-  top: 2rem;
-  bottom: 0.4rem;
-  left: 0.18rem;
-  width: 1px;
-  background: linear-gradient(180deg, rgba(31, 106, 56, 0.22), rgba(31, 106, 56, 0.02));
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 1.02rem;
+  border-radius: 22px;
+  border: 1px solid rgba(20, 32, 24, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 252, 0.66);
 }
 
 .coffee-journal-section-head {
@@ -1847,7 +2006,6 @@ img {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding-inline: 0.2rem;
   position: relative;
 }
 
@@ -1857,19 +2015,6 @@ img {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.coffee-journal-section-head span::before {
-  content: "";
-  position: absolute;
-  left: -0.78rem;
-  top: 50%;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 999px;
-  background: #1f6a38;
-  box-shadow: 0 0 0 5px rgba(199, 245, 211, 0.18);
-  transform: translateY(-50%);
 }
 
 .coffee-journal-section-head strong {
@@ -1898,9 +2043,15 @@ img {
 }
 
 .coffee-journal-entry {
-  gap: 0.5rem;
+  gap: 0.56rem;
   position: relative;
   overflow: visible;
+  padding: 0.88rem 0.92rem;
+  border-radius: 18px;
+  border: 1px solid rgba(20, 32, 24, 0.06);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.14)),
+    rgba(255, 255, 252, 0.74);
 }
 
 .coffee-journal-entry-topline {
@@ -1914,9 +2065,9 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.35rem;
-  height: 2.35rem;
-  border-radius: 16px;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 18px;
   background:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.72), transparent 34%),
     linear-gradient(180deg, rgba(199, 245, 211, 0.54) 0%, rgba(199, 245, 211, 0.22) 100%),
@@ -1978,8 +2129,8 @@ img {
   gap: 0;
   flex-shrink: 0;
   min-width: 3rem;
-  padding: 0.42rem 0.48rem 0.45rem;
-  border-radius: 14px;
+  padding: 0.48rem 0.54rem 0.5rem;
+  border-radius: 16px;
   background: rgba(255, 255, 252, 0.72);
   border: 1px solid rgba(20, 32, 24, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
@@ -5563,10 +5714,6 @@ img {
     grid-template-columns: 1fr;
   }
 
-  .coffee-journal-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .coffee-journal-hero-wheel {
     grid-template-columns: 1fr;
   }
@@ -5579,12 +5726,21 @@ img {
     width: 9rem;
   }
 
+  .coffee-journal-hero-intro strong {
+    font-size: 1.95rem;
+  }
+
   .coffee-journal-hero-copy {
     text-align: center;
   }
 
   .coffee-journal-hero-head {
     justify-content: center;
+  }
+
+  .coffee-journal-hero-metrics,
+  .coffee-journal-hero-aside {
+    grid-template-columns: 1fr;
   }
 
   .coffee-journal-spectrum-grid {
@@ -5595,8 +5751,21 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .coffee-journal-insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coffee-journal-evolution-hero {
+    grid-template-columns: 1fr;
+  }
+
   .coffee-journal-share-grid {
     grid-template-columns: 1fr;
+  }
+
+  .coffee-journal-results-head {
+    align-items: start;
+    flex-direction: column;
   }
 
   .coffee-journal-entry-head {
