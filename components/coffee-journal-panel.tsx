@@ -746,236 +746,247 @@ export function CoffeeJournalPanel({
             </article>
           </section>
 
-          {hasStarterRead ? (
-            <section className="coffee-journal-spectrum" aria-label="Taste wheel notes">
-              <div className="coffee-journal-spectrum-head">
-                <span>Taste lanes</span>
-                <strong>
-                  {insight.primaryTaste && insight.secondaryTaste
-                    ? `${insight.primaryTaste} + ${insight.secondaryTaste}`
-                    : insight.primaryTaste ?? "Still learning"}
-                </strong>
-              </div>
+          <div className="coffee-journal-dashboard-grid">
+            {hasStarterRead ? (
+              <section className="coffee-journal-spectrum coffee-journal-dashboard-card" aria-label="Taste wheel notes">
+                <div className="coffee-journal-spectrum-head">
+                  <span>Taste lanes</span>
+                  <strong>
+                    {insight.primaryTaste && insight.secondaryTaste
+                      ? `${insight.primaryTaste} + ${insight.secondaryTaste}`
+                      : insight.primaryTaste ?? "Still learning"}
+                  </strong>
+                </div>
 
-              <div className="coffee-journal-spectrum-grid">
-                {visibleWheelTags.map((segment, index) => (
-                  <article className="coffee-journal-spectrum-card" key={segment.key}>
-                    <div
-                      className="coffee-journal-spectrum-swatch"
-                      style={{ backgroundColor: segment.color }}
-                      aria-hidden="true"
-                    />
-                    <div className="coffee-journal-spectrum-copy">
-                      <strong>{segment.label}</strong>
-                      <span>{getTastePullLabel(segment.value, index)}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {hasMeaningfulStory && insight.tasteDrivers.length > 0 ? (
-            <section className="coffee-journal-drivers" aria-label="What changed your taste">
-              <div className="coffee-journal-spectrum-head">
-                <span>What changed your taste</span>
-                <strong>The cups moving your wheel most</strong>
-              </div>
-
-              <div className="coffee-journal-driver-grid">
-                {insight.tasteDrivers.map((driver) => (
-                  <article
-                    className="coffee-journal-driver-card"
-                    key={driver.id}
-                    style={
-                      {
-                        "--driver-accent":
-                          insight.tasteWheel.find(
-                            (segment) => segment.label.toLowerCase() === driver.targetTaste.toLowerCase(),
-                          )?.color ?? "#8ed8a2",
-                      } as CSSProperties
-                    }
-                  >
-                    <div className="coffee-journal-driver-topline">
-                      <div>
-                        <span>{driver.cafeName}</span>
-                        <strong>{driver.headline}</strong>
-                      </div>
-                      <div className="coffee-journal-driver-score">
-                        <strong>{driver.rating}</strong>
-                        <span>/10</span>
-                      </div>
-                    </div>
-
-                    <p>{driver.body}</p>
-
-                    <div className="coffee-journal-driver-meter">
-                      <div className="coffee-journal-driver-meter-track" aria-hidden="true">
-                        <div
-                          className="coffee-journal-driver-meter-fill"
-                          style={{ width: `${Math.max(18, Math.round(driver.impact * 100))}%` }}
-                        />
-                      </div>
-                      <span>{driver.impact >= 0.72 ? "Strong taste pull" : "Taste signal"}</span>
-                    </div>
-
-                    <div className="coffee-journal-driver-foot">
-                      <span>
-                        {[driver.drink, formatRelativeDate(driver.createdAt)].filter(Boolean).join(" · ")}
-                      </span>
-                      {driver.tags.length > 0 ? (
-                        <div className="diesel-selection-tags">
-                          {driver.tags.slice(0, 2).map((tag) => (
-                            <span className="diesel-selection-tag" key={`${driver.id}-${tag}`}>
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {hasMeaningfulStory && (insight.patternInsights.length > 0 || insight.profileAlignment) ? (
-            <section className="coffee-journal-insights" aria-label="Journal insights">
-              <div className="coffee-journal-spectrum-head">
-                <span>Pattern notes</span>
-                <strong>What Near Me is noticing</strong>
-              </div>
-              <div className="coffee-journal-insights-grid">
-                {insight.profileAlignment ? (
-                  <article
-                    className={`coffee-journal-evolution-card coffee-journal-profile-alignment is-${insight.profileAlignment.status}`}
-                  >
-                    <span>{insight.profileAlignment.eyebrow}</span>
-                    <strong>{insight.profileAlignment.title}</strong>
-                    <span>{insight.profileAlignment.body}</span>
-                  </article>
-                ) : null}
-                {insight.patternInsights.map((item) => (
-                  <article className="coffee-journal-insight-card" key={item}>
-                    <strong>{item}</strong>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {hasMeaningfulStory ? (
-            <section className="coffee-journal-evolution" aria-label="Taste evolution">
-              <div className="coffee-journal-spectrum-head">
-                <span>Taste evolution</span>
-                <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
-              </div>
-              <div className="coffee-journal-evolution-hero">
-                <article className="coffee-journal-evolution-card coffee-journal-evolution-card-primary">
-                  <span>Current motion</span>
-                  <strong>{insight.evolutionSummary}</strong>
-                </article>
-                {insight.latestHighlight ? (
-                  <article className="coffee-journal-evolution-card coffee-journal-evolution-card-highlight">
-                    <span>Recent standout</span>
-                    <strong>{insight.latestHighlight}</strong>
-                  </article>
-                ) : null}
-              </div>
-              <div className="coffee-journal-evolution-lanes">
-                {evolutionLanes.map((segment) => {
-                  const trendLabel =
-                    segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
-                  const trendDetail =
-                    segment.delta > 0.08
-                      ? `Recent high scores are pulling you further toward ${segment.label.toLowerCase()} cups.`
-                      : segment.delta < -0.08
-                        ? `${segment.label} is still part of your taste, but it is shaping the wheel less right now.`
-                        : `${segment.label} is staying present in both your recent and long-term cups.`;
-
-                  return (
-                    <article
-                      className="coffee-journal-evolution-lane"
-                      key={segment.key}
-                      style={{ "--evolution-accent": segment.color } as CSSProperties}
-                    >
-                      <div className="coffee-journal-evolution-lane-head">
-                        <div className="coffee-journal-evolution-lane-title">
-                          <span
-                            className="coffee-journal-evolution-lane-dot"
-                            style={{ backgroundColor: segment.color }}
-                            aria-hidden="true"
-                          />
-                          <strong>{segment.label}</strong>
-                        </div>
-                        <span>{trendLabel}</span>
-                      </div>
-                      <p>{trendDetail}</p>
-                      <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
-                        <div className="coffee-journal-evolution-bar-row">
-                          <span>Recent</span>
-                          <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
-                            <div
-                              className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
-                              style={{
-                                width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
-                                backgroundColor: segment.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div className="coffee-journal-evolution-bar-row">
-                          <span>All time</span>
-                          <div className="coffee-journal-evolution-bar-track">
-                            <div
-                              className="coffee-journal-evolution-bar-fill"
-                              style={{
-                                width: `${Math.max(12, Math.round(segment.value * 100))}%`,
-                                backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
-                              }}
-                            />
-                          </div>
-                        </div>
+                <div className="coffee-journal-spectrum-grid">
+                  {visibleWheelTags.map((segment, index) => (
+                    <article className="coffee-journal-spectrum-card" key={segment.key}>
+                      <div
+                        className="coffee-journal-spectrum-swatch"
+                        style={{ backgroundColor: segment.color }}
+                        aria-hidden="true"
+                      />
+                      <div className="coffee-journal-spectrum-copy">
+                        <strong>{segment.label}</strong>
+                        <span>{getTastePullLabel(segment.value, index)}</span>
                       </div>
                     </article>
-                  );
-                })}
-              </div>
-            </section>
-          ) : null}
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-          <article className="coffee-journal-pulse">
-            <span>Near Me is learning</span>
-            <strong>{insight.learningPrompt}</strong>
-          </article>
+            <article className="coffee-journal-pulse coffee-journal-dashboard-card coffee-journal-dashboard-card-compact">
+              <span>Near Me is learning</span>
+              <strong>{insight.learningPrompt}</strong>
+            </article>
 
-          {hasMeaningfulStory ? (
-            <section className="coffee-journal-share" aria-label="Shareable journal moments">
-              <div className="coffee-journal-spectrum-head">
-                <span>Shareable moments</span>
-                <strong>Your taste read has a clear story</strong>
-              </div>
-
-              <div className="coffee-journal-share-grid">
-                {insight.shareMoments.map((moment) => (
-                  <article className="coffee-journal-share-card" key={moment.id}>
-                    <span>{moment.eyebrow}</span>
-                    <strong>{moment.title}</strong>
-                    <p>{moment.body}</p>
-                    <button
-                      className="coffee-journal-share-button"
-                      type="button"
-                      onClick={() => void handleShareMoment(moment)}
+            {hasMeaningfulStory && (insight.patternInsights.length > 0 || insight.profileAlignment) ? (
+              <section className="coffee-journal-insights coffee-journal-dashboard-card" aria-label="Journal insights">
+                <div className="coffee-journal-spectrum-head">
+                  <span>Pattern notes</span>
+                  <strong>What Near Me is noticing</strong>
+                </div>
+                <div className="coffee-journal-insights-grid">
+                  {insight.profileAlignment ? (
+                    <article
+                      className={`coffee-journal-evolution-card coffee-journal-profile-alignment is-${insight.profileAlignment.status}`}
                     >
-                      Share card
-                    </button>
-                  </article>
-                ))}
-              </div>
+                      <span>{insight.profileAlignment.eyebrow}</span>
+                      <strong>{insight.profileAlignment.title}</strong>
+                      <span>{insight.profileAlignment.body}</span>
+                    </article>
+                  ) : null}
+                  {insight.patternInsights.map((item) => (
+                    <article className="coffee-journal-insight-card" key={item}>
+                      <strong>{item}</strong>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-              {shareFeedback ? <div className="coffee-journal-share-feedback">{shareFeedback}</div> : null}
-            </section>
-          ) : null}
+            {hasMeaningfulStory ? (
+              <section
+                className="coffee-journal-evolution coffee-journal-dashboard-card coffee-journal-dashboard-card-wide"
+                aria-label="Taste evolution"
+              >
+                <div className="coffee-journal-spectrum-head">
+                  <span>Taste evolution</span>
+                  <strong>{recentDrinkFamily ? `${recentDrinkFamily} lately` : "Still taking shape"}</strong>
+                </div>
+                <div className="coffee-journal-evolution-hero">
+                  <article className="coffee-journal-evolution-card coffee-journal-evolution-card-primary">
+                    <span>Current motion</span>
+                    <strong>{insight.evolutionSummary}</strong>
+                  </article>
+                  {insight.latestHighlight ? (
+                    <article className="coffee-journal-evolution-card coffee-journal-evolution-card-highlight">
+                      <span>Recent standout</span>
+                      <strong>{insight.latestHighlight}</strong>
+                    </article>
+                  ) : null}
+                </div>
+                <div className="coffee-journal-evolution-lanes">
+                  {evolutionLanes.map((segment) => {
+                    const trendLabel =
+                      segment.delta > 0.08 ? "Rising lately" : segment.delta < -0.08 ? "Quieter lately" : "Holding steady";
+                    const trendDetail =
+                      segment.delta > 0.08
+                        ? `Recent high scores are pulling you further toward ${segment.label.toLowerCase()} cups.`
+                        : segment.delta < -0.08
+                          ? `${segment.label} is still part of your taste, but it is shaping the wheel less right now.`
+                          : `${segment.label} is staying present in both your recent and long-term cups.`;
+
+                    return (
+                      <article
+                        className="coffee-journal-evolution-lane"
+                        key={segment.key}
+                        style={{ "--evolution-accent": segment.color } as CSSProperties}
+                      >
+                        <div className="coffee-journal-evolution-lane-head">
+                          <div className="coffee-journal-evolution-lane-title">
+                            <span
+                              className="coffee-journal-evolution-lane-dot"
+                              style={{ backgroundColor: segment.color }}
+                              aria-hidden="true"
+                            />
+                            <strong>{segment.label}</strong>
+                          </div>
+                          <span>{trendLabel}</span>
+                        </div>
+                        <p>{trendDetail}</p>
+                        <div className="coffee-journal-evolution-bar-stack" aria-hidden="true">
+                          <div className="coffee-journal-evolution-bar-row">
+                            <span>Recent</span>
+                            <div className="coffee-journal-evolution-bar-track coffee-journal-evolution-bar-track-recent">
+                              <div
+                                className="coffee-journal-evolution-bar-fill coffee-journal-evolution-bar-fill-recent"
+                                style={{
+                                  width: `${Math.max(12, Math.round(segment.recentValue * 100))}%`,
+                                  backgroundColor: segment.color,
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="coffee-journal-evolution-bar-row">
+                            <span>All time</span>
+                            <div className="coffee-journal-evolution-bar-track">
+                              <div
+                                className="coffee-journal-evolution-bar-fill"
+                                style={{
+                                  width: `${Math.max(12, Math.round(segment.value * 100))}%`,
+                                  backgroundColor: `color-mix(in srgb, ${segment.color} 42%, rgba(255, 255, 255, 0.88))`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {hasMeaningfulStory && insight.tasteDrivers.length > 0 ? (
+              <section
+                className="coffee-journal-drivers coffee-journal-dashboard-card coffee-journal-dashboard-card-wide"
+                aria-label="What changed your taste"
+              >
+                <div className="coffee-journal-spectrum-head">
+                  <span>What changed your taste</span>
+                  <strong>The cups moving your wheel most</strong>
+                </div>
+
+                <div className="coffee-journal-driver-grid">
+                  {insight.tasteDrivers.map((driver) => (
+                    <article
+                      className="coffee-journal-driver-card"
+                      key={driver.id}
+                      style={
+                        {
+                          "--driver-accent":
+                            insight.tasteWheel.find(
+                              (segment) => segment.label.toLowerCase() === driver.targetTaste.toLowerCase(),
+                            )?.color ?? "#8ed8a2",
+                        } as CSSProperties
+                      }
+                    >
+                      <div className="coffee-journal-driver-topline">
+                        <div>
+                          <span>{driver.cafeName}</span>
+                          <strong>{driver.headline}</strong>
+                        </div>
+                        <div className="coffee-journal-driver-score">
+                          <strong>{driver.rating}</strong>
+                          <span>/10</span>
+                        </div>
+                      </div>
+
+                      <p>{driver.body}</p>
+
+                      <div className="coffee-journal-driver-meter">
+                        <div className="coffee-journal-driver-meter-track" aria-hidden="true">
+                          <div
+                            className="coffee-journal-driver-meter-fill"
+                            style={{ width: `${Math.max(18, Math.round(driver.impact * 100))}%` }}
+                          />
+                        </div>
+                        <span>{driver.impact >= 0.72 ? "Strong taste pull" : "Taste signal"}</span>
+                      </div>
+
+                      <div className="coffee-journal-driver-foot">
+                        <span>
+                          {[driver.drink, formatRelativeDate(driver.createdAt)].filter(Boolean).join(" · ")}
+                        </span>
+                        {driver.tags.length > 0 ? (
+                          <div className="diesel-selection-tags">
+                            {driver.tags.slice(0, 2).map((tag) => (
+                              <span className="diesel-selection-tag" key={`${driver.id}-${tag}`}>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {hasMeaningfulStory ? (
+              <section
+                className="coffee-journal-share coffee-journal-dashboard-card coffee-journal-dashboard-card-wide"
+                aria-label="Shareable journal moments"
+              >
+                <div className="coffee-journal-spectrum-head">
+                  <span>Shareable moments</span>
+                  <strong>Your taste read has a clear story</strong>
+                </div>
+
+                <div className="coffee-journal-share-grid">
+                  {insight.shareMoments.map((moment) => (
+                    <article className="coffee-journal-share-card" key={moment.id}>
+                      <span>{moment.eyebrow}</span>
+                      <strong>{moment.title}</strong>
+                      <p>{moment.body}</p>
+                      <button
+                        className="coffee-journal-share-button"
+                        type="button"
+                        onClick={() => void handleShareMoment(moment)}
+                      >
+                        Share card
+                      </button>
+                    </article>
+                  ))}
+                </div>
+
+                {shareFeedback ? <div className="coffee-journal-share-feedback">{shareFeedback}</div> : null}
+              </section>
+            ) : null}
+          </div>
         </div>
 
         <div className="map-top-picks-results coffee-journal-results">
