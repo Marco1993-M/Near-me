@@ -130,6 +130,19 @@ type TodayCupIntentConfig = {
   accentClass: string;
 };
 
+type TodayCupTrustStage = "new" | "early" | "personalized";
+
+type TodayCupTrustStageCopy = {
+  label: string;
+  openingLine: string;
+  supportLine: string;
+  contextTitle: string;
+  contextBody: string;
+  visualTasteLabel: string;
+  visualTasteDetail: string;
+  feedbackLabel: string;
+};
+
 type SponsoredPlacement = {
   slug: string;
   radiusKm: number;
@@ -259,6 +272,64 @@ const todayCupIntentCopy: Record<TodayCupIntentKey, TodayCupIntentConfig> = {
     accentClass: "is-bright",
   },
 };
+
+const todayCupTrustStageCopy: Record<TodayCupTrustStage, TodayCupTrustStageCopy> = {
+  new: {
+    label: "New here",
+    openingLine: "A strong nearby start",
+    supportLine: "Today’s Cup is keeping it simple here: close, credible, and a good first coffee call.",
+    contextTitle: "A credible first pick",
+    contextBody:
+      "Near Me is leading with distance and trust first, then it will get more personal as you leave reviews, save cafes, or set up your taste.",
+    visualTasteLabel: "Good for",
+    visualTasteDetail: "Strong nearby start",
+    feedbackLabel: "Refine this",
+  },
+  early: {
+    label: "Early learning",
+    openingLine: "A good nearby match",
+    supportLine:
+      "Near Me is starting to blend your early coffee signals with cafes that already look dependable nearby.",
+    contextTitle: "A nearby read with early signals",
+    contextBody:
+      "This pick is still trust-led, but Near Me is beginning to fold in what you have saved, logged, or told it about your taste.",
+    visualTasteLabel: "Style",
+    visualTasteDetail: "Early taste read",
+    feedbackLabel: "Teach Near Me",
+  },
+  personalized: {
+    label: "Personalized",
+    openingLine: "A personal coffee call",
+    supportLine:
+      "Near Me has enough of your coffee memory now to lean more confidently on your taste, habits, and higher-rated cups.",
+    contextTitle: "Best fit for this moment",
+    contextBody:
+      "This recommendation is leaning on your journal, taste profile, and repeat choices instead of only proximity and review signals.",
+    visualTasteLabel: "Taste",
+    visualTasteDetail: "Taste fit",
+    feedbackLabel: "Help Near Me learn",
+  },
+};
+
+function getTodayCupTrustStage({
+  hasProfile,
+  journalEntryCount,
+  favoriteCount,
+}: {
+  hasProfile: boolean;
+  journalEntryCount: number;
+  favoriteCount: number;
+}): TodayCupTrustStage {
+  if (!hasProfile && journalEntryCount < 2 && favoriteCount === 0) {
+    return "new";
+  }
+
+  if (journalEntryCount >= 5 || favoriteCount >= 3 || (hasProfile && journalEntryCount >= 3)) {
+    return "personalized";
+  }
+
+  return "early";
+}
 
 const journalTagHints: Record<(typeof journalTags)[number], string> = {
   Bright: "Bright usually means lively acidity rather than bitterness.",
@@ -793,6 +864,7 @@ export function HomeDiscoveryScreen({
   const handledTasteIntentRef = useRef(false);
   const handledReviewIntentRef = useRef(false);
   const lastClaimedReviewLinkKeyRef = useRef<string | null>(null);
+  const lastTrackedTrustStageRef = useRef<TodayCupTrustStage | null>(null);
 
   const coffeeProfileState = useSyncExternalStore(
     subscribeToCoffeeProfile,
@@ -811,9 +883,53 @@ export function HomeDiscoveryScreen({
   );
   const authDisplayName = useMemo(() => getAuthDisplayName(authUser), [authUser]);
   const journalInsight = useMemo(() => getCoffeeJournalInsight(journalEntries), [journalEntries]);
+  const hasTasteProfile = Boolean(coffeeProfileState?.profileSlug);
+  const todayCupTrustStage = useMemo(
+    () =>
+      getTodayCupTrustStage({
+        hasProfile: hasTasteProfile,
+        journalEntryCount: journalEntries.length,
+        favoriteCount: favoriteCafeIds.length,
+      }),
+    [favoriteCafeIds.length, hasTasteProfile, journalEntries.length],
+  );
+  const todayCupTrustCopy = todayCupTrustStageCopy[todayCupTrustStage];
   const currentHour = useMemo(() => new Date().getHours(), []);
   const todayCupMoment = useMemo(() => getTodayCupMoment(currentHour), [currentHour]);
   const todayCupIntentConfig = todayCupIntentCopy[todayCupIntent];
+  const visibleTodayCupIntentKeys = useMemo(() => {
+    if (todayCupTrustStage === "new") {
+      return ["default", "quick-stop", "worth-it"] as TodayCupIntentKey[];
+    }
+
+    if (todayCupTrustStage === "early") {
+      return ["default", "quiet", "best-cortado", "quick-stop"] as TodayCupIntentKey[];
+    }
+
+    return Object.keys(todayCupIntentCopy) as TodayCupIntentKey[];
+  }, [todayCupTrustStage]);
+
+  useEffect(() => {
+    if (lastTrackedTrustStageRef.current === todayCupTrustStage) {
+      return;
+    }
+
+    lastTrackedTrustStageRef.current = todayCupTrustStage;
+    trackEvent("today_cup_trust_stage_changed", {
+      stage: todayCupTrustStage,
+      has_profile: hasTasteProfile,
+      journal_entries: journalEntries.length,
+      favorites: favoriteCafeIds.length,
+    });
+  }, [favoriteCafeIds.length, hasTasteProfile, journalEntries.length, todayCupTrustStage]);
+
+  useEffect(() => {
+    if (visibleTodayCupIntentKeys.includes(todayCupIntent)) {
+      return;
+    }
+
+    setTodayCupIntent("default");
+  }, [todayCupIntent, visibleTodayCupIntentKeys]);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -1350,8 +1466,8 @@ export function HomeDiscoveryScreen({
 
     const candidatePool =
       cafesWithinRadius.length > 0
-        ? cafesWithinRadius.slice(0, 24)
-        : cafesByDistance.slice(0, 24);
+        ? cafesWithinRadius.slice(0, todayCupTrustStage === "personalized" ? 24 : 16)
+        : cafesByDistance.slice(0, todayCupTrustStage === "personalized" ? 24 : 12);
 
     return candidatePool
       .map((cafe) => {
@@ -1429,6 +1545,38 @@ export function HomeDiscoveryScreen({
         let ratingWeight = 0.86;
         let journalWeight = 1.16;
         let profileWeight = 0.9;
+        let stageTrustBoost = 0;
+
+        if (todayCupTrustStage === "new") {
+          distanceWeight = 0.34;
+          ratingWeight = 1.08;
+          journalWeight = 0.08;
+          profileWeight = 0.08;
+          stageTrustBoost += Math.min(reviewCount, 12) * 0.08;
+          if (rating >= 8.5) {
+            stageTrustBoost += 1.2;
+          } else if (rating >= 8) {
+            stageTrustBoost += 0.65;
+          }
+          if (cafeSignalsContain(cafe, ["roaster", "specialty coffee"])) {
+            stageTrustBoost += 0.45;
+          }
+          if (!isCurrentPlace && reviewCount === 0 && rating < 7.4) {
+            stageTrustBoost -= 0.6;
+          }
+        } else if (todayCupTrustStage === "early") {
+          distanceWeight = 0.26;
+          ratingWeight = 0.96;
+          journalWeight = 0.56;
+          profileWeight = 0.5;
+          stageTrustBoost += Math.min(reviewCount, 10) * 0.05;
+          if (rating >= 8.4) {
+            stageTrustBoost += 0.7;
+          }
+          if (cafeSignalsContain(cafe, ["roaster", "specialty coffee"])) {
+            stageTrustBoost += 0.25;
+          }
+        }
 
         if (todayCupIntent === "quiet") {
           const quietFit = cafeSignalsContain(cafe, [
@@ -1518,6 +1666,7 @@ export function HomeDiscoveryScreen({
           momentBoost -
           distance * distanceWeight +
           intentBoost +
+          stageTrustBoost +
           routineBoost +
           onSiteBoost;
 
@@ -1551,6 +1700,7 @@ export function HomeDiscoveryScreen({
     todayCupFeedbackByCafeId,
     todayCupMoment.key,
     todayCupMoment.shortLabel,
+    todayCupTrustStage,
     currentPlaceCafe,
     userLocation,
   ]);
@@ -1630,39 +1780,128 @@ export function HomeDiscoveryScreen({
   ]);
   const shouldShowFeaturedCafePrompt =
     Boolean(sponsoredPlacement) && !shouldShowIntro && !isOverlayOpen;
+  const shouldShowTasteSetupPrompt = todayCupTrustStage === "new" && !activeCoffeeProfile;
   const todayCupVisualSignals = todayCupPrimary
-    ? [
-        {
-          label: "Trust",
-          value: clampNumber(
-            ((todayCupPrimary.cafe.reviewSummary.averageRating - 6.2) / 3) * 0.65 +
-              Math.min(todayCupPrimary.cafe.reviewSummary.reviewCount, 12) / 12 * 0.35,
-            0.18,
-            1,
-          ),
-          detail: todayCupPrimary.decisionGuide.confidenceRead,
-        },
-        {
-          label: "Taste",
-          value: clampNumber(
-            todayCupPrimary.profileMatch
-              ? todayCupPrimary.profileMatch.percentage / 100
-              : (todayCupPrimary.journalMatch?.score ?? 0) / 4.4,
-            0.16,
-            1,
-          ),
-          detail:
-            todayCupPrimary.journalMatch?.label ??
-            todayCupPrimary.profileMatch?.label ??
-            "Taste fit",
-        },
-        {
-          label: "Distance",
-          value: clampNumber(1 - todayCupPrimary.distance / Math.max(selectedRadiusKm + 0.6, 2), 0.18, 1),
-          detail: formatDistance(todayCupPrimary.distance),
-        },
-      ]
+    ? todayCupTrustStage === "personalized"
+      ? [
+          {
+            label: "Trust",
+            value: clampNumber(
+              ((todayCupPrimary.cafe.reviewSummary.averageRating - 6.2) / 3) * 0.65 +
+                Math.min(todayCupPrimary.cafe.reviewSummary.reviewCount, 12) / 12 * 0.35,
+              0.18,
+              1,
+            ),
+            detail: todayCupPrimary.decisionGuide.confidenceRead,
+          },
+          {
+            label: "Taste",
+            value: clampNumber(
+              todayCupPrimary.profileMatch
+                ? todayCupPrimary.profileMatch.percentage / 100
+                : (todayCupPrimary.journalMatch?.score ?? 0) / 4.4,
+              0.16,
+              1,
+            ),
+            detail:
+              todayCupPrimary.journalMatch?.label ??
+              todayCupPrimary.profileMatch?.label ??
+              todayCupTrustCopy.visualTasteDetail,
+          },
+          {
+            label: "Distance",
+            value: clampNumber(1 - todayCupPrimary.distance / Math.max(selectedRadiusKm + 0.6, 2), 0.18, 1),
+            detail: formatDistance(todayCupPrimary.distance),
+          },
+        ]
+      : todayCupTrustStage === "early"
+        ? [
+            {
+              label: "Trust",
+              value: clampNumber(
+                ((todayCupPrimary.cafe.reviewSummary.averageRating - 6.2) / 3) * 0.65 +
+                  Math.min(todayCupPrimary.cafe.reviewSummary.reviewCount, 12) / 12 * 0.35,
+                0.18,
+                1,
+              ),
+              detail: todayCupPrimary.decisionGuide.confidenceRead,
+            },
+            {
+              label: "Style",
+              value: clampNumber(
+                Math.max(
+                  todayCupPrimary.profileMatch ? todayCupPrimary.profileMatch.percentage / 100 : 0,
+                  (todayCupPrimary.journalMatch?.score ?? 0) / 4.8,
+                ),
+                0.16,
+                1,
+              ),
+              detail:
+                todayCupPrimary.journalMatch?.label ??
+                todayCupPrimary.profileMatch?.label ??
+                todayCupPrimary.decisionGuide.bestFor,
+            },
+            {
+              label: "Distance",
+              value: clampNumber(1 - todayCupPrimary.distance / Math.max(selectedRadiusKm + 0.6, 2), 0.18, 1),
+              detail: formatDistance(todayCupPrimary.distance),
+            },
+          ]
+        : [
+            {
+              label: "Trust",
+              value: clampNumber(
+                ((todayCupPrimary.cafe.reviewSummary.averageRating - 6.2) / 3) * 0.7 +
+                  Math.min(todayCupPrimary.cafe.reviewSummary.reviewCount, 12) / 12 * 0.3,
+                0.18,
+                1,
+              ),
+              detail: todayCupPrimary.decisionGuide.confidenceRead,
+            },
+            {
+              label: "Good for",
+              value: clampNumber(
+                todayCupPrimary.cafe.reviewSummary.reviewCount > 0
+                  ? 0.72
+                  : cafeSignalsContain(todayCupPrimary.cafe, ["roaster", "specialty coffee"])
+                    ? 0.64
+                    : 0.5,
+                0.18,
+                1,
+              ),
+              detail: todayCupPrimary.decisionGuide.bestFor,
+            },
+            {
+              label: "Nearby",
+              value: clampNumber(1 - todayCupPrimary.distance / Math.max(selectedRadiusKm + 0.6, 2), 0.18, 1),
+              detail: formatDistance(todayCupPrimary.distance),
+            },
+          ]
     : [];
+  const todayCupStoryHeadline = todayCupPrimary
+    ? todayCupTrustStage === "new"
+      ? todayCupPrimary.decisionGuide.bestFor
+      : todayCupTrustStage === "early"
+        ? todayCupPrimary.journalMatch?.reason ??
+          todayCupPrimary.profileMatch?.label ??
+          todayCupPrimary.decisionGuide.bestFor
+        : todayCupPrimary.journalMatch?.reason ??
+          todayCupPrimary.profileMatch?.label ??
+          todayCupPrimary.decisionGuide.bestFor
+    : null;
+  const todayCupStoryBody = todayCupPrimary
+    ? todayCupPrimary.isCurrentPlace
+      ? `Near Me thinks you are already at ${todayCupPrimary.cafe.name}, so it is anchoring here instead of nudging you somewhere else.`
+      : todayCupTrustStage === "new"
+        ? todayCupTrustCopy.supportLine
+        : todayCupTrustStage === "early"
+          ? todayCupPrimary.routineNote ??
+            todayCupPrimary.journalMatch?.support ??
+            todayCupTrustCopy.supportLine
+          : todayCupPrimary.routineNote ??
+            todayCupPrimary.journalMatch?.support ??
+            todayCupIntentConfig.cue
+    : null;
   useEffect(() => {
     if (!userLocation) {
       setFallbackPlaces([]);
@@ -2238,6 +2477,7 @@ export function HomeDiscoveryScreen({
       cafe_slug: todayCupPrimary.cafe.slug,
       reason,
       moment: todayCupMoment.key,
+      stage: todayCupTrustStage,
     });
   }
 
@@ -2247,6 +2487,7 @@ export function HomeDiscoveryScreen({
     trackEvent("today_cup_intent_selected", {
       intent,
       moment: todayCupMoment.key,
+      stage: todayCupTrustStage,
     });
   }
 
@@ -2259,6 +2500,7 @@ export function HomeDiscoveryScreen({
     trackEvent("today_cup_dismissed", {
       intent: todayCupIntent,
       moment: todayCupMoment.key,
+      stage: todayCupTrustStage,
     });
   }
 
@@ -2279,6 +2521,7 @@ export function HomeDiscoveryScreen({
       cafe_id: cafeId,
       intent: todayCupIntent,
       moment: todayCupMoment.key,
+      stage: todayCupTrustStage,
       source,
     });
   }
@@ -4067,12 +4310,20 @@ export function HomeDiscoveryScreen({
                   <div className="diesel-selection-head diesel-selection-head-today">
                     <div className="diesel-selection-meta">
                       <span>Today's cup</span>
-                      <span>{todayCupMoment.shortLabel}</span>
+                      <span>{todayCupPrimary.isCurrentPlace ? "Right now" : todayCupTrustCopy.label}</span>
                     </div>
                     <div className="diesel-selection-head-actions">
                       <div className="diesel-selection-score diesel-selection-score-today">
                         <strong>{todayCupPrimary.isCurrentPlace ? "You're here" : formatDistance(todayCupPrimary.distance)}</strong>
-                        <span>{todayCupPrimary.isCurrentPlace ? "Live stop detected" : todayCupPrimary.decisionGuide.confidenceRead}</span>
+                        <span>
+                          {todayCupPrimary.isCurrentPlace
+                            ? "Live stop detected"
+                            : todayCupTrustStage === "new"
+                              ? todayCupTrustCopy.openingLine
+                              : todayCupTrustStage === "early"
+                                ? "Early taste read"
+                                : todayCupPrimary.decisionGuide.confidenceRead}
+                        </span>
                       </div>
                       <button
                         className="map-search-close diesel-selection-dismiss"
@@ -4090,17 +4341,22 @@ export function HomeDiscoveryScreen({
                           <div className={`diesel-today-mood-band ${todayCupIntentConfig.accentClass}`}>
                             <div className="diesel-today-mood-orb" aria-hidden="true" />
                             <div className="diesel-today-mood-copy">
-                              <span>{todayCupIntent === "default" ? todayCupMoment.label : todayCupIntentConfig.label}</span>
+                              <span>
+                                {todayCupIntent === "default"
+                                  ? todayCupTrustStage === "new"
+                                    ? todayCupTrustCopy.label
+                                    : todayCupMoment.label
+                                  : todayCupIntentConfig.label}
+                              </span>
                               <strong>{todayCupIntentConfig.tone}</strong>
                             </div>
                           </div>
                         ) : null}
                         <div className="diesel-today-intents" aria-label="Choose what you are in the mood for">
-                          {(
-                            Object.entries(todayCupIntentCopy) as Array<
-                              [TodayCupIntentKey, TodayCupIntentConfig]
-                            >
-                          ).map(([intentKey, intentConfig]) => (
+                          {visibleTodayCupIntentKeys.map((intentKey) => {
+                            const intentConfig = todayCupIntentCopy[intentKey];
+
+                            return (
                             <button
                               key={intentKey}
                               type="button"
@@ -4112,7 +4368,8 @@ export function HomeDiscoveryScreen({
                             >
                               {intentConfig.label}
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                         <div className="diesel-selection-decision-badge diesel-selection-decision-badge-today">
                           <span className="diesel-selection-decision-kicker">Today's strength</span>
@@ -4126,18 +4383,16 @@ export function HomeDiscoveryScreen({
                                   <div className="diesel-today-editorial-glow" aria-hidden="true" />
                                   <div className="diesel-today-editorial-note">
                                     <span className="diesel-today-editorial-kicker">
-                                      {todayCupPrimary.isCurrentPlace ? "Live read" : "Why this fits"}
+                                      {todayCupPrimary.isCurrentPlace
+                                        ? "Live read"
+                                        : todayCupTrustStage === "new"
+                                          ? "Why this is showing"
+                                          : todayCupTrustStage === "early"
+                                            ? "Early read"
+                                            : "Why this fits"}
                                     </span>
-                                    <strong>
-                                      {todayCupPrimary.journalMatch?.reason ??
-                                        todayCupPrimary.profileMatch?.label ??
-                                        todayCupPrimary.decisionGuide.bestFor}
-                                    </strong>
-                                    <p>
-                                      {todayCupPrimary.routineNote ??
-                                        todayCupPrimary.journalMatch?.support ??
-                                        todayCupIntentConfig.cue}
-                                    </p>
+                                    <strong>{todayCupStoryHeadline}</strong>
+                                    <p>{todayCupStoryBody}</p>
                                   </div>
                                 </div>
                               </div>
@@ -4150,12 +4405,18 @@ export function HomeDiscoveryScreen({
                                   <small>
                                     {todayCupPrimary.isCurrentPlace
                                       ? "Live stop"
-                                      : todayCupPrimary.decisionGuide.confidenceRead}
+                                      : todayCupTrustStage === "new"
+                                        ? todayCupTrustCopy.openingLine
+                                        : todayCupPrimary.decisionGuide.confidenceRead}
                                   </small>
                                 </div>
                                 <div className="diesel-today-utility-card diesel-today-utility-card-secondary">
-                                  <span>Order first</span>
-                                  <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                                  <span>{todayCupTrustStage === "new" ? "Good for" : "Order first"}</span>
+                                  <strong>
+                                    {todayCupTrustStage === "new"
+                                      ? todayCupPrimary.decisionGuide.bestFor
+                                      : todayCupPrimary.decisionGuide.order}
+                                  </strong>
                                   <small>
                                     {todayCupIntent === "default" ? todayCupMoment.shortLabel : todayCupIntentConfig.shortLabel}
                                   </small>
@@ -4173,9 +4434,15 @@ export function HomeDiscoveryScreen({
                           </>
                         ) : (
                           <p>
-                            {todayCupPrimary.journalMatch?.support ??
-                              todayCupPrimary.profileMatch?.reasons?.[0] ??
-                              todayCupPrimary.decisionGuide.goIfSupport}
+                            {todayCupTrustStage === "new"
+                              ? todayCupTrustCopy.contextBody
+                              : todayCupTrustStage === "early"
+                                ? todayCupPrimary.journalMatch?.support ??
+                                  todayCupPrimary.profileMatch?.reasons?.[0] ??
+                                  todayCupTrustCopy.contextBody
+                                : todayCupPrimary.journalMatch?.support ??
+                                  todayCupPrimary.profileMatch?.reasons?.[0] ??
+                                  todayCupPrimary.decisionGuide.goIfSupport}
                           </p>
                         )}
                       </div>
@@ -4185,7 +4452,7 @@ export function HomeDiscoveryScreen({
                           isCollapsedCard ? " diesel-today-feedback-compact" : ""
                         }`}
                       >
-                        <span>{isCollapsedCard ? "Teach Near Me" : "Help Near Me learn"}</span>
+                        <span>{isCollapsedCard ? todayCupTrustCopy.feedbackLabel : todayCupTrustCopy.feedbackLabel}</span>
                         <div className="diesel-today-feedback-list">
                           {(Object.entries(todayCupFeedbackCopy) as Array<
                             [TodayCupFeedbackReason, (typeof todayCupFeedbackCopy)[TodayCupFeedbackReason]]
@@ -4209,25 +4476,43 @@ export function HomeDiscoveryScreen({
                             <strong>
                               {todayCupPrimary.isCurrentPlace
                                 ? "Live stop detected"
-                                : todayCupPrimary.routineBoost > 0.8
-                                  ? "Routine-aware pick"
-                                  : "Best fit for this moment"}
+                                : todayCupTrustStage === "new"
+                                  ? todayCupTrustCopy.contextTitle
+                                  : todayCupTrustStage === "early"
+                                    ? todayCupTrustCopy.contextTitle
+                                    : todayCupPrimary.routineBoost > 0.8
+                                      ? "Routine-aware pick"
+                                      : todayCupTrustCopy.contextTitle}
                             </strong>
                             <p>
-                              {todayCupPrimary.routineNote ??
-                                todayCupPrimary.journalMatch?.support ??
-                                todayCupIntentConfig.cue}
+                              {todayCupTrustStage === "new"
+                                ? todayCupTrustCopy.contextBody
+                                : todayCupTrustStage === "early"
+                                  ? todayCupPrimary.routineNote ??
+                                    todayCupPrimary.journalMatch?.support ??
+                                    todayCupTrustCopy.contextBody
+                                  : todayCupPrimary.routineNote ??
+                                    todayCupPrimary.journalMatch?.support ??
+                                    todayCupIntentConfig.cue}
                             </p>
                           </div>
 
                           <div className="diesel-selection-quick-grid">
                             <div className="diesel-selection-quick-card">
-                              <span>Order first</span>
-                              <strong>{todayCupPrimary.decisionGuide.order}</strong>
+                              <span>{todayCupTrustStage === "new" ? "Start with" : "Order first"}</span>
+                              <strong>
+                                {todayCupTrustStage === "new"
+                                  ? todayCupPrimary.decisionGuide.bestFor
+                                  : todayCupPrimary.decisionGuide.order}
+                              </strong>
                             </div>
                             <div className="diesel-selection-quick-card">
-                              <span>Best for</span>
-                              <strong>{todayCupPrimary.decisionGuide.bestFor}</strong>
+                              <span>{todayCupTrustStage === "new" ? "Why it stands out" : "Best for"}</span>
+                              <strong>
+                                {todayCupTrustStage === "new"
+                                  ? todayCupPrimary.decisionGuide.confidenceRead
+                                  : todayCupPrimary.decisionGuide.bestFor}
+                              </strong>
                             </div>
                           </div>
 
@@ -4288,13 +4573,23 @@ export function HomeDiscoveryScreen({
                           >
                             Open pick
                           </button>
-                          <button
-                            className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
-                            type="button"
-                            onClick={() => openTopPicks("today_cup")}
-                          >
-                            More picks
-                          </button>
+                          {shouldShowTasteSetupPrompt ? (
+                            <button
+                              className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                              type="button"
+                              onClick={() => openProfiler("today_cup")}
+                            >
+                              Set up your taste
+                            </button>
+                          ) : (
+                            <button
+                              className="diesel-selection-secondary diesel-selection-secondary-main control-chip"
+                              type="button"
+                              onClick={() => openTopPicks("today_cup")}
+                            >
+                              More picks
+                            </button>
+                          )}
                         </div>
                       </div>
                 </>
